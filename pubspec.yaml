@@ -1,0 +1,26 @@
+name: zapata_flutter
+description: Zapata - Flutter port of the original Angular app (scaffold)
+publish_to: 'none'
+version: 0.1.0
+environment:
+  sdk: '>=2.18.0 <4.0.0'
+
+dependencies:
+  fl_chart: ^0.68.0
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  provider: ^6.0.5
+  intl: ^0.18.0
+  supabase_flutter: ^1.5.0
+  http: ^0.13.6
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
