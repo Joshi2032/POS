@@ -17,14 +17,11 @@ class App extends StatelessWidget {
           title: 'ZAPATA POS',
           debugShowCheckedModeBanner: false,
           
-          // Configuración de tus temas (Claro y Oscuro)
-          theme: AppTheme.lightTheme(),
-          darkTheme: ThemeData.dark().copyWith(
-            // Aquí puedes extender el tema oscuro usando tus constantes de AppTheme si lo deseas
-          ),
-          themeMode: currentMode,
+          // ¡Aquí conectamos tus dos paletas idénticas a Angular!
+          theme: AppTheme.lightTheme(), 
+          darkTheme: AppTheme.darkTheme(), 
+          themeMode: currentMode, 
           
-          // Apunta al nuevo MainLayout que creamos como contenedor principal
           home: const MainLayout(),
         );
       },

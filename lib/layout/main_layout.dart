@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/sidebar.dart';
-import '../pages/dashboard_page.dart'; // Tu panel de métricas real
+import '../pages/dashboard_page.dart';
 import '../pages/productos_page.dart';
+import '../pages/combos_page.dart'; 
 import '../pages/tomar_orden_page.dart';
 import '../pages/caja_page.dart';
 import '../pages/inventario_page.dart';
@@ -20,28 +21,27 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   int _currentIndex = 0;
 
-  // El equivalente al <router-outlet>
   final List<Widget> _pages = [
-    const DashboardPage(),                       // 0: AHORA SÍ ES EL DASHBOARD REAL
-    const ProductosPage(),                       // 1: Productos
-    const Center(child: Text('Combos Page')),    // 2: Combos
-    const Center(child: Text('Recetas Page')),   // 3: Recetas
-    const EmpleadosPage(),                       // 4: Empleados
-    const InventarioPage(),                      // 5: Inventario
-    const MesasPage(),                           // 6: Mesas
-    const ReportesPage(),                        // 7: Reportes
-    const GastosPage(),                          // 8: Gastos
-    const Center(child: Text('Nómina Page')),    // 9: Nómina
-    const Center(child: Text('Historial')),      // 10: Historial
-    const Center(child: Text('Ajustes Page')),   // 11: Ajustes
-    const TomarOrdenPage(),                      // 12: Tomar Orden
-    const CajaPage(),                            // 13: Caja
+    const DashboardPage(),                       // 0
+    const ProductosPage(),                       // 1
+    const CombosPage(),                          // 2
+    const Center(child: Text('Recetas Page')),   // 3
+    const EmpleadosPage(),                       // 4
+    const InventarioPage(),                      // 5
+    const MesasPage(),                           // 6
+    const ReportesPage(),                        // 7
+    const GastosPage(),                          // 8
+    const Center(child: Text('Nómina Page')),    // 9
+    const Center(child: Text('Historial')),      // 10
+    const Center(child: Text('Ajustes Page')),   // 11
+    const TomarOrdenPage(),                      // 12
+    const CajaPage(),                            // 13
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), 
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isMobile = constraints.maxWidth <= 1024;
@@ -75,7 +75,7 @@ class _MainLayoutState extends State<MainLayout> {
                     },
                   ),
                 ),
-                const VerticalDivider(width: 1, color: Color(0xFFE5E7EB)),
+                VerticalDivider(width: 1, color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
                 Expanded(
                   child: IndexedStack(index: _currentIndex, children: _pages),
                 ),

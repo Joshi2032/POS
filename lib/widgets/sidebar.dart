@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../app.dart'; // Importamos el themeNotifier de app.dart
+import '../app.dart'; 
 
 class AppSidebar extends StatelessWidget {
   final int currentIndex;
@@ -16,29 +16,28 @@ class AppSidebar extends StatelessWidget {
     return Drawer(
       child: Column(
         children: [
+          // 1. Header adaptativo al tema
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFFFB347), Color(0xFFFF4500)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
+            decoration: BoxDecoration(
+              // Usamos el color de la tarjeta (blanco o casi negro) y un borde inferior
+              color: Theme.of(context).cardTheme.color,
+              border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
             ),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.local_fire_department, color: Color(0xFFFF4500), size: 40),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              child: Icon(Icons.local_fire_department, color: Theme.of(context).primaryColor, size: 40),
             ),
-            accountName: const Text('La Brasa', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            accountEmail: const Text('PARRILLA & GRILL', style: TextStyle(letterSpacing: 1.2)),
+            accountName: Text('La Brasa', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Theme.of(context).textTheme.titleMedium?.color)),
+            accountEmail: Text('PARRILLA & GRILL', style: TextStyle(letterSpacing: 1.2, color: Theme.of(context).textTheme.bodySmall?.color)),
           ),
 
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Text('Panel de Control', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Text('Panel de Control', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
                 ),
                 _buildTile(context, icon: Icons.dashboard, title: 'Dashboard', index: 0),
                 _buildTile(context, icon: Icons.shopping_bag, title: 'Productos', index: 1),
@@ -54,9 +53,9 @@ class AppSidebar extends StatelessWidget {
                 _buildTile(context, icon: Icons.settings, title: 'Ajustes', index: 11),
                 
                 const Divider(),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Text('Extras', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Text('Extras', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
                 ),
                 _buildTile(context, icon: Icons.star, title: 'Tomar Orden', index: 12),
                 _buildTile(context, icon: Icons.point_of_sale, title: 'Caja', index: 13),
@@ -66,16 +65,15 @@ class AppSidebar extends StatelessWidget {
 
           const Divider(height: 1),
           
-          // Widget que escucha y cambia el estado del Tema (Claro / Oscuro)
           ValueListenableBuilder<ThemeMode>(
             valueListenable: themeNotifier,
             builder: (context, currentMode, _) {
               final isDark = currentMode == ThemeMode.dark;
               
               return ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.blueGrey,
-                  child: Text('D', style: TextStyle(color: Colors.white)),
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: const Text('D', style: TextStyle(color: Colors.white)),
                 ),
                 title: const Text('Dueño', style: TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: const Text('Propietario'),
@@ -83,7 +81,6 @@ class AppSidebar extends StatelessWidget {
                   icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
                   tooltip: isDark ? 'Modo claro' : 'Modo oscuro',
                   onPressed: () {
-                    // Cambiamos la variable global
                     themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
                   },
                 ),
@@ -95,21 +92,20 @@ class AppSidebar extends StatelessWidget {
     );
   }
 
+  // 2. Elemento del menú más limpio (el tema maneja el color solo si isSelected es true)
   Widget _buildTile(BuildContext context, {required IconData icon, required String title, required int index}) {
     final isSelected = currentIndex == index;
-    return ListTile(
-      leading: Icon(icon, color: isSelected ? Theme.of(context).primaryColor : null),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? Theme.of(context).primaryColor : null,
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        leading: Icon(icon), // El color lo inyecta el ListTileThemeData
+        title: Text(title, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+        selected: isSelected,
+        onTap: () {
+          onIndexChanged(index);
+        },
       ),
-      selected: isSelected,
-      onTap: () {
-        onIndexChanged(index);
-      },
     );
   }
 }
