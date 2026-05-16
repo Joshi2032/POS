@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../app.dart'; // Importamos el themeNotifier de app.dart
 
 class AppSidebar extends StatelessWidget {
-  // FIX: Volvemos a usar int y Function(int) para que no rompa tu dashboard actual
   final int currentIndex;
   final Function(int) onIndexChanged;
 
@@ -65,27 +65,36 @@ class AppSidebar extends StatelessWidget {
           ),
 
           const Divider(height: 1),
-          ListTile(
-            leading: const CircleAvatar(
-              backgroundColor: Colors.blueGrey,
-              child: Text('D', style: TextStyle(color: Colors.white)),
-            ),
-            title: const Text('Dueño', style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text('Propietario'),
-            trailing: IconButton(
-              icon: const Icon(Icons.brightness_6),
-              // FIX: IconButton no tiene la propiedad onChanged, se elimina.
-              onPressed: () {
-                // Lógica de cambio de tema
-              },
-            ),
+          
+          // Widget que escucha y cambia el estado del Tema (Claro / Oscuro)
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeNotifier,
+            builder: (context, currentMode, _) {
+              final isDark = currentMode == ThemeMode.dark;
+              
+              return ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.blueGrey,
+                  child: Text('D', style: TextStyle(color: Colors.white)),
+                ),
+                title: const Text('Dueño', style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text('Propietario'),
+                trailing: IconButton(
+                  icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+                  tooltip: isDark ? 'Modo claro' : 'Modo oscuro',
+                  onPressed: () {
+                    // Cambiamos la variable global
+                    themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                  },
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  // Se modificó para recibir y comparar un entero (index)
   Widget _buildTile(BuildContext context, {required IconData icon, required String title, required int index}) {
     final isSelected = currentIndex == index;
     return ListTile(

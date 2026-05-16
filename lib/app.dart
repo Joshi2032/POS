@@ -1,18 +1,33 @@
 import 'package:flutter/material.dart';
-import 'routes.dart';
+import 'layout/main_layout.dart';
 import 'theme/app_theme.dart';
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// Definición del notificador global para el tema
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
+
+class App extends StatelessWidget {
+  const App({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Zapata Flutter',
-      theme: AppTheme.lightTheme(),
-      initialRoute: Routes.dashboard,
-      routes: Routes.map,
-      debugShowCheckedModeBanner: false,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, currentMode, child) {
+        return MaterialApp(
+          title: 'ZAPATA POS',
+          debugShowCheckedModeBanner: false,
+          
+          // Configuración de tus temas (Claro y Oscuro)
+          theme: AppTheme.lightTheme(),
+          darkTheme: ThemeData.dark().copyWith(
+            // Aquí puedes extender el tema oscuro usando tus constantes de AppTheme si lo deseas
+          ),
+          themeMode: currentMode,
+          
+          // Apunta al nuevo MainLayout que creamos como contenedor principal
+          home: const MainLayout(),
+        );
+      },
     );
   }
 }
