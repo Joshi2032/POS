@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/tomar_orden_page.dart'; // Tu lógica de ordenes reactiva ya importada
+import 'layout/main_layout.dart'; // Tu layout principal con el sidebar y el router-outlet
 
 void main() {
   runApp(const MyApp());
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF8F9FA),
         useMaterial3: true,
       ),
-      home: const DashboardPage(),
+      home: const MainLayout(),
     );
   }
 }

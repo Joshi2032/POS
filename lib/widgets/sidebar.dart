@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 class AppSidebar extends StatelessWidget {
+  // FIX: Volvemos a usar int y Function(int) para que no rompa tu dashboard actual
   final int currentIndex;
-  final ValueChanged<int> onIndexChanged;
+  final Function(int) onIndexChanged;
 
   const AppSidebar({
     super.key,
@@ -12,126 +13,94 @@ class AppSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Definición exacta de los módulos sincronizados con Angular
-    final List<Map<String, dynamic>> menuItems = [
-      {'title': 'Tomar Orden', 'icon': Icons.restaurant_menu},
-      {'title': 'Control de Caja', 'icon': Icons.point_of_sale},
-      {'title': 'Gestión de Mesas', 'icon': Icons.table_restaurant},
-      {'title': 'Productos', 'icon': Icons.fastfood},
-      {'title': 'Inventario', 'icon': Icons.inventory},
-      {'title': 'Empleados', 'icon': Icons.people},
-      {'title': 'Gastos', 'icon': Icons.money_off},
-      {'title': 'Reportes y Métricas', 'icon': Icons.bar_chart},
-    ];
-
-    final activeColor = Theme.of(context).primaryColor;
-
-    return Container(
-      color: Colors.white,
+    return Drawer(
       child: Column(
         children: [
-          // Header / Logo del restaurante (Estilo Angular layout)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            alignment: Alignment.centerLeft,
-            child: Row(
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFFB347), Color(0xFFFF4500)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            currentAccountPicture: const CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.local_fire_department, color: Color(0xFFFF4500), size: 40),
+            ),
+            accountName: const Text('La Brasa', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            accountEmail: const Text('PARRILLA & GRILL', style: TextStyle(letterSpacing: 1.2)),
+          ),
+
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: activeColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.storefront, color: activeColor, size: 24),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Text('Panel de Control', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
                 ),
-                const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'ZAPATA', 
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 1),
-                    ),
-                    Text(
-                      'Punto de Venta', 
-                      style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                )
+                _buildTile(context, icon: Icons.dashboard, title: 'Dashboard', index: 0),
+                _buildTile(context, icon: Icons.shopping_bag, title: 'Productos', index: 1),
+                _buildTile(context, icon: Icons.widgets, title: 'Combos', index: 2),
+                _buildTile(context, icon: Icons.receipt_long, title: 'Recetas', index: 3),
+                _buildTile(context, icon: Icons.people, title: 'Empleados', index: 4),
+                _buildTile(context, icon: Icons.inventory, title: 'Inventario', index: 5),
+                _buildTile(context, icon: Icons.table_restaurant, title: 'Mesas', index: 6),
+                _buildTile(context, icon: Icons.bar_chart, title: 'Reportes', index: 7),
+                _buildTile(context, icon: Icons.money_off, title: 'Gastos', index: 8),
+                _buildTile(context, icon: Icons.assignment, title: 'Nómina', index: 9),
+                _buildTile(context, icon: Icons.history, title: 'Historial', index: 10),
+                _buildTile(context, icon: Icons.settings, title: 'Ajustes', index: 11),
+                
+                const Divider(),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Text('Extras', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                ),
+                _buildTile(context, icon: Icons.star, title: 'Tomar Orden', index: 12),
+                _buildTile(context, icon: Icons.point_of_sale, title: 'Caja', index: 13),
               ],
             ),
           ),
-          const Divider(height: 1, color: Color(0xFFE5E7EB)),
-          const SizedBox(height: 10),
-          
-          // Lista de Módulos / Opciones
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              itemCount: menuItems.length,
-              itemBuilder: (context, index) {
-                final item = menuItems[index];
-                final isSelected = currentIndex == index;
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: ListTile(
-                    horizontalTitleGap: 12,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    selected: isSelected,
-                    selectedTileColor: activeColor.withValues(alpha: 0.08),
-                    leading: Icon(
-                      item['icon'], 
-                      color: isSelected ? activeColor : Colors.grey[600],
-                      size: 21,
-                    ),
-                    title: Text(
-                      item['title'],
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                        color: isSelected ? activeColor : Colors.black87,
-                      ),
-                    ),
-                    onTap: () => onIndexChanged(index),
-                  ),
-                );
+          const Divider(height: 1),
+          ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Colors.blueGrey,
+              child: Text('D', style: TextStyle(color: Colors.white)),
+            ),
+            title: const Text('Dueño', style: TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: const Text('Propietario'),
+            trailing: IconButton(
+              icon: const Icon(Icons.brightness_6),
+              // FIX: IconButton no tiene la propiedad onChanged, se elimina.
+              onPressed: () {
+                // Lógica de cambio de tema
               },
             ),
           ),
-          
-          // Footer de la barra lateral (Información del usuario firmado)
-          const Divider(height: 1, color: Color(0xFFE5E7EB)),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFE5E7EB),
-                  radius: 18,
-                  child: Icon(Icons.person, color: Colors.grey, size: 20),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Administrador', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                      Text('Sucursal Principal', style: TextStyle(fontSize: 11, color: Color(0xFF9E9E9E))),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.logout, size: 18, color: Colors.grey),
-                  onPressed: () {
-                    // Cierre de sesión
-                  },
-                )
-              ],
-            ),
-          )
         ],
       ),
+    );
+  }
+
+  // Se modificó para recibir y comparar un entero (index)
+  Widget _buildTile(BuildContext context, {required IconData icon, required String title, required int index}) {
+    final isSelected = currentIndex == index;
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? Theme.of(context).primaryColor : null),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? Theme.of(context).primaryColor : null,
+        ),
+      ),
+      selected: isSelected,
+      onTap: () {
+        onIndexChanged(index);
+      },
     );
   }
 }
