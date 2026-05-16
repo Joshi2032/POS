@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../widgets/app_widgets.dart';      // Importamos tu AppCard y SectionHeader
 import '../widgets/layout_widgets.dart';   // Importamos tu EmptyState
 
-// Nota: Si ya tienes este modelo en lib/models/product.dart, 
-// puedes borrar esta clase e importar ese archivo en su lugar.
 class Producto {
   final String nombre;
   final String categoria;
@@ -95,7 +93,8 @@ class _ProductosPageState extends State<ProductosPage> {
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
-                        initialValue: _formCategoria,
+                        dropdownColor: Theme.of(context).cardColor,
+                        value: _formCategoria,
                         decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
                         items: _categorias.where((c) => c != 'Todas').map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                         onChanged: (v) => setModalState(() => _formCategoria = v!),
@@ -112,7 +111,8 @@ class _ProductosPageState extends State<ProductosPage> {
                         children: [
                           Expanded(
                             child: DropdownButtonFormField<String>(
-                              initialValue: _formUnidad,
+                              dropdownColor: Theme.of(context).cardColor,
+                              value: _formUnidad,
                               decoration: const InputDecoration(labelText: 'Unidad', border: OutlineInputBorder()),
                               items: ['orden', 'plato', 'pieza', 'botella', 'porción', 'vaso', 'jarra', 'cazuela', 'tarro', 'copa']
                                   .map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
@@ -191,13 +191,12 @@ class _ProductosPageState extends State<ProductosPage> {
     final filtrados = _productosFiltrados;
 
     return Scaffold(
-      backgroundColor: Colors.transparent, // Deja que el contenedor padre maneje el fondo gris
+      backgroundColor: Colors.transparent, 
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Usamos TU widget SectionHeader para el título y el botón de acción
             SectionHeader(
               title: '🍔 Productos',
               subtitle: '${filtrados.length} de ${_productos.length} productos registrados',
@@ -206,21 +205,17 @@ class _ProductosPageState extends State<ProductosPage> {
             ),
             const SizedBox(height: 24),
             
-            // 2. Barra de Búsqueda y Filtros
+            // 2. MÓDULO CORREGIDO: Barra de Búsqueda y Filtros adaptativos
             Row(
               children: [
                 Expanded(
                   flex: 2,
                   child: TextField(
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
                       hintText: 'Buscar por nombre o unidad...',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
+                      // Quitamos fillColor y filled para delegar al InputDecorationTheme global
                     ),
                     onChanged: (v) => setState(() => _searchTerm = v),
                   ),
@@ -229,16 +224,16 @@ class _ProductosPageState extends State<ProductosPage> {
                 Expanded(
                   flex: 1,
                   child: DropdownButtonFormField<String>(
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
+                    dropdownColor: Theme.of(context).cardColor, // Menú desplegable flotante adaptativo
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+                    decoration: const InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
                     value: _selectedCategory.isEmpty ? 'Todas' : _selectedCategory,
-                    items: _categorias.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    items: _categorias.map((c) => DropdownMenuItem(
+                      value: c, 
+                      child: Text(c, style: TextStyle(color: Theme.of(context).colorScheme.onSurface))
+                    )).toList(),
                     onChanged: (v) => setState(() => _selectedCategory = v == 'Todas' ? '' : v!),
                   ),
                 ),
@@ -249,7 +244,6 @@ class _ProductosPageState extends State<ProductosPage> {
             // 3. Contenido (Grilla o Estado Vacío)
             Expanded(
               child: filtrados.isEmpty
-                  // Usamos TU widget EmptyState cuando no hay resultados
                   ? EmptyState(
                       message: 'No hay productos que coincidan con tu búsqueda.\nIntenta con otros filtros.',
                       icon: Icons.fastfood_outlined,
@@ -261,7 +255,6 @@ class _ProductosPageState extends State<ProductosPage> {
                         });
                       },
                     )
-                  // Usamos TU widget AppCard para los elementos de la grilla
                   : GridView.builder(
                       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: 320,
@@ -279,7 +272,8 @@ class _ProductosPageState extends State<ProductosPage> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                  // CORRECCIÓN: Usamos .withValues en vez de .withOpacity para evitar warnings
+                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
@@ -295,7 +289,7 @@ class _ProductosPageState extends State<ProductosPage> {
                               Text(producto.nombre, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
                               Text('Stock disponible: ${producto.stock} ${producto.unidad}', 
-                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600])),
+                                   style: Theme.of(context).textTheme.bodySmall),
                               const Spacer(),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
