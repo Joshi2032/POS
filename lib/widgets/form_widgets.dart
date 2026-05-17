@@ -68,7 +68,7 @@ class _DropdownFieldWidgetState extends State<DropdownFieldWidget> {
       padding: const EdgeInsets.only(bottom: AppTheme.md),
       child: DropdownButtonFormField<String>(
         decoration: InputDecoration(labelText: widget.label),
-        value: _selected,
+        initialValue: _selected,
         items: widget.items
             .map((item) => DropdownMenuItem(value: item, child: Text(item)))
             .toList(),

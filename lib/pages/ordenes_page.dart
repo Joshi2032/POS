@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 // ==========================================
 // MODELOS DE DATOS (Mapeo de ordenes.models.ts)
 // ==========================================
-typedef OrderStatus = String; // 'pendiente' | 'preparando' | 'lista' | 'entregada' | 'cancelada'
+typedef OrderStatus
+    = String; // 'pendiente' | 'preparando' | 'lista' | 'entregada' | 'cancelada'
 typedef ServiceType = String; // 'comedor' | 'llevar' | 'domicilio'
 
 class OrderDetail {
@@ -82,26 +83,65 @@ class _OrdenesPageState extends State<OrdenesPage> {
   @override
   void initState() {
     super.initState();
-    
+
     // Semilla de datos simulada idéntica a tus componentes de control de cocina/caja
     orders = [
-      Order(id: 'ORD-101', tableOrCustomer: 'Mesa 4', serviceType: 'comedor', status: 'pendiente', time: '14:25', items: [
-        OrderDetail(productName: 'Tacos de Asada', quantity: 3, price: 35.0),
-        OrderDetail(productName: 'Refresco Refill', quantity: 2, price: 30.0),
-      ]),
-      Order(id: 'ORD-102', tableOrCustomer: 'Carlos P.', serviceType: 'llevar', status: 'preparando', time: '14:30', items: [
-        OrderDetail(productName: 'Hamburguesa Zapata', quantity: 1, price: 120.0),
-        OrderDetail(productName: 'Papas Gajo', quantity: 1, price: 45.0),
-      ], notes: 'Sin cebolla en la hamburguesa'),
-      Order(id: 'ORD-103', tableOrCustomer: 'Calle Aldama #24', serviceType: 'domicilio', status: 'lista', time: '14:10', items: [
-        OrderDetail(productName: 'Paquete Familiar Premium', quantity: 1, price: 389.0),
-      ]),
-      Order(id: 'ORD-104', tableOrCustomer: 'Mesa 1', serviceType: 'comedor', status: 'entregada', time: '13:15', items: [
-        OrderDetail(productName: 'Combo Individual', quantity: 2, price: 149.0),
-      ]),
-      Order(id: 'ORD-105', tableOrCustomer: 'Mesa 7', serviceType: 'comedor', status: 'cancelada', time: '13:00', items: [
-        OrderDetail(productName: 'Gringa de Pastor', quantity: 1, price: 65.0),
-      ]),
+      Order(
+          id: 'ORD-101',
+          tableOrCustomer: 'Mesa 4',
+          serviceType: 'comedor',
+          status: 'pendiente',
+          time: '14:25',
+          items: [
+            OrderDetail(
+                productName: 'Tacos de Asada', quantity: 3, price: 35.0),
+            OrderDetail(
+                productName: 'Refresco Refill', quantity: 2, price: 30.0),
+          ]),
+      Order(
+          id: 'ORD-102',
+          tableOrCustomer: 'Carlos P.',
+          serviceType: 'llevar',
+          status: 'preparando',
+          time: '14:30',
+          items: [
+            OrderDetail(
+                productName: 'Hamburguesa Zapata', quantity: 1, price: 120.0),
+            OrderDetail(productName: 'Papas Gajo', quantity: 1, price: 45.0),
+          ],
+          notes: 'Sin cebolla en la hamburguesa'),
+      Order(
+          id: 'ORD-103',
+          tableOrCustomer: 'Calle Aldama #24',
+          serviceType: 'domicilio',
+          status: 'lista',
+          time: '14:10',
+          items: [
+            OrderDetail(
+                productName: 'Paquete Familiar Premium',
+                quantity: 1,
+                price: 389.0),
+          ]),
+      Order(
+          id: 'ORD-104',
+          tableOrCustomer: 'Mesa 1',
+          serviceType: 'comedor',
+          status: 'entregada',
+          time: '13:15',
+          items: [
+            OrderDetail(
+                productName: 'Combo Individual', quantity: 2, price: 149.0),
+          ]),
+      Order(
+          id: 'ORD-105',
+          tableOrCustomer: 'Mesa 7',
+          serviceType: 'comedor',
+          status: 'cancelada',
+          time: '13:00',
+          items: [
+            OrderDetail(
+                productName: 'Gringa de Pastor', quantity: 1, price: 65.0),
+          ]),
     ];
   }
 
@@ -109,11 +149,13 @@ class _OrdenesPageState extends State<OrdenesPage> {
   List<Order> get filteredOrders {
     final search = searchTerm.toLowerCase();
     return orders.where((order) {
-      final matchesSearch = order.id.toLowerCase().contains(search) || 
-                            order.tableOrCustomer.toLowerCase().contains(search);
-      final matchesStatus = selectedFilterStatus == 'Todos' || order.status == selectedFilterStatus.toLowerCase();
-      final matchesService = selectedFilterService == 'Todos' || order.serviceType == selectedFilterService.toLowerCase();
-      
+      final matchesSearch = order.id.toLowerCase().contains(search) ||
+          order.tableOrCustomer.toLowerCase().contains(search);
+      final matchesStatus = selectedFilterStatus == 'Todos' ||
+          order.status == selectedFilterStatus.toLowerCase();
+      final matchesService = selectedFilterService == 'Todos' ||
+          order.serviceType == selectedFilterService.toLowerCase();
+
       return matchesSearch && matchesStatus && matchesService;
     }).toList();
   }
@@ -122,12 +164,19 @@ class _OrdenesPageState extends State<OrdenesPage> {
     final filtered = filteredOrders;
     final start = (currentPage - 1) * pageSize;
     if (start >= filtered.length) return [];
-    final end = (start + pageSize) > filtered.length ? filtered.length : (start + pageSize);
+    final end = (start + pageSize) > filtered.length
+        ? filtered.length
+        : (start + pageSize);
     return filtered.sublist(start, end);
   }
 
   int get totalPages => (filteredOrders.length / pageSize).ceil();
-  int get activeOrdersCount => orders.where((o) => o.status == 'pendiente' || o.status == 'preparando' || o.status == 'lista').length;
+  int get activeOrdersCount => orders
+      .where((o) =>
+          o.status == 'pendiente' ||
+          o.status == 'preparando' ||
+          o.status == 'lista')
+      .length;
   int get readyOrdersCount => orders.where((o) => o.status == 'lista').length;
 
   // METODOS DEL EVENT HANDLER (TS)
@@ -157,7 +206,8 @@ class _OrdenesPageState extends State<OrdenesPage> {
       final index = orders.indexWhere((o) => o.id == id);
       if (index != -1) {
         orders[index] = orders[index].copyWith(status: nuevoEstado);
-        _showToast('Orden $id cambiada a ${_getStatusLabel(nuevoEstado)}', Colors.green);
+        _showToast('Orden $id cambiada a ${_getStatusLabel(nuevoEstado)}',
+            Colors.green);
         if (showModal && selectedOrderForModal?.id == id) {
           selectedOrderForModal = orders[index];
         }
@@ -189,7 +239,10 @@ class _OrdenesPageState extends State<OrdenesPage> {
 
   void _showToast(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 2)),
+      SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          duration: const Duration(seconds: 2)),
     );
   }
 
@@ -207,12 +260,18 @@ class _OrdenesPageState extends State<OrdenesPage> {
 
   Color _getStatusColor(OrderStatus status) {
     switch (status) {
-      case 'pendiente': return Colors.orange;
-      case 'preparando': return Colors.blue;
-      case 'lista': return Colors.green;
-      case 'entregada': return Colors.grey;
-      case 'cancelada': return Colors.red;
-      default: return Colors.blueGrey;
+      case 'pendiente':
+        return Colors.orange;
+      case 'preparando':
+        return Colors.blue;
+      case 'lista':
+        return Colors.green;
+      case 'entregada':
+        return Colors.grey;
+      case 'cancelada':
+        return Colors.red;
+      default:
+        return Colors.blueGrey;
     }
   }
 
@@ -249,18 +308,26 @@ class _OrdenesPageState extends State<OrdenesPage> {
                           Row(
                             children: [
                               const Text('📋 ', style: TextStyle(fontSize: 26)),
-                              Text('Módulo de Órdenes', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                              Text('Módulo de Órdenes',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold)),
                             ],
                           ),
-                          const Text('Monitoreo en tiempo real de comandas y despachos', style: TextStyle(color: Colors.grey)),
+                          const Text(
+                              'Monitoreo en tiempo real de comandas y despachos',
+                              style: TextStyle(color: Colors.grey)),
                         ],
                       ),
                       // Tarjetas rápidas de estado superior
                       Row(
                         children: [
-                          _buildTopStatusIndicator('Activas', '$activeOrdersCount', Colors.blue),
+                          _buildTopStatusIndicator(
+                              'Activas', '$activeOrdersCount', Colors.blue),
                           const SizedBox(width: 12),
-                          _buildTopStatusIndicator('Listas', '$readyOrdersCount', Colors.green),
+                          _buildTopStatusIndicator(
+                              'Listas', '$readyOrdersCount', Colors.green),
                         ],
                       )
                     ],
@@ -278,7 +345,8 @@ class _OrdenesPageState extends State<OrdenesPage> {
                             flex: isDesktop ? 4 : 0,
                             child: TextField(
                               decoration: const InputDecoration(
-                                hintText: 'Buscar por ID de orden o cliente/mesa...',
+                                hintText:
+                                    'Buscar por ID de orden o cliente/mesa...',
                                 prefixIcon: Icon(Icons.search),
                                 border: InputBorder.none,
                               ),
@@ -286,28 +354,45 @@ class _OrdenesPageState extends State<OrdenesPage> {
                             ),
                           ),
                           if (!isDesktop) const Divider(),
-                          if (isDesktop) const VerticalDivider(width: 24, thickness: 1),
+                          if (isDesktop)
+                            const VerticalDivider(width: 24, thickness: 1),
                           Expanded(
                             flex: isDesktop ? 2 : 0,
                             child: DropdownButtonFormField<String>(
-                              value: selectedFilterStatus,
-                              decoration: const InputDecoration(labelText: 'Estado', border: InputBorder.none),
-                              items: ['Todos', 'Pendiente', 'Preparando', 'Lista', 'Entregada', 'Cancelada']
-                                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                              initialValue: selectedFilterStatus,
+                              decoration: const InputDecoration(
+                                  labelText: 'Estado',
+                                  border: InputBorder.none),
+                              items: [
+                                'Todos',
+                                'Pendiente',
+                                'Preparando',
+                                'Lista',
+                                'Entregada',
+                                'Cancelada'
+                              ]
+                                  .map((s) => DropdownMenuItem(
+                                      value: s, child: Text(s)))
                                   .toList(),
-                              onChanged: (val) => onStatusFilterChange(val ?? 'Todos'),
+                              onChanged: (val) =>
+                                  onStatusFilterChange(val ?? 'Todos'),
                             ),
                           ),
-                          if (isDesktop) const VerticalDivider(width: 24, thickness: 1),
+                          if (isDesktop)
+                            const VerticalDivider(width: 24, thickness: 1),
                           Expanded(
                             flex: isDesktop ? 2 : 0,
                             child: DropdownButtonFormField<String>(
-                              value: selectedFilterService,
-                              decoration: const InputDecoration(labelText: 'Servicio', border: InputBorder.none),
+                              initialValue: selectedFilterService,
+                              decoration: const InputDecoration(
+                                  labelText: 'Servicio',
+                                  border: InputBorder.none),
                               items: ['Todos', 'Comedor', 'Llevar', 'Domicilio']
-                                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                                  .map((s) => DropdownMenuItem(
+                                      value: s, child: Text(s)))
                                   .toList(),
-                              onChanged: (val) => onServiceFilterChange(val ?? 'Todos'),
+                              onChanged: (val) =>
+                                  onServiceFilterChange(val ?? 'Todos'),
                             ),
                           ),
                         ],
@@ -318,7 +403,10 @@ class _OrdenesPageState extends State<OrdenesPage> {
 
                   Row(
                     children: [
-                      Text('${filteredOrders.length} orden(es) encontrada(s)', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                      Text('${filteredOrders.length} orden(es) encontrada(s)',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blueGrey)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -332,7 +420,10 @@ class _OrdenesPageState extends State<OrdenesPage> {
                         children: [
                           Text('🍳', style: TextStyle(fontSize: 54)),
                           SizedBox(height: 12),
-                          Text('No hay órdenes activas que coincidan con los filtros.', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                          Text(
+                              'No hay órdenes activas que coincidan con los filtros.',
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 16)),
                         ],
                       ),
                     ),
@@ -352,7 +443,8 @@ class _OrdenesPageState extends State<OrdenesPage> {
                       final order = paginatedOrders[index];
                       return Card(
                         elevation: 3,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () => abrirDetalleModal(order),
@@ -363,48 +455,86 @@ class _OrdenesPageState extends State<OrdenesPage> {
                               children: [
                                 // Renglón de ID y Hora
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(order.id, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.grey)),
-                                    Text('🕒 ${order.time}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                                    Text(order.id,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: Colors.grey)),
+                                    Text('🕒 ${order.time}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w500)),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
                                 // Cliente / Mesa y Badge de Estado
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
-                                      child: Text(order.tableOrCustomer, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      child: Text(order.tableOrCustomer,
+                                          style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(color: _getStatusColor(order.status), borderRadius: BorderRadius.circular(8)),
-                                      child: Text(_getStatusLabel(order.status), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                          color: _getStatusColor(order.status),
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
+                                      child: Text(_getStatusLabel(order.status),
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold)),
                                     )
                                   ],
                                 ),
                                 const SizedBox(height: 6),
-                                Text(_getServiceLabel(order.serviceType), style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
+                                Text(_getServiceLabel(order.serviceType),
+                                    style: const TextStyle(
+                                        fontSize: 13, color: Colors.blueGrey)),
                                 const Divider(),
                                 // Lista resumida de productos del ticket
                                 Expanded(
                                   child: ListView.builder(
-                                    itemCount: order.items.length > 2 ? 2 : order.items.length,
+                                    itemCount: order.items.length > 2
+                                        ? 2
+                                        : order.items.length,
                                     itemBuilder: (ctx, idx) {
                                       final item = order.items[idx];
-                                      return Text('${item.quantity}x ${item.productName}', style: const TextStyle(fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis);
+                                      return Text(
+                                          '${item.quantity}x ${item.productName}',
+                                          style: const TextStyle(fontSize: 13),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis);
                                     },
                                   ),
                                 ),
                                 if (order.items.length > 2)
-                                  Text('+ ${order.items.length - 2} productos más...', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                  Text(
+                                      '+ ${order.items.length - 2} productos más...',
+                                      style: const TextStyle(
+                                          fontSize: 11, color: Colors.grey)),
                                 const SizedBox(height: 4),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('Total: \$${order.totalAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                    const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                                    Text(
+                                        'Total: \$${order.totalAmount.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15)),
+                                    const Icon(Icons.arrow_forward_ios,
+                                        size: 14, color: Colors.grey),
                                   ],
                                 )
                               ],
@@ -423,12 +553,18 @@ class _OrdenesPageState extends State<OrdenesPage> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.chevron_left),
-                          onPressed: currentPage == 1 ? null : () => goToPage(currentPage - 1),
+                          onPressed: currentPage == 1
+                              ? null
+                              : () => goToPage(currentPage - 1),
                         ),
-                        Text('Página $currentPage de $totalPages', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text('Página $currentPage de $totalPages',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         IconButton(
                           icon: const Icon(Icons.chevron_right),
-                          onPressed: currentPage == totalPages ? null : () => goToPage(currentPage + 1),
+                          onPressed: currentPage == totalPages
+                              ? null
+                              : () => goToPage(currentPage + 1),
                         ),
                       ],
                     )
@@ -449,7 +585,8 @@ class _OrdenesPageState extends State<OrdenesPage> {
                 width: isDesktop ? 500 : double.infinity,
                 margin: const EdgeInsets.all(16),
                 child: Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
                     child: Column(
@@ -459,26 +596,46 @@ class _OrdenesPageState extends State<OrdenesPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Detalle de Comanda: ${selectedOrderForModal!.id}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            IconButton(icon: const Icon(Icons.close), onPressed: cerrarModal),
+                            Text(
+                                'Detalle de Comanda: ${selectedOrderForModal!.id}',
+                                style: const TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.bold)),
+                            IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: cerrarModal),
                           ],
                         ),
                         const Divider(),
                         const SizedBox(height: 8),
-                        Text('Cliente/Mesa: ${selectedOrderForModal!.tableOrCustomer}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                        Text('Tipo de Servicio: ${_getServiceLabel(selectedOrderForModal!.serviceType)}', style: const TextStyle(color: Colors.blueGrey)),
-                        Text('Hora de Registro: ${selectedOrderForModal!.time} hrs'),
-                        if (selectedOrderForModal!.notes != null && selectedOrderForModal!.notes!.isNotEmpty) ...[
+                        Text(
+                            'Cliente/Mesa: ${selectedOrderForModal!.tableOrCustomer}',
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w600)),
+                        Text(
+                            'Tipo de Servicio: ${_getServiceLabel(selectedOrderForModal!.serviceType)}',
+                            style: const TextStyle(color: Colors.blueGrey)),
+                        Text(
+                            'Hora de Registro: ${selectedOrderForModal!.time} hrs'),
+                        if (selectedOrderForModal!.notes != null &&
+                            selectedOrderForModal!.notes!.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: Colors.orange.withAlpha(30), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.orange)),
-                            child: Text('⚠️ Notas: ${selectedOrderForModal!.notes}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                            decoration: BoxDecoration(
+                                color: Colors.orange.withAlpha(30),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.orange)),
+                            child: Text(
+                                '⚠️ Notas: ${selectedOrderForModal!.notes}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
                           )
                         ],
                         const SizedBox(height: 16),
-                        const Text('Productos Solicitados:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        const Text('Productos Solicitados:',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 15)),
                         const SizedBox(height: 8),
                         // Lista de desglose del ticket
                         Flexible(
@@ -488,12 +645,18 @@ class _OrdenesPageState extends State<OrdenesPage> {
                             itemBuilder: (ctx, index) {
                               final item = selectedOrderForModal!.items[index];
                               return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 4.0),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('${item.quantity}x ${item.productName}', style: const TextStyle(fontSize: 14)),
-                                    Text('\$${item.total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                                    Text(
+                                        '${item.quantity}x ${item.productName}',
+                                        style: const TextStyle(fontSize: 14)),
+                                    Text('\$${item.total.toStringAsFixed(2)}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w500)),
                                   ],
                                 ),
                               );
@@ -504,12 +667,23 @@ class _OrdenesPageState extends State<OrdenesPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Importe Total:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text('\$${selectedOrderForModal!.totalAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
+                            const Text('Importe Total:',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text(
+                                '\$${selectedOrderForModal!.totalAmount.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: Colors.green)),
                           ],
                         ),
                         const SizedBox(height: 24),
-                        const Text('Flujo de Estados de Cocina:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+                        const Text('Flujo de Estados de Cocina:',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Colors.grey)),
                         const SizedBox(height: 10),
                         // Renglón de botones rápidos para mutar estado (Acciones directas)
                         Wrap(
@@ -518,31 +692,44 @@ class _OrdenesPageState extends State<OrdenesPage> {
                           children: [
                             if (selectedOrderForModal!.status == 'pendiente')
                               ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white),
                                 icon: const Icon(Icons.soup_kitchen),
                                 label: const Text('Cocinar'),
-                                onPressed: () => cambiarEstadoOrden(selectedOrderForModal!.id, 'preparando'),
+                                onPressed: () => cambiarEstadoOrden(
+                                    selectedOrderForModal!.id, 'preparando'),
                               ),
                             if (selectedOrderForModal!.status == 'preparando')
                               ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white),
                                 icon: const Icon(Icons.check),
                                 label: const Text('Listo'),
-                                onPressed: () => cambiarEstadoOrden(selectedOrderForModal!.id, 'lista'),
+                                onPressed: () => cambiarEstadoOrden(
+                                    selectedOrderForModal!.id, 'lista'),
                               ),
                             if (selectedOrderForModal!.status == 'lista')
                               ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, foregroundColor: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.grey,
+                                    foregroundColor: Colors.white),
                                 icon: const Icon(Icons.delivery_dining),
                                 label: const Text('Entregar'),
-                                onPressed: () => cambiarEstadoOrden(selectedOrderForModal!.id, 'entregada'),
+                                onPressed: () => cambiarEstadoOrden(
+                                    selectedOrderForModal!.id, 'entregada'),
                               ),
-                            if (selectedOrderForModal!.status != 'entregada' && selectedOrderForModal!.status != 'cancelada')
+                            if (selectedOrderForModal!.status != 'entregada' &&
+                                selectedOrderForModal!.status != 'cancelada')
                               OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red), foregroundColor: Colors.red),
+                                style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: Colors.red),
+                                    foregroundColor: Colors.red),
                                 icon: const Icon(Icons.cancel_outlined),
                                 label: const Text('Cancelar Orden'),
-                                onPressed: () => cambiarEstadoOrden(selectedOrderForModal!.id, 'cancelada'),
+                                onPressed: () => cambiarEstadoOrden(
+                                    selectedOrderForModal!.id, 'cancelada'),
                               ),
                           ],
                         )
@@ -561,11 +748,18 @@ class _OrdenesPageState extends State<OrdenesPage> {
   Widget _buildTopStatusIndicator(String title, String count, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(color: color.withAlpha(30), borderRadius: BorderRadius.circular(10), border: Border.all(color: color, width: 1.5)),
+      decoration: BoxDecoration(
+          color: color.withAlpha(30),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color, width: 1.5)),
       child: Row(
         children: [
-          Text('$title: ', style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13)),
-          Text(count, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15)),
+          Text('$title: ',
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.w600, fontSize: 13)),
+          Text(count,
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.bold, fontSize: 15)),
         ],
       ),
     );
