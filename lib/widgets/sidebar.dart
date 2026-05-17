@@ -1,109 +1,154 @@
 import 'package:flutter/material.dart';
-import '../app.dart'; 
+import 'package:provider/provider.dart';
+import '../state/app_state.dart'; // Importamos tu manejador de estado global
 
-class AppSidebar extends StatelessWidget {
-  final int currentIndex;
-  final Function(int) onIndexChanged;
+class CustomSidebar extends StatelessWidget {
+  final String currentSection;
+  final Function(String) onSectionSelected;
 
-  const AppSidebar({
+  const CustomSidebar({
     super.key,
-    required this.currentIndex,
-    required this.onIndexChanged,
+    required this.currentSection,
+    required this.onSectionSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Drawer(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final appState = context.watch<AppState>();
+
+    // Colores corporativos basados en tus paletas de Angular
+    final sidebarBg = Theme.of(context).cardColor;
+    final activeColor = Theme.of(context).primaryColor;
+    final inactiveColor = isDark ? const Color(0xFF9F9F9F) : const Color(0xFF6B6B6B);
+
+    return Container(
+      width: 260,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        color: sidebarBg,
+        border: Border(
+          right: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+        ),
+      ),
       child: Column(
         children: [
-          // 1. Header adaptativo al tema
-          UserAccountsDrawerHeader(
-            decoration: BoxDecoration(
-              // Usamos el color de la tarjeta (blanco o casi negro) y un borde inferior
-              color: Theme.of(context).cardTheme.color,
-              border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.1))),
-            ),
-            currentAccountPicture: CircleAvatar(
-              backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-              child: Icon(Icons.local_fire_department, color: Theme.of(context).primaryColor, size: 40),
-            ),
-            accountName: Text('La Brasa', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Theme.of(context).textTheme.titleMedium?.color)),
-            accountEmail: Text('PARRILLA & GRILL', style: TextStyle(letterSpacing: 1.2, color: Theme.of(context).textTheme.bodySmall?.color)),
-          ),
-
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
+          // Branding / Logo del POS La Brasa
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            alignment: Alignment.centerLeft,
+            child: Row(
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Text('Panel de Control', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
+                Icon(Icons.local_fire_department, color: activeColor, size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  'LA BRASA POS',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900, // <-- CORREGIDO: Cambiado de black a w900
+                    color: Theme.of(context).colorScheme.onSurface,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-                _buildTile(context, icon: Icons.dashboard, title: 'Dashboard', index: 0),
-                _buildTile(context, icon: Icons.shopping_bag, title: 'Productos', index: 1),
-                _buildTile(context, icon: Icons.widgets, title: 'Combos', index: 2),
-                _buildTile(context, icon: Icons.receipt_long, title: 'Recetas', index: 3),
-                _buildTile(context, icon: Icons.people, title: 'Empleados', index: 4),
-                _buildTile(context, icon: Icons.inventory, title: 'Inventario', index: 5),
-                _buildTile(context, icon: Icons.table_restaurant, title: 'Mesas', index: 6),
-                _buildTile(context, icon: Icons.bar_chart, title: 'Reportes', index: 7),
-                _buildTile(context, icon: Icons.money_off, title: 'Gastos', index: 8),
-                _buildTile(context, icon: Icons.assignment, title: 'Nómina', index: 9),
-                _buildTile(context, icon: Icons.history, title: 'Historial', index: 10),
-                _buildTile(context, icon: Icons.settings, title: 'Ajustes', index: 11),
-                
-                const Divider(),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Text('Extras', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
-                ),
-                _buildTile(context, icon: Icons.star, title: 'Tomar Orden', index: 12),
-                _buildTile(context, icon: Icons.point_of_sale, title: 'Caja', index: 13),
               ],
             ),
           ),
-
           const Divider(height: 1),
           
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: themeNotifier,
-            builder: (context, currentMode, _) {
-              final isDark = currentMode == ThemeMode.dark;
-              
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: const Text('D', style: TextStyle(color: Colors.white)),
+          // Listado de Módulos Operativos scrolleable
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              children: [
+                _buildMenuItem(context, title: 'Dashboard', icon: Icons.dashboard_outlined),
+                _buildMenuItem(context, title: 'Tomar Orden', icon: Icons.restaurant_menu_outlined),
+                _buildMenuItem(context, title: 'Órdenes', icon: Icons.receipt_long_outlined),
+                _buildMenuItem(context, title: 'Productos', icon: Icons.fastfood_outlined),
+                _buildMenuItem(context, title: 'Combos', icon: Icons.auto_awesome_motion_outlined),
+                _buildMenuItem(context, title: 'Mesas', icon: Icons.table_bar_outlined),
+                _buildMenuItem(context, title: 'Reservaciones', icon: Icons.calendar_today_outlined),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+                  child: Divider(height: 1),
                 ),
-                title: const Text('Dueño', style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('Propietario'),
-                trailing: IconButton(
-                  icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-                  tooltip: isDark ? 'Modo claro' : 'Modo oscuro',
-                  onPressed: () {
-                    themeNotifier.value = isDark ? ThemeMode.light : ThemeMode.dark;
+                _buildMenuItem(context, title: 'Empleados', icon: Icons.people_alt_outlined),
+                _buildMenuItem(context, title: 'Nóminas', icon: Icons.payments_outlined),
+                _buildMenuItem(context, title: 'Caja', icon: Icons.point_of_sale_outlined),
+                _buildMenuItem(context, title: 'Gastos', icon: Icons.money_off_csred_outlined),
+                _buildMenuItem(context, title: 'Inventario', icon: Icons.inventory_2_outlined),
+                _buildMenuItem(context, title: 'Recetas', icon: Icons.menu_book_outlined),
+                _buildMenuItem(context, title: 'Proveedores', icon: Icons.local_shipping_outlined),
+                _buildMenuItem(context, title: 'Cortes de Caja', icon: Icons.history_toggle_off_outlined),
+                _buildMenuItem(context, title: 'Ajustes', icon: Icons.settings_outlined),
+              ],
+            ),
+          ),
+          
+          // Interruptor inferior para cambiar de tema (Claro / Oscuro)
+          const Divider(height: 1),
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                      color: inactiveColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      isDark ? 'Modo Oscuro' : 'Modo Claro',
+                      style: TextStyle(color: inactiveColor, fontSize: 13, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+                Switch(
+                  value: isDark,
+                  activeThumbColor: activeColor, // <-- CORREGIDO: Cambiado de activeColor a activeThumbColor
+                  onChanged: (bool value) {
+                    appState.toggleDarkMode(); // <-- CORREGIDO: Vinculado al método nativo real de tu AppState
                   },
                 ),
-              );
-            },
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // 2. Elemento del menú más limpio (el tema maneja el color solo si isSelected es true)
-  Widget _buildTile(BuildContext context, {required IconData icon, required String title, required int index}) {
-    final isSelected = currentIndex == index;
+  Widget _buildMenuItem(BuildContext context, {required String title, required IconData icon}) {
+    final isSelected = currentSection == title;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final activeColor = Theme.of(context).primaryColor;
+    final inactiveColor = isDark ? const Color(0xFF9F9F9F) : const Color(0xFF6B6B6B);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: ListTile(
+        dense: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        leading: Icon(icon), // El color lo inyecta el ListTileThemeData
-        title: Text(title, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
         selected: isSelected,
+        selectedTileColor: activeColor.withValues(alpha: 0.12),
+        leading: Icon(
+          icon,
+          color: isSelected ? activeColor : inactiveColor,
+          size: 20,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? activeColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+        ),
         onTap: () {
-          onIndexChanged(index);
+          onSectionSelected(title);
         },
       ),
     );

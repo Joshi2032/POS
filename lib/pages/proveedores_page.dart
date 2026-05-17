@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
+import '../widgets/app_widgets.dart'; // Para consumir AppCard y SectionHeader
 
 class ProveedoresPage extends StatefulWidget {
   const ProveedoresPage({super.key});
@@ -54,49 +55,54 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: Text(payment == null ? 'Nuevo Pago' : 'Editar Pago'),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              title: Text(payment == null ? 'Nuevo Pago' : 'Editar Pago',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
                         controller: idController,
-                        decoration: const InputDecoration(labelText: 'ID')),
+                        decoration: const InputDecoration(labelText: 'ID', border: OutlineInputBorder()),
+                        readOnly: true),
+                    const SizedBox(height: 12),
                     TextField(
                         controller: providerController,
-                        decoration:
-                            const InputDecoration(labelText: 'Proveedor')),
+                        decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder())),
+                    const SizedBox(height: 12),
                     TextField(
                         controller: categoryController,
-                        decoration:
-                            const InputDecoration(labelText: 'Concepto')),
+                        decoration: const InputDecoration(labelText: 'Concepto', border: OutlineInputBorder())),
+                    const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      initialValue: method,
+                      dropdownColor: Theme.of(context).cardColor, // Mantiene el menú contextual oscuro
+                      initialValue: method, // Adaptado a los estándares de Flutter 3.33+
                       items: const [
-                        DropdownMenuItem(
-                            value: 'Transferencia',
-                            child: Text('Transferencia')),
-                        DropdownMenuItem(
-                            value: 'Efectivo', child: Text('Efectivo')),
-                        DropdownMenuItem(
-                            value: 'Tarjeta', child: Text('Tarjeta')),
+                        DropdownMenuItem(value: 'Transferencia', child: Text('Transferencia')),
+                        DropdownMenuItem(value: 'Efectivo', child: Text('Efectivo')),
+                        DropdownMenuItem(value: 'Tarjeta', child: Text('Tarjeta')),
                       ],
-                      onChanged: (value) => setDialogState(
-                          () => method = value ?? 'Transferencia'),
-                      decoration: const InputDecoration(labelText: 'Método'),
+                      onChanged: (value) => setDialogState(() => method = value ?? 'Transferencia'),
+                      decoration: const InputDecoration(labelText: 'Método', border: OutlineInputBorder()),
                     ),
+                    const SizedBox(height: 12),
                     TextField(
                         controller: amountController,
-                        decoration: const InputDecoration(labelText: 'Monto'),
+                        decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ ', border: OutlineInputBorder()),
                         keyboardType: TextInputType.number),
+                    const SizedBox(height: 12),
                     TextField(
                         controller: dateController,
-                        decoration: const InputDecoration(labelText: 'Fecha')),
+                        decoration: const InputDecoration(labelText: 'Fecha', border: OutlineInputBorder())),
+                    const SizedBox(height: 12),
                     TextField(
                         controller: timeController,
-                        decoration: const InputDecoration(labelText: 'Hora')),
+                        decoration: const InputDecoration(labelText: 'Hora', border: OutlineInputBorder())),
+                    const SizedBox(height: 12),
                     TextField(
                         controller: cashierController,
-                        decoration: const InputDecoration(labelText: 'Cajero')),
+                        decoration: const InputDecoration(labelText: 'Cajero', border: OutlineInputBorder())),
                   ],
                 ),
               ),
@@ -131,6 +137,10 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
                       Navigator.pop(context);
                     }
                   },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
                   child: const Text('Guardar'),
                 ),
               ],
@@ -159,105 +169,135 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
     final start = (currentPage - 1) * pageSize;
     final paginated = payments.skip(start).take(pageSize).toList();
 
+    final primaryTextColor = Theme.of(context).colorScheme.onSurface;
+    final mutedTextColor = Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Proveedores')),
+      backgroundColor: Colors.transparent, // Hereda el lienzo limpio de fondo de tu MainLayout
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            // 1. Encabezado Oficial tipo Dashboard/Web
+            SectionHeader(
+              title: '📦 Control de Proveedores',
+              subtitle: 'Historial de pagos y liquidación de insumos',
+              actionLabel: 'Nuevo Pago',
+              onAction: () => _openEditor(),
+            ),
+            const SizedBox(height: 24),
+
+            // 2. Buscador adaptativo global
+            TextField(
+              style: TextStyle(color: primaryTextColor),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Buscar por proveedor, concepto, método...',
+              ),
+              onChanged: _setSearch,
+            ),
+            const SizedBox(height: 24),
+
+            // 3. Grid de Tarjetas de Estadísticas unificadas con tu AppCard
+            GridView(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 220,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.8,
+              ),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search),
-                        hintText: 'Buscar proveedor...'),
-                    onChanged: _setSearch,
-                  ),
+                _buildStatCard(
+                  context,
+                  label: 'Pagos hoy',
+                  value: _money.format(app.providerPaymentsTodayTotal),
+                  note: '${app.providerPayments.where((p) => p['date'] == DateTime.now().toIso8601String().split('T').first).length} operaciones',
+                  tone: Colors.deepOrange,
                 ),
-                const SizedBox(width: 12),
-                FilledButton.icon(
-                  onPressed: () => _openEditor(),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nuevo Pago'),
-                )
+                _buildStatCard(
+                  context,
+                  label: 'Total semana',
+                  value: _money.format(app.providerPaymentsWeekTotal),
+                  note: 'Últimos 7 días',
+                  tone: Colors.red,
+                ),
+                _buildStatCard(
+                  context,
+                  label: 'Total mes',
+                  value: _money.format(app.providerPaymentsMonthTotal),
+                  note: 'Mes en curso',
+                  tone: Colors.green,
+                ),
+                _buildStatCard(
+                  context,
+                  label: 'Proveedores',
+                  value: app.providerPayments
+                      .map((e) => e['provider'])
+                      .whereType<String>()
+                      .toSet()
+                      .length
+                      .toString(),
+                  note: 'Rastreados distintos',
+                  tone: Colors.blue,
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _StatCard(
-                    label: 'Pagos hoy',
-                    value: _money.format(app.providerPaymentsTodayTotal),
-                    note:
-                        '${app.providerPayments.where((p) => p['date'] == DateTime.now().toIso8601String().split('T').first).length} pagos',
-                    tone: Colors.deepOrange),
-                _StatCard(
-                    label: 'Total semana',
-                    value: _money.format(app.providerPaymentsWeekTotal),
-                    note: 'última semana',
-                    tone: Colors.red),
-                _StatCard(
-                    label: 'Total mes',
-                    value: _money.format(app.providerPaymentsMonthTotal),
-                    note: 'mes actual',
-                    tone: Colors.green),
-                _StatCard(
-                    label: 'Proveedores',
-                    value: app.providerPayments
-                        .map((e) => e['provider'])
-                        .whereType<String>()
-                        .toSet()
-                        .length
-                        .toString(),
-                    note: 'distintos',
-                    tone: Colors.blue),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text('${payments.length} registro(s)',
+            const SizedBox(height: 24),
+
+            Text('${payments.length} registro(s) encontrado(s)',
                 style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
+
+            // 4. Lista de Historial integrada con el AppCard adaptativo
             Expanded(
               child: paginated.isEmpty
-                  ? const Center(
-                      child:
-                          Text('No hay pagos que coincidan con tu búsqueda.'))
+                  ? Center(
+                      child: Text(
+                        'No hay pagos que coincidan con tu búsqueda.',
+                        style: TextStyle(color: mutedTextColor),
+                      ),
+                    )
                   : ListView.separated(
                       itemCount: paginated.length,
-                      separatorBuilder: (_, __) => const Divider(),
+                      separatorBuilder: (_, __) => Divider(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
                       itemBuilder: (_, index) {
                         final payment = paginated[index];
-                        return Card(
+                        final providerName = payment['provider'] ?? '';
+                        return AppCard(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           child: ListTile(
+                            contentPadding: EdgeInsets.zero,
                             leading: CircleAvatar(
+                              backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                               child: Text(
-                                  (payment['provider'] as String).isNotEmpty
-                                      ? (payment['provider'] as String)[0]
-                                          .toUpperCase()
-                                      : '?'),
+                                providerName.isNotEmpty ? providerName[0].toUpperCase() : '?',
+                                style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
+                              ),
                             ),
-                            title: Text(payment['provider'] ?? ''),
-                            subtitle: Text(
-                                '${payment['category']} · ${payment['method']} · ${payment['date']} ${payment['time']}\nCajero: ${payment['cashier']}'),
+                            title: Text(providerName,
+                                style: TextStyle(fontWeight: FontWeight.bold, color: primaryTextColor)),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Text(
+                                  '${payment['category']} · ${payment['method']} · ${payment['date']} ${payment['time']}\nCajero: ${payment['cashier']}',
+                                  style: TextStyle(color: mutedTextColor)),
+                            ),
                             isThreeLine: true,
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(_money.format(payment['amount'] ?? 0.0),
-                                    style: const TextStyle(
-                                        fontWeight: FontWeight.w700)),
+                                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: primaryTextColor)),
+                                const SizedBox(width: 8),
                                 IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () =>
-                                        _openEditor(payment: payment)),
+                                    icon: const Icon(Icons.edit_outlined, color: Colors.blueGrey, size: 20),
+                                    onPressed: () => _openEditor(payment: payment)),
                                 IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    onPressed: () => app.removeProviderPayment(
-                                        payment['id'] as String)),
+                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                                    onPressed: () => app.removeProviderPayment(payment['id'] as String)),
                               ],
                             ),
                           ),
@@ -265,25 +305,25 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
                       },
                     ),
             ),
+
+            // 5. Paginador inferior perimetral
             if (totalPages > 1)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.only(top: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     OutlinedButton(
-                      onPressed: currentPage > 1
-                          ? () => _goToPage(currentPage - 1, totalPages)
-                          : null,
+                      onPressed: currentPage > 1 ? () => _goToPage(currentPage - 1, totalPages) : null,
+                      style: OutlinedButton.styleFrom(side: BorderSide(color: Theme.of(context).dividerColor)),
                       child: const Text('Anterior'),
                     ),
-                    const SizedBox(width: 12),
-                    Text('Página $currentPage de $totalPages'),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
+                    Text('Página $currentPage de $totalPages', style: TextStyle(color: primaryTextColor)),
+                    const SizedBox(width: 16),
                     OutlinedButton(
-                      onPressed: currentPage < totalPages
-                          ? () => _goToPage(currentPage + 1, totalPages)
-                          : null,
+                      onPressed: currentPage < totalPages ? () => _goToPage(currentPage + 1, totalPages) : null,
+                      style: OutlinedButton.styleFrom(side: BorderSide(color: Theme.of(context).dividerColor)),
                       child: const Text('Siguiente'),
                     ),
                   ],
@@ -294,41 +334,20 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
       ),
     );
   }
-}
 
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final String note;
-  final Color tone;
-
-  const _StatCard(
-      {required this.label,
-      required this.value,
-      required this.note,
-      required this.tone});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 200,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: tone.withValues(alpha: .08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: tone.withValues(alpha: .18)),
-      ),
+  // Tarjeta de estadística adaptada al contexto oscuro/claro
+  Widget _buildStatCard(BuildContext context, {required String label, required String value, required String note, required Color tone}) {
+    return AppCard(
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label,
-              style: TextStyle(color: tone, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Text(value,
-              style:
-                  const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          Text(label, style: TextStyle(color: tone, fontWeight: FontWeight.bold, fontSize: 12)),
           const SizedBox(height: 4),
-          Text(note, style: TextStyle(color: Colors.grey.shade700)),
+          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.onSurface)),
+          const SizedBox(height: 2),
+          Text(note, style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 11)),
         ],
       ),
     );
