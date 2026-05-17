@@ -23,6 +23,14 @@ class CustomSidebar extends StatelessWidget {
     final activeColor = Theme.of(context).primaryColor;
     final inactiveColor = isDark ? const Color(0xFF9F9F9F) : const Color(0xFF6B6B6B);
 
+    // Determina si alguna subsección del Panel de Control está activa para mantenerlo expandido por defecto
+    final controlPanelSections = [
+      'Dashboard', 'Productos', 'Combos', 'Recetas', 'Empleados', 
+      'Inventario', 'Mesas', 'Reportes', 'Gastos', 'Nóminas', 
+      'Cortes de Caja', 'Ajustes'
+    ];
+    final isControlPanelActive = controlPanelSections.contains(currentSection);
+
     return Container(
       width: 260,
       height: double.infinity,
@@ -61,26 +69,55 @@ class CustomSidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
               children: [
-                _buildMenuItem(context, title: 'Dashboard', icon: Icons.dashboard_outlined),
+                // --- MÓDULOS FUERA DEL MENÚ DESPLEGABLE ---
                 _buildMenuItem(context, title: 'Tomar Orden', icon: Icons.restaurant_menu_outlined),
+                _buildMenuItem(context, title: 'Caja', icon: Icons.point_of_sale_outlined),
+                _buildMenuItem(context, title: 'Proveedores', icon: Icons.local_shipping_outlined),
                 _buildMenuItem(context, title: 'Órdenes', icon: Icons.receipt_long_outlined),
-                _buildMenuItem(context, title: 'Productos', icon: Icons.fastfood_outlined),
-                _buildMenuItem(context, title: 'Combos', icon: Icons.auto_awesome_motion_outlined),
-                _buildMenuItem(context, title: 'Mesas', icon: Icons.table_bar_outlined),
                 _buildMenuItem(context, title: 'Reservaciones', icon: Icons.calendar_today_outlined),
+                
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
                   child: Divider(height: 1),
                 ),
-                _buildMenuItem(context, title: 'Empleados', icon: Icons.people_alt_outlined),
-                _buildMenuItem(context, title: 'Nóminas', icon: Icons.payments_outlined),
-                _buildMenuItem(context, title: 'Caja', icon: Icons.point_of_sale_outlined),
-                _buildMenuItem(context, title: 'Gastos', icon: Icons.money_off_csred_outlined),
-                _buildMenuItem(context, title: 'Inventario', icon: Icons.inventory_2_outlined),
-                _buildMenuItem(context, title: 'Recetas', icon: Icons.menu_book_outlined),
-                _buildMenuItem(context, title: 'Proveedores', icon: Icons.local_shipping_outlined),
-                _buildMenuItem(context, title: 'Cortes de Caja', icon: Icons.history_toggle_off_outlined),
-                _buildMenuItem(context, title: 'Ajustes', icon: Icons.settings_outlined),
+                
+                // --- MENÚ DESPLEGABLE: PANEL DE CONTROL ---
+                Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    initiallyExpanded: isControlPanelActive,
+                    leading: Icon(
+                      Icons.settings_input_component_outlined, 
+                      color: isControlPanelActive ? activeColor : inactiveColor,
+                      size: 20
+                    ),
+                    title: Text(
+                      'Panel de Control',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isControlPanelActive ? activeColor : textColor,
+                      ),
+                    ),
+                    iconColor: activeColor,
+                    collapsedIconColor: inactiveColor,
+                    childrenPadding: const EdgeInsets.only(left: 12),
+                    children: [
+                      _buildMenuItem(context, title: 'Dashboard', icon: Icons.dashboard_outlined),
+                      _buildMenuItem(context, title: 'Productos', icon: Icons.fastfood_outlined),
+                      _buildMenuItem(context, title: 'Combos', icon: Icons.auto_awesome_motion_outlined),
+                      _buildMenuItem(context, title: 'Recetas', icon: Icons.menu_book_outlined),
+                      _buildMenuItem(context, title: 'Empleados', icon: Icons.people_alt_outlined),
+                      _buildMenuItem(context, title: 'Inventario', icon: Icons.inventory_2_outlined),
+                      _buildMenuItem(context, title: 'Mesas', icon: Icons.table_bar_outlined),
+                      _buildMenuItem(context, title: 'Reportes', icon: Icons.bar_chart_outlined),
+                      _buildMenuItem(context, title: 'Gastos', icon: Icons.money_off_csred_outlined),
+                      _buildMenuItem(context, title: 'Nóminas', icon: Icons.payments_outlined),
+                      _buildMenuItem(context, title: 'Cortes de Caja', icon: Icons.history_toggle_off_outlined),
+                      _buildMenuItem(context, title: 'Ajustes', icon: Icons.settings_outlined),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

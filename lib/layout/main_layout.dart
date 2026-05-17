@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../widgets/sidebar.dart';
-// Importaciones de todas tus páginas del repositorio corregidas
 import '../pages/dashboard_page.dart';
 import '../pages/tomar_orden_page.dart';
 import '../pages/productos_page.dart';
@@ -13,8 +12,9 @@ import '../pages/inventario_page.dart';
 import '../pages/ordenes_page.dart';
 import '../pages/reservaciones_page.dart';
 import '../pages/recetas_page.dart';
-import '../pages/proveedores_page.dart'; // Módulo de proveedores
+import '../pages/proveedores_page.dart'; 
 import '../pages/combos_page.dart';
+import '../pages/reportes_page.dart'; // Importación de la página de reportes
 import '../pages/historial_cortes_page.dart';
 import '../pages/ajustes_page.dart';
 
@@ -32,38 +32,44 @@ class _MainLayoutState extends State<MainLayout> {
   // Mapeador dinámico que inyecta la página correspondiente en el contenedor principal
   Widget _getBodyWidget() {
     switch (_currentSection) {
-      case 'Dashboard':
-        return const DashboardPage();
+      // Fuera del menú desplegable
       case 'Tomar Orden':
         return const TomarOrdenPage();
+      case 'Caja':
+        return const CajaPage();
+      case 'Proveedores':
+        return const ProveedoresPage();
       case 'Órdenes':
         return const OrdenesPage();
+      case 'Reservaciones':
+        return const ReservacionesPage();
+
+      // Dentro de Panel de Control (Menú Desplegable)
+      case 'Dashboard':
+        return const DashboardPage();
       case 'Productos':
         return const ProductosPage();
       case 'Combos':
         return const CombosPage();
-      case 'Mesas':
-        return const MesasPage();
-      case 'Reservaciones':
-        return const ReservacionesPage();
-      case 'Empleados':
-        return const EmpleadosPage();
-      case 'Nóminas':
-        return const NominasPage();
-      case 'Caja':
-        return const CajaPage();
-      case 'Gastos':
-        return const GastosPage();
-      case 'Inventario':
-        return const InventarioPage();
       case 'Recetas':
         return const RecetasPage();
-      case 'Proveedores':
-        return const ProveedoresPage(); // <-- CORREGIDO: Cambiado de ProvidersPage a ProveedoresPage
+      case 'Empleados':
+        return const EmpleadosPage();
+      case 'Inventario':
+        return const InventarioPage();
+      case 'Mesas':
+        return const MesasPage();
+      case 'Reportes':
+        return const ReportesPage();
+      case 'Gastos':
+        return const GastosPage();
+      case 'Nóminas':
+        return const NominasPage();
       case 'Cortes de Caja':
         return const HistorialCortesPage();
       case 'Ajustes':
         return const AjustesPage();
+        
       default:
         return const DashboardPage();
     }
