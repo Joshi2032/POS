@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../state/app_state.dart'; // Importamos tu manejador de estado global
+import '../state/app_state.dart';
 
 class CustomSidebar extends StatelessWidget {
   final String currentSection;
@@ -14,11 +14,12 @@ class CustomSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final appState = context.watch<AppState>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Colores corporativos basados en tus paletas de Angular
-    final sidebarBg = Theme.of(context).cardColor;
+    // Colores dinámicos basados en el tema activo
+    final sidebarBg = isDark ? const Color(0xFF1E1E2D) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
     final activeColor = Theme.of(context).primaryColor;
     final inactiveColor = isDark ? const Color(0xFF9F9F9F) : const Color(0xFF6B6B6B);
 
@@ -45,8 +46,8 @@ class CustomSidebar extends StatelessWidget {
                   'LA BRASA POS',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w900, // <-- CORREGIDO: Cambiado de black a w900
-                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w900,
+                    color: textColor,
                     letterSpacing: 1.2,
                   ),
                 ),
@@ -106,10 +107,10 @@ class CustomSidebar extends StatelessWidget {
                   ],
                 ),
                 Switch(
-                  value: isDark,
-                  activeThumbColor: activeColor, // <-- CORREGIDO: Cambiado de activeColor a activeThumbColor
+                  value: appState.darkMode,
+                  activeThumbColor: activeColor,
                   onChanged: (bool value) {
-                    appState.toggleDarkMode(); // <-- CORREGIDO: Vinculado al método nativo real de tu AppState
+                    appState.toggleDarkMode();
                   },
                 ),
               ],
@@ -126,6 +127,7 @@ class CustomSidebar extends StatelessWidget {
     
     final activeColor = Theme.of(context).primaryColor;
     final inactiveColor = isDark ? const Color(0xFF9F9F9F) : const Color(0xFF6B6B6B);
+    final textThemeColor = isDark ? Colors.white70 : Colors.black87;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -144,7 +146,7 @@ class CustomSidebar extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? activeColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+            color: isSelected ? activeColor : textThemeColor,
           ),
         ),
         onTap: () {

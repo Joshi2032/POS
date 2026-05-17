@@ -190,10 +190,14 @@ class TomarOrdenPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // EVALUAR SI ESTÁ ACTIVO EL MODO OSCURO GLOBAL
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark ? const Color(0xFF13131A) : Colors.grey[50];
+
     return ChangeNotifierProvider(
       create: (_) => TomarOrdenProvider(),
       child: Scaffold(
-        backgroundColor: Colors.grey[50], // var(--bg-primary)
+        backgroundColor: scaffoldBg, // COLOR ADAPTATIVO
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -207,7 +211,7 @@ class TomarOrdenPage extends StatelessWidget {
                 return Row(
                   children: [
                     const Expanded(flex: 7, child: _MenuSection(isMobile: false)),
-                    VerticalDivider(width: 1, color: Colors.grey[300]),
+                    VerticalDivider(width: 1, color: isDark ? const Color(0xFF2D2D44) : Colors.grey[300]),
                     const SizedBox(width: 380, child: _CartSection(isMobile: false)),
                   ],
                 );
@@ -240,10 +244,12 @@ class TomarOrdenPage extends StatelessWidget {
   // Abre el carrito en la parte inferior como un Drawer en móviles (max-height: 76vh;)
   void _openMobileCart(BuildContext context) {
     final provider = context.read<TomarOrdenProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF1E1E2D) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -268,6 +274,13 @@ class _MenuSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<TomarOrdenProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // COLORES INTERNOS ADAPTATIVOS
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final textSubColor = isDark ? Colors.white60 : Colors.grey[600];
+    final searchFillColor = isDark ? const Color(0xFF1E1E2D) : Colors.grey[100];
+    final cardBg = isDark ? const Color(0xFF1E1E2D) : Colors.white;
 
     return Padding(
       padding: const EdgeInsets.all(18.0),
@@ -275,8 +288,8 @@ class _MenuSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Principal
-          const Text('Tomar Orden', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-          Text('Registra los productos del cliente', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+          Text('Tomar Orden', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
+          Text('Registra los productos del cliente', style: TextStyle(color: textSubColor, fontSize: 14)),
           const SizedBox(height: 14),
 
           // Selector de Tipo de Orden: Dine-in / Takeaway
@@ -299,11 +312,13 @@ class _MenuSection extends StatelessWidget {
 
           // Input de Búsqueda (app-search-input)
           TextField(
+            style: TextStyle(color: textColor),
             decoration: InputDecoration(
               hintText: 'Buscar por nombre, desc...',
-              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey),
+              prefixIcon: Icon(Icons.search, color: isDark ? Colors.white38 : Colors.grey),
               filled: true,
-              fillColor: Colors.grey[100],
+              fillColor: searchFillColor,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none,
@@ -326,8 +341,9 @@ class _MenuSection extends StatelessWidget {
                     label: Text(cat),
                     selected: isSelected,
                     selectedColor: Theme.of(context).primaryColor,
+                    backgroundColor: cardBg,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
+                      color: isSelected ? Colors.white : textColor,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                     onSelected: (_) => provider.setCategory(cat),
@@ -341,24 +357,57 @@ class _MenuSection extends StatelessWidget {
           // Grid Principal de productos con Empty State integrado
           Expanded(
             child: provider.visibleProducts.isEmpty
-                ? const Center(child: Text('No hay productos que coincidan con la búsqueda.', style: TextStyle(color: Colors.grey)))
+                ? Center(child: Text('No hay productos que coincidan con la búsqueda.', style: TextStyle(color: textSubColor)))
                 : GridView.builder(
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: MediaQuery.of(context).size.width < 600 ? 1 : (isMobile ? 2 : 3),
-                      childAspectRatio: isMobile ? 1.25 : 1.35,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
+                    gridDelegate: GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: MediaQuery.of(context).size.width < 600 ? 1 : (isMobile ? 2 : 3),
+                        childAspectRatio: isMobile ? 1.25 : 1.35,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemCount: provider.visibleProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = provider.visibleProducts[index];
+                        return Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          color: cardBg,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => provider.addToCart(product),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(product.category.toUpperCase(), style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                  const SizedBox(height: 4),
+                                  Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  const SizedBox(height: 4),
+                                  Expanded(child: Text(product.description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[500], height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                                  const SizedBox(height: 4),
+                                  Text('\$${product.price.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ).gridDelegate,
                     itemCount: provider.visibleProducts.length,
                     itemBuilder: (context, index) {
                       final product = provider.visibleProducts[index];
                       return Card(
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          side: BorderSide(color: Colors.grey[200]!),
+                          side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        color: Colors.white,
+                        color: cardBg,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () => provider.addToCart(product),
@@ -367,11 +416,11 @@ class _MenuSection extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(product.category.toUpperCase(), style: TextStyle(fontSize: 10, color: Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                Text(product.category.toUpperCase(), style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                 const SizedBox(height: 4),
-                                Text(product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 const SizedBox(height: 4),
-                                Expanded(child: Text(product.description, style: TextStyle(fontSize: 12, color: Colors.grey[500], height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                                Expanded(child: Text(product.description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[500], height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis)),
                                 const SizedBox(height: 4),
                                 Text('\$${product.price.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
                               ],
@@ -389,13 +438,14 @@ class _MenuSection extends StatelessWidget {
 
   Widget _buildTypeButton(BuildContext context, String text, OrderType type, TomarOrdenProvider provider) {
     final isSelected = provider.orderType == type;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: SizedBox(
         height: 40,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected ? Theme.of(context).primaryColor : Colors.grey[100],
-            foregroundColor: isSelected ? Colors.white : Colors.black87,
+            backgroundColor: isSelected ? Theme.of(context).primaryColor : (isDark ? const Color(0xFF1E1E2D) : Colors.grey[100]),
+            foregroundColor: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -407,9 +457,10 @@ class _MenuSection extends StatelessWidget {
   }
 
   Widget _buildChipsRow(BuildContext context, String label, List<String> options, String selectedValue, ValueChanged<String> onSelected) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        SizedBox(width: 50, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.grey))),
+        SizedBox(width: 50, child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white38 : Colors.grey))),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -422,8 +473,9 @@ class _MenuSection extends StatelessWidget {
                     label: Text(opt),
                     selected: isSelected,
                     selectedColor: Theme.of(context).primaryColor,
+                    backgroundColor: isDark ? const Color(0xFF1E1E2D) : Colors.white,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black87,
+                      color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
                     ),
                     onSelected: (_) => onSelected(opt),
                   ),
@@ -445,6 +497,12 @@ class _CartSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<TomarOrdenProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final textSubColor = isDark ? Colors.white60 : Colors.grey;
+    final cardBg = isDark ? const Color(0xFF1E1E2D) : Colors.white;
+    final countBg = isDark ? const Color(0xFF232334) : Colors.grey[200];
 
     return Column(
       children: [
@@ -459,18 +517,18 @@ class _CartSection extends StatelessWidget {
                 children: [
                   Text(
                     provider.orderType == OrderType.dineIn ? 'Mesa ${provider.selectedTable}' : 'Para Llevar',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
                   ),
-                  Text(provider.orderType == OrderType.dineIn ? 'Servicio en Mesa' : 'Recoger en Cocina', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(provider.orderType == OrderType.dineIn ? 'Servicio en Mesa' : 'Recoger en Cocina', style: TextStyle(fontSize: 12, color: textSubColor)),
                 ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(12)),
-                child: Text('${provider.itemsCount} Items', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                decoration: BoxDecoration(color: countBg, borderRadius: BorderRadius.circular(12)),
+                child: Text('${provider.itemsCount} Items', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textColor)),
               ),
               if (isMobile)
-                IconButton(icon: const Icon(Icons.close, size: 22), onPressed: () => Navigator.pop(context))
+                IconButton(icon: Icon(Icons.close, size: 22, color: textColor), onPressed: () => Navigator.pop(context))
             ],
           ),
         ),
@@ -479,7 +537,7 @@ class _CartSection extends StatelessWidget {
         // Lista de Productos en el carrito
         Expanded(
           child: provider.cart.isEmpty
-              ? const Center(child: Text('El carrito está vacío', style: TextStyle(color: Colors.grey)))
+              ? Center(child: Text('El carrito está vacío', style: TextStyle(color: textSubColor)))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: provider.cart.length,
@@ -487,8 +545,8 @@ class _CartSection extends StatelessWidget {
                     final item = provider.cart[index];
                     return Card(
                       elevation: 0,
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(side: BorderSide(color: Colors.grey[200]!), borderRadius: BorderRadius.circular(10)),
+                      color: cardBg,
+                      shape: RoundedRectangleBorder(side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!), borderRadius: BorderRadius.circular(10)),
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: Padding(
                         padding: const EdgeInsets.all(10.0),
@@ -497,7 +555,7 @@ class _CartSection extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(child: Text(item.product.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), overflow: TextOverflow.ellipsis)),
+                                Expanded(child: Text(item.product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), overflow: TextOverflow.ellipsis)),
                                 Text('\$${item.total.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
                               ],
                             ),
@@ -509,12 +567,12 @@ class _CartSection extends StatelessWidget {
                                 Row(
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.remove_circle_outline, size: 22, color: Colors.grey),
+                                      icon: Icon(Icons.remove_circle_outline, size: 22, color: isDark ? Colors.white60 : Colors.grey),
                                       onPressed: () => provider.decrement(item),
                                     ),
-                                    Text('${item.qty}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                    Text('${item.qty}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor)),
                                     IconButton(
-                                      icon: const Icon(Icons.add_circle_outline, size: 22, color: Colors.grey),
+                                      icon: Icon(Icons.add_circle_outline, size: 22, color: isDark ? Colors.white60 : Colors.grey),
                                       onPressed: () => provider.increment(item),
                                     ),
                                   ],
@@ -540,10 +598,12 @@ class _CartSection extends StatelessWidget {
           child: Column(
             children: [
               TextField(
+                style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Notas de la orden (ej: sin cebolla)...',
-                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
-                  border: const OutlineInputBorder(),
+                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey[400], fontSize: 13),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey)),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).primaryColor)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 ),
                 onChanged: (v) => provider.setNotes(v),
@@ -552,10 +612,10 @@ class _CartSection extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total General', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+                  Text('Total General', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textColor)),
                   Text(
                     '\$${provider.total.toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
                   ),
                 ],
               ),
@@ -566,7 +626,7 @@ class _CartSection extends StatelessWidget {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[600],
-                    disabledBackgroundColor: Colors.grey[300],
+                    disabledBackgroundColor: isDark ? const Color(0xFF232334) : Colors.grey[300],
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
