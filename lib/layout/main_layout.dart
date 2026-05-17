@@ -10,6 +10,7 @@ import '../pages/mesas_page.dart';
 import '../pages/empleados_page.dart';
 import '../pages/gastos_page.dart';
 import '../pages/reportes_page.dart';
+import '../pages/nominas_page.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -31,7 +32,7 @@ class _MainLayoutState extends State<MainLayout> {
     const MesasPage(),                           // 6
     const ReportesPage(),                        // 7
     const GastosPage(),                          // 8
-    const Center(child: Text('Nómina Page')),    // 9
+    const NominasPage(),                         // 9
     const Center(child: Text('Historial')),      // 10
     const Center(child: Text('Ajustes Page')),   // 11
     const TomarOrdenPage(),                      // 12

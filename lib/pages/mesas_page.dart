@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../state/app_state.dart';
-import '../theme/app_theme.dart';
-import '../widgets/search_bar.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/layout_widgets.dart';
-import '../widgets/form_widgets.dart';
+import '../widgets/search_bar.dart';
+
+class Mesa {
+  final String numero;
+  final String area;
+  final int capacidad;
+  final String estado;
+
+  Mesa({
+    required this.numero,
+    required this.area,
+    required this.capacidad,
+    required this.estado,
+  });
+}
 
 class MesasPage extends StatefulWidget {
   const MesasPage({super.key});
@@ -15,190 +25,235 @@ class MesasPage extends StatefulWidget {
 }
 
 class _MesasPageState extends State<MesasPage> {
-  String search = '';
-  int currentPage = 1;
-  final pageSize = 12;
+  final List<Mesa> _mesas = [
+    Mesa(numero: 'Mesa 1', area: 'Terraza', capacidad: 4, estado: 'Disponible'),
+    Mesa(numero: 'Mesa 2', area: 'Terraza', capacidad: 6, estado: 'Ocupada'),
+    Mesa(numero: 'Mesa 3', area: 'Salón Principal', capacidad: 2, estado: 'Reservada'),
+    Mesa(numero: 'Mesa 4', area: 'VIP', capacidad: 8, estado: 'Disponible'),
+  ];
 
-  void _openEditor({Map<String, dynamic>? mesa}) {
-    final idController = TextEditingController(
-        text: mesa?['id'] ?? 'M-${DateTime.now().millisecondsSinceEpoch}');
-    final nameController = TextEditingController(text: mesa?['name'] ?? '');
-    final capacidadController =
-        TextEditingController(text: mesa?['capacidad']?.toString() ?? '4');
-    final areaController = TextEditingController(text: mesa?['area'] ?? 'Sala');
+  String _searchTerm = '';
+  String _selectedEstado = 'Todos';
+
+  final List<String> _estados = ['Todos', 'Disponible', 'Ocupada', 'Reservada'];
+  final List<String> _areas = ['Salón Principal', 'Terraza', 'VIP', 'Bar'];
+
+  List<Mesa> get _mesasFiltrados {
+    return _mesas.where((m) {
+      final matchesSearch = m.numero.toLowerCase().contains(_searchTerm.toLowerCase()) ||
+          m.area.toLowerCase().contains(_searchTerm.toLowerCase());
+      final matchesEstado = _selectedEstado == 'Todos' || m.estado == _selectedEstado;
+      return matchesSearch && matchesEstado;
+    }).toList();
+  }
+
+  final _formKey = GlobalKey<FormState>();
+  final _numeroCtrl = TextEditingController();
+  final _capacidadCtrl = TextEditingController();
+  String _formArea = 'Salón Principal';
+  String _formEstado = 'Disponible';
+
+  void _abrirFormularioModal({Mesa? mesa, int? index}) {
+    if (mesa != null) {
+      _numeroCtrl.text = mesa.numero;
+      _capacidadCtrl.text = mesa.capacidad.toString();
+      _formArea = mesa.area;
+      _formEstado = mesa.estado;
+    } else {
+      _numeroCtrl.clear();
+      _capacidadCtrl.clear();
+      _formArea = 'Salón Principal';
+      _formEstado = 'Disponible';
+    }
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(mesa == null ? 'Nueva Mesa' : 'Editar Mesa',
-            style: Theme.of(context).textTheme.headlineMedium),
-        content: SingleChildScrollView(
-          child: Column(
-            children: [
-              FormFieldWidget(
-                  label: 'ID', hint: 'M-001', controller: idController),
-              FormFieldWidget(
-                  label: 'Nombre', hint: 'Mesa 1', controller: nameController),
-              FormFieldWidget(
-                  label: 'Capacidad',
-                  hint: '4',
-                  controller: capacidadController,
-                  keyboardType: TextInputType.number),
-              FormFieldWidget(
-                  label: 'Área', hint: 'Sala', controller: areaController),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () {
-              final app = context.read<AppState>();
-              final data = {
-                'id': idController.text,
-                'name': nameController.text.trim(),
-                'capacidad': int.tryParse(capacidadController.text) ?? 4,
-                'area': areaController.text.trim(),
-                'estado': mesa?['estado'] ?? 'Libre'
-              };
-              if (mesa == null) {
-                app.addMesa(data);
-              } else {
-                app.updateMesa(mesa['id'], data);
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Guardar'),
-          )
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              title: Text(mesa != null ? 'Editar Configuración' : 'Nueva Mesa', 
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: _numeroCtrl,
+                        decoration: const InputDecoration(labelText: 'Identificador (Ej: Mesa 1)', border: OutlineInputBorder()),
+                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        dropdownColor: Theme.of(context).cardColor,
+                        value: _formArea,
+                        decoration: const InputDecoration(labelText: 'Ubicación / Área', border: OutlineInputBorder()),
+                        items: _areas.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
+                        onChanged: (v) => setModalState(() => _formArea = v!),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _capacidadCtrl,
+                        decoration: const InputDecoration(labelText: 'Capacidad de Comensales', border: OutlineInputBorder()),
+                        keyboardType: TextInputType.number,
+                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        dropdownColor: Theme.of(context).cardColor,
+                        value: _formEstado,
+                        decoration: const InputDecoration(labelText: 'Estado Operativo', border: OutlineInputBorder()),
+                        items: _estados.where((e) => e != 'Todos').map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                        onChanged: (v) => setModalState(() => _formEstado = v!),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      final nuevo = Mesa(
+                        numero: _numeroCtrl.text,
+                        area: _formArea,
+                        capacidad: int.tryParse(_capacidadCtrl.text) ?? 4,
+                        estado: _formEstado,
+                      );
+                      setState(() {
+                        if (index != null) {
+                          _mesas[index] = nuevo;
+                        } else {
+                          _mesas.add(nuevo);
+                        }
+                      });
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: Text(mesa != null ? 'Guardar' : 'Crear'),
+                )
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final mesas = app.mesas.where((m) {
-      if (search.isEmpty) return true;
-      final q = search.toLowerCase();
-      return [m['name'], m['area'], m['estado']]
-          .whereType<String>()
-          .any((v) => v.toLowerCase().contains(q));
-    }).toList();
-
-    final totalPages = (mesas.length / pageSize).ceil().clamp(1, 999999);
-    final start = (currentPage - 1) * pageSize;
-    final paginated = mesas.skip(start).take(pageSize).toList();
+    final filtrados = _mesasFiltrados;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mesas')),
+      backgroundColor: Colors.transparent,
       body: Padding(
-        padding: const EdgeInsets.all(AppTheme.lg),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CustomSearchBar(
-                hint: 'Buscar mesas por nombre o área...',
-                onChanged: (value) => setState(() {
-                      search = value;
-                      currentPage = 1;
-                    })),
-            const SizedBox(height: AppTheme.lg),
-            Align(
-                alignment: Alignment.centerLeft,
-                child: Text('${mesas.length} mesa(s)',
-                    style: Theme.of(context).textTheme.titleMedium)),
-            const SizedBox(height: AppTheme.md),
+            SectionHeader(
+              title: '🍽️ Control de Mesas',
+              subtitle: '${_mesas.where((m) => m.estado == 'Ocupada').length} mesas ocupadas actualmente',
+              actionLabel: 'Nueva Mesa',
+              onAction: () => _abrirFormularioModal(),
+            ),
+            const SizedBox(height: 24),
+            
+            // Barra de búsqueda y filtrado tematizado
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: CustomSearchBar(
+                    hint: 'Buscar por identificador o área...',
+                    onChanged: (v) => setState(() => _searchTerm = v),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 1,
+                  child: DropdownButtonFormField<String>(
+                    dropdownColor: Theme.of(context).cardColor,
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+                    decoration: const InputDecoration(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                    value: _selectedEstado,
+                    items: _estados.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                    onChanged: (v) => setState(() => _selectedEstado = v!),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            
             Expanded(
-              child: paginated.isEmpty
+              child: filtrados.isEmpty
                   ? EmptyState(
-                      message: 'No hay mesas que coincidan con tu búsqueda',
-                      actionLabel: 'Agregar Mesa',
-                      onAction: _openEditor)
-                  : ListView.separated(
-                      itemCount: paginated.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: AppTheme.md),
-                      itemBuilder: (_, index) {
-                        final mesa = paginated[index];
-                        final estado = mesa['estado'] ?? 'Libre';
-                        final statusColor = estado == 'Libre'
-                            ? AppTheme.successColor
-                            : estado == 'Ocupada'
-                                ? AppTheme.warningColor
-                                : AppTheme.errorColor;
+                      message: 'No hay mesas en este estado operativo.',
+                      icon: Icons.table_bar_outlined,
+                      actionLabel: 'Ver Todas',
+                      onAction: () => setState(() { _searchTerm = ''; _selectedEstado = 'Todos'; }),
+                    )
+                  : GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 260,
+                        childAspectRatio: 1.2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: filtrados.length,
+                      itemBuilder: (context, idx) {
+                        final mesa = filtrados[idx];
+                        
+                        Color estadoColor = Colors.green;
+                        if (mesa.estado == 'Ocupada') estadoColor = Colors.redAccent;
+                        if (mesa.estado == 'Reservada') estadoColor = Colors.orange;
+
                         return AppCard(
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(
-                                        AppTheme.radiusMd)),
-                                child: Center(
-                                    child: Icon(Icons.table_restaurant,
-                                        color: statusColor, size: 24)),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(mesa.numero, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: estadoColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(mesa.estado, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: estadoColor)),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: AppTheme.lg),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(mesa['name'],
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium),
-                                    Text(
-                                        '${mesa['capacidad']} personas · ${mesa['area']}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: AppTheme.md,
-                                    vertical: AppTheme.sm),
-                                decoration: BoxDecoration(
-                                    color: statusColor.withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(
-                                        AppTheme.radiusMd)),
-                                child: Text(estado,
-                                    style: TextStyle(
-                                        color: statusColor,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12)),
-                              ),
-                              const SizedBox(width: AppTheme.md),
-                              IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: () => _openEditor(mesa: mesa)),
-                              IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () => app.removeMesa(mesa['id'])),
+                              const SizedBox(height: 8),
+                              Text('Área: ${mesa.area}', style: Theme.of(context).textTheme.bodySmall),
+                              Text('Capacidad: ${mesa.capacidad} personas', style: Theme.of(context).textTheme.bodySmall),
+                              const Spacer(),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.settings_outlined, size: 20, color: Colors.blueGrey),
+                                    onPressed: () => _abrirFormularioModal(mesa: mesa, index: _mesas.indexOf(mesa)),
+                                  ),
+                                ],
+                              )
                             ],
                           ),
                         );
                       },
                     ),
             ),
-            if (totalPages > 1)
-              PaginationWidget(
-                  currentPage: currentPage,
-                  totalPages: totalPages,
-                  onPrevious: () => setState(() => currentPage--),
-                  onNext: () => setState(() => currentPage++)),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-          onPressed: _openEditor,
-          icon: const Icon(Icons.add),
-          label: const Text('Nueva Mesa')),
     );
   }
 }
