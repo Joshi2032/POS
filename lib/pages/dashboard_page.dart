@@ -13,23 +13,103 @@ class _DashboardPageState extends State<DashboardPage> {
   String _filterType = 'semana';
 
   // Datos financieros replicados del modelo web original
-  final List<String> weekLabels = ['mar', 'mié', 'jue', 'vie', 'sab', 'dom', 'lun'];
-  final List<double> weekIngresos = [12000, 15000, 9000, 18000, 21000, 24000, 7000];
+  final List<String> weekLabels = [
+    'mar',
+    'mié',
+    'jue',
+    'vie',
+    'sab',
+    'dom',
+    'lun'
+  ];
+  final List<double> weekIngresos = [
+    12000,
+    15000,
+    9000,
+    18000,
+    21000,
+    24000,
+    7000
+  ];
   final List<double> weekGastos = [6000, 8000, 7000, 9000, 11000, 12000, 5000];
-  final List<double> weekUtilidad = [6000, 7000, 2000, 9000, 10000, 12000, 2000];
+  final List<double> weekUtilidad = [
+    6000,
+    7000,
+    2000,
+    9000,
+    10000,
+    12000,
+    2000
+  ];
 
   final List<String> monthLabels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
   final List<double> monthIngresos = [52000, 48000, 61000, 57000];
   final List<double> monthGastos = [26000, 22000, 31000, 27000];
   final List<double> monthUtilidad = [26000, 26000, 30000, 30000];
 
-  final List<String> yearLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  final List<double> yearIngresos = [210000, 220000, 205000, 230000, 240000, 250000, 260000, 255000, 245000, 235000, 225000, 215000];
-  final List<double> yearGastos = [110000, 115000, 108000, 120000, 125000, 130000, 135000, 132000, 128000, 124000, 120000, 118000];
-  final List<double> yearUtilidad = [100000, 105000, 97000, 110000, 115000, 120000, 125000, 123000, 117000, 111000, 105000, 97000];
+  final List<String> yearLabels = [
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic'
+  ];
+  final List<double> yearIngresos = [
+    210000,
+    220000,
+    205000,
+    230000,
+    240000,
+    250000,
+    260000,
+    255000,
+    245000,
+    235000,
+    225000,
+    215000
+  ];
+  final List<double> yearGastos = [
+    110000,
+    115000,
+    108000,
+    120000,
+    125000,
+    130000,
+    135000,
+    132000,
+    128000,
+    124000,
+    120000,
+    118000
+  ];
+  final List<double> yearUtilidad = [
+    100000,
+    105000,
+    97000,
+    110000,
+    115000,
+    120000,
+    125000,
+    123000,
+    117000,
+    111000,
+    105000,
+    97000
+  ];
 
   List<FlSpot> _getSpots(List<double> data) {
-    return data.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList();
+    return data
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value))
+        .toList();
   }
 
   LineChartData _buildLineChartData(BuildContext context) {
@@ -58,7 +138,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
     final primaryColor = Theme.of(context).primaryColor;
     final errorColor = Theme.of(context).colorScheme.error;
-    final textStyle = TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6));
+    final textStyle = TextStyle(
+        fontSize: 11,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6));
 
     return LineChartData(
       gridData: FlGridData(
@@ -71,7 +153,8 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       ),
       titlesData: FlTitlesData(
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
@@ -108,7 +191,8 @@ class _DashboardPageState extends State<DashboardPage> {
           barWidth: 3,
           dotData: FlDotData(
             show: true,
-            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+            getDotPainter: (spot, percent, barData, index) =>
+                FlDotCirclePainter(
               radius: 4,
               color: Theme.of(context).cardColor,
               strokeWidth: 2,
@@ -118,7 +202,10 @@ class _DashboardPageState extends State<DashboardPage> {
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [primaryColor.withValues(alpha: 0.25), primaryColor.withValues(alpha: 0.01)],
+              colors: [
+                primaryColor.withValues(alpha: 0.25),
+                primaryColor.withValues(alpha: 0.01)
+              ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -131,7 +218,8 @@ class _DashboardPageState extends State<DashboardPage> {
           barWidth: 3,
           dotData: FlDotData(
             show: true,
-            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+            getDotPainter: (spot, percent, barData, index) =>
+                FlDotCirclePainter(
               radius: 4,
               color: Theme.of(context).cardColor,
               strokeWidth: 2,
@@ -141,7 +229,10 @@ class _DashboardPageState extends State<DashboardPage> {
           belowBarData: BarAreaData(
             show: true,
             gradient: LinearGradient(
-              colors: [errorColor.withValues(alpha: 0.2), errorColor.withValues(alpha: 0.01)],
+              colors: [
+                errorColor.withValues(alpha: 0.2),
+                errorColor.withValues(alpha: 0.01)
+              ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -172,7 +263,9 @@ class _DashboardPageState extends State<DashboardPage> {
     }
 
     final barColor = Theme.of(context).primaryColor;
-    final textStyle = TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6));
+    final textStyle = TextStyle(
+        fontSize: 11,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6));
 
     return BarChartData(
       gridData: FlGridData(
@@ -185,7 +278,8 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       ),
       titlesData: FlTitlesData(
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles:
+            const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
@@ -222,7 +316,8 @@ class _DashboardPageState extends State<DashboardPage> {
               toY: e.value,
               color: barColor,
               width: 14,
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(4)),
+              borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4), topRight: Radius.circular(4)),
             )
           ],
         );
@@ -234,153 +329,231 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SectionHeader(
-              title: 'Dashboard',
-              subtitle: 'Resumen operativo del sistema',
-            ),
-            const SizedBox(height: 24),
-            
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMetricCard(
-                    context,
-                    title: 'Ventas Hoy',
-                    value: '\$12,700.00',
-                    change: '+12.5%',
-                    icon: Icons.attach_money,
-                    isPositive: true,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildMetricCard(
-                    context,
-                    title: 'Órdenes Activas',
-                    value: '4',
-                    change: 'En cocina',
-                    icon: Icons.restaurant,
-                    isPositive: true,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildMetricCard(
-                    context,
-                    title: 'Ingreso Semanal',
-                    value: '\$161,600.00',
-                    change: '+8.2%',
-                    icon: Icons.trending_up,
-                    isPositive: true,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildMetricCard(
-                    context,
-                    title: 'Utilidad Semanal',
-                    value: '\$107,800.00',
-                    change: '+15.3%',
-                    icon: Icons.account_balance_wallet,
-                    isPositive: true,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Theme.of(context).dividerColor),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _filterType,
-                      dropdownColor: Theme.of(context).cardColor,
-                      items: const [
-                        DropdownMenuItem(value: 'semana', child: Text('Esta Semana')),
-                        DropdownMenuItem(value: 'mes', child: Text('Este Mes')),
-                        DropdownMenuItem(value: 'año', child: Text('Este Año')),
-                      ],
-                      onChanged: (v) => setState(() => _filterType = v!),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            Row(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  flex: 3,
-                  child: AppCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                const SectionHeader(
+                  title: 'Dashboard',
+                  subtitle: 'Resumen operativo del sistema',
+                ),
+                const SizedBox(height: 24),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final cols = constraints.maxWidth > 700
+                        ? 4
+                        : constraints.maxWidth > 480
+                            ? 2
+                            : 1;
+                    return GridView.count(
+                      crossAxisCount: cols,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.58,
                       children: [
-                        Text('Flujo Financiero', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          height: 300,
-                          child: LineChart(_buildLineChartData(context)),
+                        _buildMetricCard(
+                          context,
+                          title: 'Ventas Hoy',
+                          value: '\$12,700.00',
+                          change: '+12.5%',
+                          icon: Icons.attach_money,
+                          isPositive: true,
+                        ),
+                        _buildMetricCard(
+                          context,
+                          title: 'Órdenes Activas',
+                          value: '4',
+                          change: 'En cocina',
+                          icon: Icons.restaurant,
+                          isPositive: true,
+                        ),
+                        _buildMetricCard(
+                          context,
+                          title: 'Ingreso Semanal',
+                          value: '\$161,600.00',
+                          change: '+8.2%',
+                          icon: Icons.trending_up,
+                          isPositive: true,
+                        ),
+                        _buildMetricCard(
+                          context,
+                          title: 'Utilidad Semanal',
+                          value: '\$107,800.00',
+                          change: '+15.3%',
+                          icon: Icons.account_balance_wallet,
+                          isPositive: true,
                         ),
                       ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 32),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _filterType,
+                        dropdownColor: Theme.of(context).cardColor,
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'semana', child: Text('Esta Semana')),
+                          DropdownMenuItem(
+                              value: 'mes', child: Text('Este Mes')),
+                          DropdownMenuItem(
+                              value: 'año', child: Text('Este Año')),
+                        ],
+                        onChanged: (v) => setState(() => _filterType = v!),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: AppCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Utilidad neta', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          height: 300,
-                          child: BarChart(_buildBarChartData(context)),
-                        ),
-                      ],
-                    ),
+                const SizedBox(height: 16),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth > 700;
+                    final lineW = isWide
+                        ? constraints.maxWidth * 0.58
+                        : constraints.maxWidth;
+                    final barW = isWide
+                        ? constraints.maxWidth * 0.38
+                        : constraints.maxWidth;
+
+                    return isWide
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: lineW,
+                                child: AppCard(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Flujo Financiero',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium),
+                                      const SizedBox(height: 24),
+                                      SizedBox(
+                                        height: 300,
+                                        child: LineChart(
+                                            _buildLineChartData(context)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              SizedBox(
+                                width: barW,
+                                child: AppCard(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Utilidad neta',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium),
+                                      const SizedBox(height: 24),
+                                      SizedBox(
+                                        height: 300,
+                                        child: BarChart(
+                                            _buildBarChartData(context)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              AppCard(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Flujo Financiero',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium),
+                                    const SizedBox(height: 24),
+                                    SizedBox(
+                                      height: 260,
+                                      child: LineChart(
+                                          _buildLineChartData(context)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              AppCard(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Utilidad neta',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium),
+                                    const SizedBox(height: 24),
+                                    SizedBox(
+                                      height: 260,
+                                      child:
+                                          BarChart(_buildBarChartData(context)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                  },
+                ),
+                const SizedBox(height: 32),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Rendimiento de Productos',
+                          style: Theme.of(context).textTheme.titleMedium),
+                      const Divider(),
+                      _buildThemeTable(
+                        context,
+                        [
+                          'Producto',
+                          'Categoría',
+                          'Unidades Vendidas',
+                          'Monto Total'
+                        ],
+                        [
+                          ['Arrachera 300g', 'Parrilla', '142', '\$40,470.00'],
+                          [
+                            'Cerveza Artesanal',
+                            'Bebidas',
+                            '320',
+                            '\$27,200.00'
+                          ],
+                          ['T-Bone 500g', 'Parrilla', '45', '\$20,250.00'],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 32),
-
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Rendimiento de Productos', style: Theme.of(context).textTheme.titleMedium),
-                  const Divider(),
-                  _buildThemeTable(
-                    context,
-                    ['Producto', 'Categoría', 'Unidades Vendidas', 'Monto Total'],
-                    [
-                      ['Arrachera 300g', 'Parrilla', '142', '\$40,470.00'],
-                      ['Cerveza Artesanal', 'Bebidas', '320', '\$27,200.00'],
-                      ['T-Bone 500g', 'Parrilla', '45', '\$20,250.00'],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -393,48 +566,64 @@ class _DashboardPageState extends State<DashboardPage> {
     required IconData icon,
     required bool isPositive,
   }) {
-    final trendColor = isPositive ? Colors.green : Theme.of(context).colorScheme.error;
+    final trendColor =
+        isPositive ? Colors.green : Theme.of(context).colorScheme.error;
 
     return AppCard(
+      padding: const EdgeInsets.all(12.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title, 
-                style: TextStyle(
-                  fontSize: 14, 
-                  fontWeight: FontWeight.w500, 
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)
-                )
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+                ),
               ),
-              Icon(icon, color: Theme.of(context).primaryColor, size: 20),
+              const SizedBox(width: 8),
+              Icon(icon, color: Theme.of(context).primaryColor, size: 18),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            value, 
-            style: TextStyle(
-              fontSize: 24, 
-              fontWeight: FontWeight.bold, 
-              color: Theme.of(context).colorScheme.onSurface
-            )
-          ),
           const SizedBox(height: 8),
-          Row(
+          Text(value,
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface)),
+          const SizedBox(height: 6),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 3,
+            runSpacing: 1,
             children: [
-              Icon(isPositive ? Icons.arrow_upward : Icons.arrow_downward, color: trendColor, size: 14),
-              const SizedBox(width: 4),
-              Text(change, style: TextStyle(color: trendColor, fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(width: 4),
+              Icon(isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+                  color: trendColor, size: 12),
+              Text(change,
+                  style: TextStyle(
+                      color: trendColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold)),
               Text(
-                'vs anterior', 
+                'vs anterior',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4), 
-                  fontSize: 11
-                )
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.4),
+                  fontSize: 10,
+                ),
               ),
             ],
           ),
@@ -443,13 +632,24 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildThemeTable(BuildContext context, List<String> columns, List<List<String>> rows) {
+  Widget _buildThemeTable(
+      BuildContext context, List<String> columns, List<List<String>> rows) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
-        headingTextStyle: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+        headingTextStyle: TextStyle(
+            fontWeight: FontWeight.bold,
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
         columns: columns.map((c) => DataColumn(label: Text(c))).toList(),
-        rows: rows.map((row) => DataRow(cells: row.map((cell) => DataCell(Text(cell, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)))).toList())).toList(),
+        rows: rows
+            .map((row) => DataRow(
+                cells: row
+                    .map((cell) => DataCell(Text(cell,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface))))
+                    .toList()))
+            .toList(),
       ),
     );
   }

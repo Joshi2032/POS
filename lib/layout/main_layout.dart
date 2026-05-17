@@ -14,7 +14,7 @@ import '../pages/reservaciones_page.dart';
 import '../pages/recetas_page.dart';
 import '../pages/proveedores_page.dart'; 
 import '../pages/combos_page.dart';
-import '../pages/reportes_page.dart'; // Importación de la página de reportes
+import '../pages/reportes_page.dart';
 import '../pages/historial_cortes_page.dart';
 import '../pages/ajustes_page.dart';
 
@@ -26,78 +26,68 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  // Estado que controla qué página del POS se está visualizando actualmente
   String _currentSection = 'Dashboard';
 
-  // Mapeador dinámico que inyecta la página correspondiente en el contenedor principal
   Widget _getBodyWidget() {
     switch (_currentSection) {
-      // Fuera del menú desplegable
-      case 'Tomar Orden':
-        return const TomarOrdenPage();
-      case 'Caja':
-        return const CajaPage();
-      case 'Proveedores':
-        return const ProveedoresPage();
-      case 'Órdenes':
-        return const OrdenesPage();
-      case 'Reservaciones':
-        return const ReservacionesPage();
-
-      // Dentro de Panel de Control (Menú Desplegable)
-      case 'Dashboard':
-        return const DashboardPage();
-      case 'Productos':
-        return const ProductosPage();
-      case 'Combos':
-        return const CombosPage();
-      case 'Recetas':
-        return const RecetasPage();
-      case 'Empleados':
-        return const EmpleadosPage();
-      case 'Inventario':
-        return const InventarioPage();
-      case 'Mesas':
-        return const MesasPage();
-      case 'Reportes':
-        return const ReportesPage();
-      case 'Gastos':
-        return const GastosPage();
-      case 'Nóminas':
-        return const NominasPage();
-      case 'Cortes de Caja':
-        return const HistorialCortesPage();
-      case 'Ajustes':
-        return const AjustesPage();
-        
-      default:
-        return const DashboardPage();
+      case 'Tomar Orden': return const TomarOrdenPage();
+      case 'Caja': return const CajaPage();
+      case 'Proveedores': return const ProveedoresPage();
+      case 'Órdenes': return const OrdenesPage();
+      case 'Reservaciones': return const ReservacionesPage();
+      case 'Dashboard': return const DashboardPage();
+      case 'Productos': return const ProductosPage();
+      case 'Combos': return const CombosPage();
+      case 'Recetas': return const RecetasPage();
+      case 'Empleados': return const EmpleadosPage();
+      case 'Inventario': return const InventarioPage();
+      case 'Mesas': return const MesasPage();
+      case 'Reportes': return const ReportesPage();
+      case 'Gastos': return const GastosPage();
+      case 'Nóminas': return const NominasPage();
+      case 'Cortes de Caja': return const HistorialCortesPage();
+      case 'Ajustes': return const AjustesPage();
+      default: return const DashboardPage();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Hereda dinámicamente el color de fondo oficial de AppTheme (Claro u Oscuro)
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
+    // 1. Detectar si es móvil
+    final isMobile = MediaQuery.of(context).size.width < 900;
+
+    // 2. Instancia del sidebar
+    Widget sidebar = CustomSidebar(
+      currentSection: _currentSection,
+      onSectionSelected: (String section) {
+        setState(() {
+          _currentSection = section;
+        });
+        // Si es móvil, cierra el menú lateral automáticamente al tocar una opción
+        if (isMobile) Navigator.of(context).pop();
+      },
+    );
 
     return Scaffold(
       backgroundColor: scaffoldBg,
+      // 3. AppBar con botón de menú solo en móviles
+      appBar: isMobile
+          ? AppBar(
+              title: Text(_currentSection),
+              elevation: 0,
+              backgroundColor: Theme.of(context).cardColor,
+            )
+          : null,
+      // 4. Drawer deslizable solo en móviles
+      drawer: isMobile ? Drawer(child: sidebar) : null,
       body: Row(
         children: [
-          // Sidebar izquierdo pasando la sección activa y escuchando los eventos de click
-          CustomSidebar(
-            currentSection: _currentSection,
-            onSectionSelected: (String section) {
-              setState(() {
-                _currentSection = section;
-              });
-            },
-          ),
-          
-          // Contenedor principal de contenidos de la derecha
+          // 5. Sidebar fijo solo en Escritorio/Tablet
+          if (!isMobile) sidebar,
           Expanded(
             child: Container(
-              color: Colors.transparent, // Permite visualizar el fondo del Scaffold subyacente
+              color: Colors.transparent,
               child: _getBodyWidget(),
             ),
           ),

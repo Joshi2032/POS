@@ -19,18 +19,15 @@ class PaginationWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: AppTheme.lg),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          OutlinedButton.icon(
-            onPressed: currentPage > 1 ? onPrevious : null,
-            icon: const Icon(Icons.chevron_left),
-            label: const Text('Anterior'),
-          ),
-          const SizedBox(width: AppTheme.md),
-          Container(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 420;
+
+          final pageInfo = Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: AppTheme.lg, vertical: AppTheme.sm),
+              horizontal: AppTheme.lg,
+              vertical: AppTheme.sm,
+            ),
             decoration: BoxDecoration(
               color: AppTheme.veryLightGrey,
               borderRadius: BorderRadius.circular(AppTheme.radiusMd),
@@ -42,14 +39,48 @@ class PaginationWidget extends StatelessWidget {
                   .bodyMedium
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
-          ),
-          const SizedBox(width: AppTheme.md),
-          OutlinedButton.icon(
-            onPressed: currentPage < totalPages ? onNext : null,
-            icon: const Icon(Icons.chevron_right),
-            label: const Text('Siguiente'),
-          ),
-        ],
+          );
+
+          if (isCompact) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: currentPage > 1 ? onPrevious : null,
+                  icon: const Icon(Icons.chevron_left),
+                  label: const Text('Anterior'),
+                ),
+                const SizedBox(height: AppTheme.md),
+                pageInfo,
+                const SizedBox(height: AppTheme.md),
+                OutlinedButton.icon(
+                  onPressed: currentPage < totalPages ? onNext : null,
+                  icon: const Icon(Icons.chevron_right),
+                  label: const Text('Siguiente'),
+                ),
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: currentPage > 1 ? onPrevious : null,
+                icon: const Icon(Icons.chevron_left),
+                label: const Text('Anterior'),
+              ),
+              const SizedBox(width: AppTheme.md),
+              pageInfo,
+              const SizedBox(width: AppTheme.md),
+              OutlinedButton.icon(
+                onPressed: currentPage < totalPages ? onNext : null,
+                icon: const Icon(Icons.chevron_right),
+                label: const Text('Siguiente'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

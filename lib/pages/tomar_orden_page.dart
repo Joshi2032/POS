@@ -42,27 +42,109 @@ class TomarOrdenProvider extends ChangeNotifier {
     'A': ['A1', 'A2', 'A3', 'A4'],
     'B': ['B1', 'B2', 'B3']
   };
-  
+
   final List<String> categories = [
-    'Todos', 'Parrilla', 'Entradas', 'Ensaladas', 'Guarniciones', 'Bebidas', 'Postres', 'Extras'
+    'Todos',
+    'Parrilla',
+    'Entradas',
+    'Ensaladas',
+    'Guarniciones',
+    'Bebidas',
+    'Postres',
+    'Extras'
   ];
 
   final List<ProductItem> _products = [
-    ProductItem(id: 1, name: 'Arrachera 300g', description: 'Corte marinado a la brasa con chimichurri.', category: 'Parrilla', price: 285),
-    ProductItem(id: 2, name: 'Brochetas Mixtas', description: 'Res y pollo a la parrilla con vegetales.', category: 'Parrilla', price: 175),
-    ProductItem(id: 3, name: 'Costillas BBQ', description: 'Rack de costilla ahumada con salsa de la casa.', category: 'Parrilla', price: 320),
-    ProductItem(id: 4, name: 'Elotes Asados', description: 'Con mayonesa, chile y limon.', category: 'Entradas', price: 65),
-    ProductItem(id: 5, name: 'Guacamole Ahumado', description: 'Guacamole con chile ahumado y totopos.', category: 'Entradas', price: 95),
-    ProductItem(id: 6, name: 'Ensalada Caesar', description: 'Lechuga romana, parmesano y crotones.', category: 'Ensaladas', price: 110),
-    ProductItem(id: 7, name: 'Ensalada de la Casa', description: 'Mixta con vinagreta balsamica.', category: 'Ensaladas', price: 85),
-    ProductItem(id: 8, name: 'Arroz a la Mexicana', description: 'Arroz tradicional con verduras.', category: 'Guarniciones', price: 45),
-    ProductItem(id: 9, name: 'Frijoles Charros', description: 'Con tocino, chorizo y chile.', category: 'Guarniciones', price: 55),
-    ProductItem(id: 10, name: 'Papas al Carbon', description: 'Papas asadas con hierbas.', category: 'Guarniciones', price: 75),
-    ProductItem(id: 11, name: 'Agua de Jamaica', description: 'Agua fresca tradicional.', category: 'Bebidas', price: 40),
-    ProductItem(id: 12, name: 'Cerveza Artesanal', description: 'IPA, Stout o Lager.', category: 'Bebidas', price: 85),
-    ProductItem(id: 13, name: 'Limonada con Hierba Buena', description: 'Limonada natural refrescante.', category: 'Bebidas', price: 55),
-    ProductItem(id: 14, name: 'Mezcal Oaxaqueno', description: 'Mezcal artesanal con sal de gusano.', category: 'Bebidas', price: 130),
-    ProductItem(id: 15, name: 'Churros a la Brasa', description: 'Con chocolate caliente.', category: 'Postres', price: 75)
+    ProductItem(
+        id: 1,
+        name: 'Arrachera 300g',
+        description: 'Corte marinado a la brasa con chimichurri.',
+        category: 'Parrilla',
+        price: 285),
+    ProductItem(
+        id: 2,
+        name: 'Brochetas Mixtas',
+        description: 'Res y pollo a la parrilla con vegetales.',
+        category: 'Parrilla',
+        price: 175),
+    ProductItem(
+        id: 3,
+        name: 'Costillas BBQ',
+        description: 'Rack de costilla ahumada con salsa de la casa.',
+        category: 'Parrilla',
+        price: 320),
+    ProductItem(
+        id: 4,
+        name: 'Elotes Asados',
+        description: 'Con mayonesa, chile y limon.',
+        category: 'Entradas',
+        price: 65),
+    ProductItem(
+        id: 5,
+        name: 'Guacamole Ahumado',
+        description: 'Guacamole con chile ahumado y totopos.',
+        category: 'Entradas',
+        price: 95),
+    ProductItem(
+        id: 6,
+        name: 'Ensalada Caesar',
+        description: 'Lechuga romana, parmesano y crotones.',
+        category: 'Ensaladas',
+        price: 110),
+    ProductItem(
+        id: 7,
+        name: 'Ensalada de la Casa',
+        description: 'Mixta con vinagreta balsamica.',
+        category: 'Ensaladas',
+        price: 85),
+    ProductItem(
+        id: 8,
+        name: 'Arroz a la Mexicana',
+        description: 'Arroz tradicional con verduras.',
+        category: 'Guarniciones',
+        price: 45),
+    ProductItem(
+        id: 9,
+        name: 'Frijoles Charros',
+        description: 'Con tocino, chorizo y chile.',
+        category: 'Guarniciones',
+        price: 55),
+    ProductItem(
+        id: 10,
+        name: 'Papas al Carbon',
+        description: 'Papas asadas con hierbas.',
+        category: 'Guarniciones',
+        price: 75),
+    ProductItem(
+        id: 11,
+        name: 'Agua de Jamaica',
+        description: 'Agua fresca tradicional.',
+        category: 'Bebidas',
+        price: 40),
+    ProductItem(
+        id: 12,
+        name: 'Cerveza Artesanal',
+        description: 'IPA, Stout o Lager.',
+        category: 'Bebidas',
+        price: 85),
+    ProductItem(
+        id: 13,
+        name: 'Limonada con Hierba Buena',
+        description: 'Limonada natural refrescante.',
+        category: 'Bebidas',
+        price: 55),
+    ProductItem(
+        id: 14,
+        name: 'Mezcal Oaxaqueno',
+        description: 'Mezcal artesanal con sal de gusano.',
+        category: 'Bebidas',
+        price: 130),
+    ProductItem(
+        id: 15,
+        name: 'Churros a la Brasa',
+        description: 'Con chocolate caliente.',
+        category: 'Postres',
+        price: 75)
   ];
 
   // Propiedades privadas reactivas
@@ -93,10 +175,15 @@ class TomarOrdenProvider extends ChangeNotifier {
   // Computed: visibleProducts (Equivalente al filterByCategoryAndSearch de Angular)
   List<ProductItem> get visibleProducts {
     return _products.where((product) {
-      final matchesCategory = _selectedCategory == 'Todos' || product.category == _selectedCategory;
-      final matchesSearch = product.name.toLowerCase().contains(_searchTerm.toLowerCase()) ||
-                            product.description.toLowerCase().contains(_searchTerm.toLowerCase()) ||
-                            product.category.toLowerCase().contains(_searchTerm.toLowerCase());
+      final matchesCategory =
+          _selectedCategory == 'Todos' || product.category == _selectedCategory;
+      final matchesSearch = product.name
+              .toLowerCase()
+              .contains(_searchTerm.toLowerCase()) ||
+          product.description
+              .toLowerCase()
+              .contains(_searchTerm.toLowerCase()) ||
+          product.category.toLowerCase().contains(_searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();
   }
@@ -203,16 +290,22 @@ class TomarOrdenPage extends StatelessWidget {
             builder: (context, constraints) {
               // Breakpoint adaptado de la directiva CSS @media (max-width: 1200px)
               final isMobile = constraints.maxWidth <= 1200;
-              
+
               if (isMobile) {
                 return const _MenuSection(isMobile: true);
               } else {
                 // Modo Desktop: Split Screen (Menu extendido + Barra lateral de carrito fija)
                 return Row(
                   children: [
-                    const Expanded(flex: 7, child: _MenuSection(isMobile: false)),
-                    VerticalDivider(width: 1, color: isDark ? const Color(0xFF2D2D44) : Colors.grey[300]),
-                    const SizedBox(width: 380, child: _CartSection(isMobile: false)),
+                    const Expanded(
+                        flex: 7, child: _MenuSection(isMobile: false)),
+                    VerticalDivider(
+                        width: 1,
+                        color: isDark
+                            ? const Color(0xFF2D2D44)
+                            : Colors.grey[300]),
+                    const SizedBox(
+                        width: 380, child: _CartSection(isMobile: false)),
                   ],
                 );
               }
@@ -231,7 +324,8 @@ class TomarOrdenPage extends StatelessWidget {
               onPressed: () => _openMobileCart(context),
               label: Text(
                 '${formatCurrency(provider.total)} (${provider.itemsCount})',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
               ),
               icon: const Icon(Icons.shopping_cart, color: Colors.white),
             );
@@ -288,25 +382,32 @@ class _MenuSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Principal
-          Text('Tomar Orden', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
-          Text('Registra los productos del cliente', style: TextStyle(color: textSubColor, fontSize: 14)),
+          Text('Tomar Orden',
+              style: TextStyle(
+                  fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
+          Text('Registra los productos del cliente',
+              style: TextStyle(color: textSubColor, fontSize: 14)),
           const SizedBox(height: 14),
 
           // Selector de Tipo de Orden: Dine-in / Takeaway
           Row(
             children: [
-              _buildTypeButton(context, 'Comer Aquí', OrderType.dineIn, provider),
+              _buildTypeButton(
+                  context, 'Comer Aquí', OrderType.dineIn, provider),
               const SizedBox(width: 8),
-              _buildTypeButton(context, 'Para Llevar', OrderType.takeaway, provider),
+              _buildTypeButton(
+                  context, 'Para Llevar', OrderType.takeaway, provider),
             ],
           ),
           const SizedBox(height: 14),
 
           // Selectores de Área y Mesas Dinámicos (*ngIf="orderType() === 'dine-in'")
           if (provider.orderType == OrderType.dineIn) ...[
-            _buildChipsRow(context, 'Área:', provider.areas, provider.selectedArea, (v) => provider.setArea(v)),
+            _buildChipsRow(context, 'Área:', provider.areas,
+                provider.selectedArea, (v) => provider.setArea(v)),
             const SizedBox(height: 8),
-            _buildChipsRow(context, 'Mesa:', provider.currentTables, provider.selectedTable, (v) => provider.setTable(v)),
+            _buildChipsRow(context, 'Mesa:', provider.currentTables,
+                provider.selectedTable, (v) => provider.setTable(v)),
             const SizedBox(height: 14),
           ],
 
@@ -315,8 +416,10 @@ class _MenuSection extends StatelessWidget {
             style: TextStyle(color: textColor),
             decoration: InputDecoration(
               hintText: 'Buscar por nombre, desc...',
-              hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey),
-              prefixIcon: Icon(Icons.search, color: isDark ? Colors.white38 : Colors.grey),
+              hintStyle:
+                  TextStyle(color: isDark ? Colors.white38 : Colors.grey),
+              prefixIcon: Icon(Icons.search,
+                  color: isDark ? Colors.white38 : Colors.grey),
               filled: true,
               fillColor: searchFillColor,
               border: OutlineInputBorder(
@@ -344,7 +447,8 @@ class _MenuSection extends StatelessWidget {
                     backgroundColor: cardBg,
                     labelStyle: TextStyle(
                       color: isSelected ? Colors.white : textColor,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                     onSelected: (_) => provider.setCategory(cat),
                   ),
@@ -357,86 +461,165 @@ class _MenuSection extends StatelessWidget {
           // Grid Principal de productos con Empty State integrado
           Expanded(
             child: provider.visibleProducts.isEmpty
-                ? Center(child: Text('No hay productos que coincidan con la búsqueda.', style: TextStyle(color: textSubColor)))
-                : GridView.builder(
-                    gridDelegate: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: MediaQuery.of(context).size.width < 600 ? 1 : (isMobile ? 2 : 3),
-                        childAspectRatio: isMobile ? 1.25 : 1.35,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemCount: provider.visibleProducts.length,
-                      itemBuilder: (context, index) {
-                        final product = provider.visibleProducts[index];
-                        return Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          color: cardBg,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () => provider.addToCart(product),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(product.category.toUpperCase(), style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                                  const SizedBox(height: 4),
-                                  Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 4),
-                                  Expanded(child: Text(product.description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[500], height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis)),
-                                  const SizedBox(height: 4),
-                                  Text('\$${product.price.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                                ],
+                ? Center(
+                    child: Text(
+                        'No hay productos que coincidan con la búsqueda.',
+                        style: TextStyle(color: textSubColor)))
+                : isMobile
+                    ? ListView.separated(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        itemCount: provider.visibleProducts.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final product = provider.visibleProducts[index];
+                          return Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              side: BorderSide(
+                                  color: isDark
+                                      ? const Color(0xFF2D2D44)
+                                      : Colors.grey[200]!),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            color: cardBg,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => provider.addToCart(product),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(product.category.toUpperCase(),
+                                              style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: isDark
+                                                      ? Colors.white38
+                                                      : Colors.grey[400],
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.5)),
+                                          const SizedBox(height: 4),
+                                          Text(product.name,
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: textColor),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis),
+                                          const SizedBox(height: 4),
+                                          Text(product.description,
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: isDark
+                                                      ? Colors.white60
+                                                      : Colors.grey[500],
+                                                  height: 1.2),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                              '\$${product.price.toStringAsFixed(2)}',
+                                              style: TextStyle(
+                                                  color: Theme.of(context)
+                                                      .primaryColor,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14)),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Icon(Icons.add_shopping_cart_outlined,
+                                        color: Theme.of(context).primaryColor),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ).gridDelegate,
-                    itemCount: provider.visibleProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = provider.visibleProducts[index];
-                      return Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!),
-                          borderRadius: BorderRadius.circular(12),
+                          );
+                        },
+                      )
+                    : GridView.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 1.2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
                         ),
-                        color: cardBg,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => provider.addToCart(product),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(product.category.toUpperCase(), style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                                const SizedBox(height: 4),
-                                Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 4),
-                                Expanded(child: Text(product.description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[500], height: 1.3), maxLines: 2, overflow: TextOverflow.ellipsis)),
-                                const SizedBox(height: 4),
-                                Text('\$${product.price.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                              ],
+                        itemCount: provider.visibleProducts.length,
+                        itemBuilder: (context, index) {
+                          final product = provider.visibleProducts[index];
+                          return Card(
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              side: BorderSide(
+                                  color: isDark
+                                      ? const Color(0xFF2D2D44)
+                                      : Colors.grey[200]!),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                            color: cardBg,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => provider.addToCart(product),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(product.category.toUpperCase(),
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: isDark
+                                                ? Colors.white38
+                                                : Colors.grey[400],
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5)),
+                                    const SizedBox(height: 4),
+                                    Text(product.name,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: textColor),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
+                                    const SizedBox(height: 4),
+                                    Text(product.description,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDark
+                                                ? Colors.white60
+                                                : Colors.grey[500],
+                                            height: 1.2),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                        '\$${product.price.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                            color:
+                                                Theme.of(context).primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTypeButton(BuildContext context, String text, OrderType type, TomarOrdenProvider provider) {
+  Widget _buildTypeButton(BuildContext context, String text, OrderType type,
+      TomarOrdenProvider provider) {
     final isSelected = provider.orderType == type;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
@@ -444,23 +627,39 @@ class _MenuSection extends StatelessWidget {
         height: 40,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected ? Theme.of(context).primaryColor : (isDark ? const Color(0xFF1E1E2D) : Colors.grey[100]),
-            foregroundColor: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+            backgroundColor: isSelected
+                ? Theme.of(context).primaryColor
+                : (isDark ? const Color(0xFF1E1E2D) : Colors.grey[100]),
+            foregroundColor: isSelected
+                ? Colors.white
+                : (isDark ? Colors.white70 : Colors.black87),
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           onPressed: () => provider.setOrderType(type),
-          child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+          child:
+              Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
         ),
       ),
     );
   }
 
-  Widget _buildChipsRow(BuildContext context, String label, List<String> options, String selectedValue, ValueChanged<String> onSelected) {
+  Widget _buildChipsRow(
+      BuildContext context,
+      String label,
+      List<String> options,
+      String selectedValue,
+      ValueChanged<String> onSelected) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        SizedBox(width: 50, child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white38 : Colors.grey))),
+        SizedBox(
+            width: 50,
+            child: Text(label,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white38 : Colors.grey))),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -473,9 +672,12 @@ class _MenuSection extends StatelessWidget {
                     label: Text(opt),
                     selected: isSelected,
                     selectedColor: Theme.of(context).primaryColor,
-                    backgroundColor: isDark ? const Color(0xFF1E1E2D) : Colors.white,
+                    backgroundColor:
+                        isDark ? const Color(0xFF1E1E2D) : Colors.white,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                      color: isSelected
+                          ? Colors.white
+                          : (isDark ? Colors.white70 : Colors.black87),
                     ),
                     onSelected: (_) => onSelected(opt),
                   ),
@@ -516,19 +718,36 @@ class _CartSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    provider.orderType == OrderType.dineIn ? 'Mesa ${provider.selectedTable}' : 'Para Llevar',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
+                    provider.orderType == OrderType.dineIn
+                        ? 'Mesa ${provider.selectedTable}'
+                        : 'Para Llevar',
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textColor),
                   ),
-                  Text(provider.orderType == OrderType.dineIn ? 'Servicio en Mesa' : 'Recoger en Cocina', style: TextStyle(fontSize: 12, color: textSubColor)),
+                  Text(
+                      provider.orderType == OrderType.dineIn
+                          ? 'Servicio en Mesa'
+                          : 'Recoger en Cocina',
+                      style: TextStyle(fontSize: 12, color: textSubColor)),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: countBg, borderRadius: BorderRadius.circular(12)),
-                child: Text('${provider.itemsCount} Items', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textColor)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: countBg, borderRadius: BorderRadius.circular(12)),
+                child: Text('${provider.itemsCount} Items',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: textColor)),
               ),
               if (isMobile)
-                IconButton(icon: Icon(Icons.close, size: 22, color: textColor), onPressed: () => Navigator.pop(context))
+                IconButton(
+                    icon: Icon(Icons.close, size: 22, color: textColor),
+                    onPressed: () => Navigator.pop(context))
             ],
           ),
         ),
@@ -537,7 +756,9 @@ class _CartSection extends StatelessWidget {
         // Lista de Productos en el carrito
         Expanded(
           child: provider.cart.isEmpty
-              ? Center(child: Text('El carrito está vacío', style: TextStyle(color: textSubColor)))
+              ? Center(
+                  child: Text('El carrito está vacío',
+                      style: TextStyle(color: textSubColor)))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: provider.cart.length,
@@ -546,7 +767,12 @@ class _CartSection extends StatelessWidget {
                     return Card(
                       elevation: 0,
                       color: cardBg,
-                      shape: RoundedRectangleBorder(side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!), borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                              color: isDark
+                                  ? const Color(0xFF2D2D44)
+                                  : Colors.grey[200]!),
+                          borderRadius: BorderRadius.circular(10)),
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: Padding(
                         padding: const EdgeInsets.all(10.0),
@@ -555,8 +781,17 @@ class _CartSection extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(child: Text(item.product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), overflow: TextOverflow.ellipsis)),
-                                Text('\$${item.total.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+                                Expanded(
+                                    child: Text(item.product.name,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: textColor),
+                                        overflow: TextOverflow.ellipsis)),
+                                Text('\$${item.total.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                        color: Theme.of(context).primaryColor,
+                                        fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const SizedBox(height: 6),
@@ -567,19 +802,34 @@ class _CartSection extends StatelessWidget {
                                 Row(
                                   children: [
                                     IconButton(
-                                      icon: Icon(Icons.remove_circle_outline, size: 22, color: isDark ? Colors.white60 : Colors.grey),
+                                      icon: Icon(Icons.remove_circle_outline,
+                                          size: 22,
+                                          color: isDark
+                                              ? Colors.white60
+                                              : Colors.grey),
                                       onPressed: () => provider.decrement(item),
                                     ),
-                                    Text('${item.qty}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor)),
+                                    Text('${item.qty}',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: textColor)),
                                     IconButton(
-                                      icon: Icon(Icons.add_circle_outline, size: 22, color: isDark ? Colors.white60 : Colors.grey),
+                                      icon: Icon(Icons.add_circle_outline,
+                                          size: 22,
+                                          color: isDark
+                                              ? Colors.white60
+                                              : Colors.grey),
                                       onPressed: () => provider.increment(item),
                                     ),
                                   ],
                                 ),
                                 TextButton(
                                   onPressed: () => provider.remove(item),
-                                  child: const Text('Eliminar', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                                  child: const Text('Eliminar',
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.w500)),
                                 )
                               ],
                             )
@@ -601,10 +851,18 @@ class _CartSection extends StatelessWidget {
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Notas de la orden (ej: sin cebolla)...',
-                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey[400], fontSize: 13),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey)),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).primaryColor)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  hintStyle: TextStyle(
+                      color: isDark ? Colors.white38 : Colors.grey[400],
+                      fontSize: 13),
+                  enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                          color:
+                              isDark ? const Color(0xFF2D2D44) : Colors.grey)),
+                  focusedBorder: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).primaryColor)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 ),
                 onChanged: (v) => provider.setNotes(v),
               ),
@@ -612,10 +870,17 @@ class _CartSection extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Total General', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textColor)),
+                  Text('Total General',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: textColor)),
                   Text(
                     '\$${provider.total.toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor),
+                    style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: textColor),
                   ),
                 ],
               ),
@@ -626,9 +891,11 @@ class _CartSection extends StatelessWidget {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[600],
-                    disabledBackgroundColor: isDark ? const Color(0xFF232334) : Colors.grey[300],
+                    disabledBackgroundColor:
+                        isDark ? const Color(0xFF232334) : Colors.grey[300],
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
                   ),
                   onPressed: provider.cart.isEmpty
@@ -637,10 +904,14 @@ class _CartSection extends StatelessWidget {
                           provider.sendOrder();
                           if (isMobile) Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Orden mandada a la cocina exitosamente')),
+                            const SnackBar(
+                                content: Text(
+                                    'Orden mandada a la cocina exitosamente')),
                           );
                         },
-                  child: const Text('Enviar a Cocina', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: const Text('Enviar a Cocina',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
             ],

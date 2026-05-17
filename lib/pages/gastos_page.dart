@@ -73,8 +73,25 @@ class GastosPage extends StatefulWidget {
 
 class _GastosPageState extends State<GastosPage> {
   final int pageSize = 10;
-  final List<String> categorias = ['Todos', 'Renta', 'Servicios', 'Insumos', 'Mantenimiento', 'Publicidad', 'Impuestos', 'General'];
-  final List<String> formCategories = ['General', 'Insumos', 'Servicios', 'Renta', 'Mantenimiento', 'Publicidad', 'Impuestos'];
+  final List<String> categorias = [
+    'Todos',
+    'Renta',
+    'Servicios',
+    'Insumos',
+    'Mantenimiento',
+    'Publicidad',
+    'Impuestos',
+    'General'
+  ];
+  final List<String> formCategories = [
+    'General',
+    'Insumos',
+    'Servicios',
+    'Renta',
+    'Mantenimiento',
+    'Publicidad',
+    'Impuestos'
+  ];
   final List<String> formMethods = ['Efectivo', 'Tarjeta', 'Transferencia'];
 
   String searchTerm = '';
@@ -82,7 +99,8 @@ class _GastosPageState extends State<GastosPage> {
   int currentPage = 1;
   bool showModal = false;
   String? editingId;
-  String modalError = ''; // Declarada explícitamente para solucionar el error de 'undefined name'
+  String modalError =
+      ''; // Declarada explícitamente para solucionar el error de 'undefined name'
 
   List<Gasto> gastos = [];
   late GastoForm formState;
@@ -92,12 +110,40 @@ class _GastosPageState extends State<GastosPage> {
   void initState() {
     super.initState();
     final todayStr = DateTime.now().toIso8601String().slice(0, 10);
-    
+
     gastos = [
-      Gasto(id: 'G-0001', date: todayStr, concept: 'Compra de carne y verdura', category: 'Insumos', method: 'Efectivo', amount: 2450.50, notes: 'Proveedor local central'),
-      Gasto(id: 'G-0002', date: todayStr, concept: 'Pago de luz CFE', category: 'Servicios', method: 'Transferencia', amount: 4890.00, notes: 'Recibo Bimestral'),
-      Gasto(id: 'G-0003', date: todayStr, concept: 'Renta del local comercial', category: 'Renta', method: 'Transferencia', amount: 12000.00, notes: 'Mes en curso'),
-      Gasto(id: 'G-0004', date: todayStr, concept: 'Reparación de freidora', category: 'Mantenimiento', method: 'Tarjeta', amount: 850.00, notes: 'Cambio de termopar'),
+      Gasto(
+          id: 'G-0001',
+          date: todayStr,
+          concept: 'Compra de carne y verdura',
+          category: 'Insumos',
+          method: 'Efectivo',
+          amount: 2450.50,
+          notes: 'Proveedor local central'),
+      Gasto(
+          id: 'G-0002',
+          date: todayStr,
+          concept: 'Pago de luz CFE',
+          category: 'Servicios',
+          method: 'Transferencia',
+          amount: 4890.00,
+          notes: 'Recibo Bimestral'),
+      Gasto(
+          id: 'G-0003',
+          date: todayStr,
+          concept: 'Renta del local comercial',
+          category: 'Renta',
+          method: 'Transferencia',
+          amount: 12000.00,
+          notes: 'Mes en curso'),
+      Gasto(
+          id: 'G-0004',
+          date: todayStr,
+          concept: 'Reparación de freidora',
+          category: 'Mantenimiento',
+          method: 'Tarjeta',
+          amount: 850.00,
+          notes: 'Cambio de termopar'),
     ];
 
     _resetForm();
@@ -134,7 +180,8 @@ class _GastosPageState extends State<GastosPage> {
     final list = filteredGastos;
     final start = (currentPage - 1) * pageSize;
     if (start >= list.length) return [];
-    final end = (start + pageSize) > list.length ? list.length : (start + pageSize);
+    final end =
+        (start + pageSize) > list.length ? list.length : (start + pageSize);
     return list.sublist(start, end);
   }
 
@@ -286,7 +333,10 @@ class _GastosPageState extends State<GastosPage> {
 
   void _showToast(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 2)),
+      SnackBar(
+          content: Text(message),
+          backgroundColor: color,
+          duration: const Duration(seconds: 2)),
     );
   }
 
@@ -297,7 +347,9 @@ class _GastosPageState extends State<GastosPage> {
         title: Text(title),
         content: Text(body),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
@@ -312,146 +364,214 @@ class _GastosPageState extends State<GastosPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width > 900;
-
     return Scaffold(
       body: Stack(
         children: [
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final screenWidth = MediaQuery.of(context).size.width;
+                final isDesktop = screenWidth > 900;
+                final isCompact = screenWidth < 700;
+
+                return SingleChildScrollView(
+                  padding: EdgeInsets.all(isCompact ? 16.0 : 20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        runSpacing: 12,
+                        spacing: 12,
                         children: [
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('💸 ', style: TextStyle(fontSize: 26)),
-                              Text('Gastos y Egresos', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                              Row(
+                                children: [
+                                  const Text('💸 ',
+                                      style: TextStyle(fontSize: 26)),
+                                  Text('Gastos y Egresos',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              Text(
+                                  '${filteredGastos.length} de ${gastos.length} gastos registrados',
+                                  style: const TextStyle(color: Colors.grey)),
                             ],
                           ),
-                          Text('${filteredGastos.length} de ${gastos.length} gastos registrados', style: const TextStyle(color: Colors.grey)),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white),
+                            onPressed: abrirModal,
+                            child: const Text('+ Registrar Gasto'),
+                          )
                         ],
                       ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
-                        onPressed: abrirModal,
-                        child: const Text('+ Registrar Gasto'),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 25),
-
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Buscar gasto, método o categoría...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onChanged: onSearch,
-                  ),
-                  const SizedBox(height: 25),
-
-                  GridView.count(
-                    crossAxisCount: isDesktop ? 2 : 1,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: isDesktop ? 3.5 : 4.0,
-                    children: [
-                      _buildStatCard('Gastos este mes', formatMoney(totalThisMonth), '↘', Colors.red.shade900),
-                      _buildStatCard('Total acumulado', formatMoney(totalAccumulated), '\$', Colors.blueGrey.shade800),
-                    ],
-                  ),
-                  const SizedBox(height: 25),
-
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: categorias.map((categoria) {
-                      final isActive = selectedCategory == categoria;
-                      return ChoiceChip(
-                        label: Text(categoria),
-                        selected: isActive,
-                        onSelected: (_) => seleccionarCategoria(categoria),
-                        selectedColor: Theme.of(context).primaryColor.withAlpha(50),
-                        labelStyle: TextStyle(
-                          color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade700,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal
+                      const SizedBox(height: 25),
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Buscar gasto, método o categoría...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
                         ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-
-                  Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: DataTable(
-                        headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
-                        columns: const [
-                          DataColumn(label: Text('Fecha', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Concepto', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Categoría', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Método', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('Monto', style: TextStyle(fontWeight: FontWeight.bold))),
-                          DataColumn(label: Text('', style: TextStyle(fontWeight: FontWeight.bold))),
+                        onChanged: onSearch,
+                      ),
+                      const SizedBox(height: 25),
+                      GridView.count(
+                        crossAxisCount: isDesktop ? 2 : 1,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: isDesktop ? 3.5 : 4.0,
+                        children: [
+                          _buildStatCard(
+                              'Gastos este mes',
+                              formatMoney(totalThisMonth),
+                              '↘',
+                              Colors.red.shade900),
+                          _buildStatCard(
+                              'Total acumulado',
+                              formatMoney(totalAccumulated),
+                              '\$',
+                              Colors.blueGrey.shade800),
                         ],
-                        rows: paginatedGastos.map((g) {
-                          return DataRow(cells: [
-                            DataCell(Text(g.date)),
-                            DataCell(Text(g.concept, style: const TextStyle(fontWeight: FontWeight.w500))),
-                            DataCell(Text(g.category)),
-                            DataCell(Text(g.method)),
-                            DataCell(Text(formatMoney(g.amount), style: const TextStyle(fontWeight: FontWeight.bold))),
-                            DataCell(Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextButton(onPressed: () => abrirEditar(g), child: const Text('Editar')),
-                                TextButton(onPressed: () => eliminar(g.id), child: const Text('Eliminar', style: TextStyle(color: Colors.red))),
-                              ],
-                            )),
-                          ]);
+                      ),
+                      const SizedBox(height: 25),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: categorias.map((categoria) {
+                          final isActive = selectedCategory == categoria;
+                          return ChoiceChip(
+                            label: Text(categoria),
+                            selected: isActive,
+                            onSelected: (_) => seleccionarCategoria(categoria),
+                            selectedColor:
+                                Theme.of(context).primaryColor.withAlpha(50),
+                            labelStyle: TextStyle(
+                              color: isActive
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey.shade700,
+                              fontWeight: isActive
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          );
                         }).toList(),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(
+                              headingRowColor: WidgetStateProperty.all(
+                                  Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest),
+                              columns: const [
+                                DataColumn(
+                                    label: Text('Fecha',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold))),
+                                DataColumn(
+                                    label: Text('Concepto',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold))),
+                                DataColumn(
+                                    label: Text('Categoría',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold))),
+                                DataColumn(
+                                    label: Text('Método',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold))),
+                                DataColumn(
+                                    label: Text('Monto',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold))),
+                                DataColumn(
+                                    label: Text('',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold))),
+                              ],
+                              rows: paginatedGastos.map((g) {
+                                return DataRow(cells: [
+                                  DataCell(Text(g.date)),
+                                  DataCell(Text(g.concept,
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.w500))),
+                                  DataCell(Text(g.category)),
+                                  DataCell(Text(g.method)),
+                                  DataCell(Text(formatMoney(g.amount),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold))),
+                                  DataCell(Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextButton(
+                                          onPressed: () => abrirEditar(g),
+                                          child: const Text('Editar')),
+                                      TextButton(
+                                          onPressed: () => eliminar(g.id),
+                                          child: const Text('Eliminar',
+                                              style: TextStyle(
+                                                  color: Colors.red))),
+                                    ],
+                                  )),
+                                ]);
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (paginatedGastos.isEmpty)
+                        Container(
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.all(32),
+                          child: const Text('Sin gastos registrados',
+                              style: TextStyle(color: Colors.grey)),
+                        ),
+                      const SizedBox(height: 15),
+                      if (totalPages > 1)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back_ios, size: 16),
+                              onPressed: currentPage == 1
+                                  ? null
+                                  : () => setState(() => currentPage--),
+                            ),
+                            Text('Página $currentPage de $totalPages',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w500)),
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.arrow_forward_ios, size: 16),
+                              onPressed: currentPage == totalPages
+                                  ? null
+                                  : () => setState(() => currentPage++),
+                            ),
+                          ],
+                        )
+                    ],
                   ),
-
-                  if (paginatedGastos.isEmpty)
-                    Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.all(32),
-                      child: const Text('Sin gastos registrados', style: TextStyle(color: Colors.grey)),
-                    ),
-                  const SizedBox(height: 15),
-
-                  if (totalPages > 1)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios, size: 16),
-                          onPressed: currentPage == 1 ? null : () => setState(() => currentPage--),
-                        ),
-                        Text('Página $currentPage de $totalPages', style: const TextStyle(fontWeight: FontWeight.w500)),
-                        IconButton(
-                          icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onPressed: currentPage == totalPages ? null : () => setState(() => currentPage++),
-                        ),
-                      ],
-                    )
-                ],
-              ),
+                );
+              },
             ),
           ),
-
           if (showModal) ...[
             GestureDetector(
               onTap: cerrarModal,
@@ -460,9 +580,12 @@ class _GastosPageState extends State<GastosPage> {
             Center(
               child: Card(
                 margin: const EdgeInsets.all(20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 child: Container(
-                  width: 500,
+                  width: MediaQuery.of(context).size.width < 700
+                      ? MediaQuery.of(context).size.width - 32
+                      : 500,
                   padding: const EdgeInsets.all(24),
                   child: SingleChildScrollView(
                     child: Form(
@@ -474,13 +597,24 @@ class _GastosPageState extends State<GastosPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(editingId != null ? 'Editar Gasto' : 'Registrar Gasto', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                              IconButton(icon: const Icon(Icons.close), onPressed: cerrarModal),
+                              Text(
+                                  editingId != null
+                                      ? 'Editar Gasto'
+                                      : 'Registrar Gasto',
+                                  style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold)),
+                              IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: cerrarModal),
                             ],
                           ),
                           const Divider(),
                           if (modalError.isNotEmpty) ...[
-                            Text(modalError, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                            Text(modalError,
+                                style: const TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w500)),
                             const SizedBox(height: 10),
                           ],
                           _buildFormFields(),
@@ -488,10 +622,15 @@ class _GastosPageState extends State<GastosPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              OutlinedButton(onPressed: cerrarModal, child: const Text('Cancelar')),
+                              OutlinedButton(
+                                  onPressed: cerrarModal,
+                                  child: const Text('Cancelar')),
                               const SizedBox(width: 12),
                               ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        Theme.of(context).primaryColor,
+                                    foregroundColor: Colors.white),
                                 onPressed: guardar,
                                 child: const Text('Guardar Gasto'),
                               ),
@@ -517,15 +656,25 @@ class _GastosPageState extends State<GastosPage> {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Text(icon, style: const TextStyle(color: Colors.white38, fontSize: 32, fontWeight: FontWeight.bold)),
+            Text(icon,
+                style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(label,
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 4),
-                Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(value,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold)),
               ],
             ),
           ],
@@ -535,71 +684,107 @@ class _GastosPageState extends State<GastosPage> {
   }
 
   Widget _buildFormFields() {
-    return Column(
-      children: [
-        Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 560;
+
+        Widget fieldRow(List<Widget> children) {
+          if (isCompact) {
+            return Column(
+              children: [
+                for (int i = 0; i < children.length; i++) ...[
+                  children[i],
+                  if (i < children.length - 1) const SizedBox(height: 16),
+                ],
+              ],
+            );
+          }
+
+          return Row(
+            children: [
+              for (int i = 0; i < children.length; i++) ...[
+                Expanded(child: children[i]),
+                if (i < children.length - 1) const SizedBox(width: 12),
+              ],
+            ],
+          );
+        }
+
+        return Column(
           children: [
-            Expanded(
-              child: TextFormField(
+            fieldRow([
+              TextFormField(
                 initialValue: formState.date,
-                decoration: const InputDecoration(labelText: 'Fecha (YYYY-MM-DD)', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
+                decoration: const InputDecoration(
+                    labelText: 'Fecha (YYYY-MM-DD)',
+                    border: OutlineInputBorder()),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requerido' : null,
                 onChanged: (val) => formState.date = val,
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
+              TextFormField(
                 initialValue: formState.concept,
-                // Solución al problema de placeholder: transferido a hintText
-                decoration: const InputDecoration(labelText: 'Concepto', hintText: 'Concepto del gasto', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
+                decoration: const InputDecoration(
+                    labelText: 'Concepto',
+                    hintText: 'Concepto del gasto',
+                    border: OutlineInputBorder()),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requerido' : null,
                 onChanged: (val) => formState.concept = val,
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                // Solución al warning de value: cambiado por initialValue
+            ]),
+            const SizedBox(height: 16),
+            fieldRow([
+              DropdownButtonFormField<String>(
                 initialValue: formState.category,
-                decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
-                items: formCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (val) => setState(() => formState.category = val ?? 'General'),
+                decoration: const InputDecoration(
+                    labelText: 'Categoría', border: OutlineInputBorder()),
+                items: formCategories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (val) =>
+                    setState(() => formState.category = val ?? 'General'),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                // Solución al warning de value: cambiado por initialValue
+              DropdownButtonFormField<String>(
                 initialValue: formState.method,
-                decoration: const InputDecoration(labelText: 'Método', border: OutlineInputBorder()),
-                items: formMethods.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-                onChanged: (val) => setState(() => formState.method = val ?? 'Efectivo'),
+                decoration: const InputDecoration(
+                    labelText: 'Método', border: OutlineInputBorder()),
+                items: formMethods
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                    .toList(),
+                onChanged: (val) =>
+                    setState(() => formState.method = val ?? 'Efectivo'),
               ),
+            ]),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue:
+                  formState.amount == 0.0 ? '' : '${formState.amount}',
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                  labelText: 'Monto',
+                  hintText: '0.00',
+                  border: OutlineInputBorder()),
+              validator: (v) => v == null ||
+                      double.tryParse(v) == null ||
+                      double.parse(v) <= 0
+                  ? 'Monto no válido'
+                  : null,
+              onChanged: (val) =>
+                  formState.amount = double.tryParse(val) ?? 0.0,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              initialValue: formState.notes,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                  labelText: 'Notas', border: OutlineInputBorder()),
+              onChanged: (val) => formState.notes = val,
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          initialValue: formState.amount == 0.0 ? '' : '${formState.amount}',
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          // Solución al problema de placeholder: transferido a hintText
-          decoration: const InputDecoration(labelText: 'Monto', hintText: '0.00', border: OutlineInputBorder()),
-          validator: (v) => v == null || double.tryParse(v) == null || double.parse(v) <= 0 ? 'Monto no válido' : null,
-          onChanged: (val) => formState.amount = double.tryParse(val) ?? 0.0,
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          initialValue: formState.notes,
-          maxLines: 4,
-          decoration: const InputDecoration(labelText: 'Notas', border: OutlineInputBorder()),
-          onChanged: (val) => formState.notes = val,
-        ),
-      ],
+        );
+      },
     );
   }
 }
