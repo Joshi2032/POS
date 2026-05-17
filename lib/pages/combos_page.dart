@@ -65,10 +65,13 @@ class _CombosPageState extends State<CombosPage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final modalTextColor = isDark ? Colors.white : Colors.black87;
+
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               title: Text(combo != null ? 'Editar Combo' : 'Nuevo Combo', 
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: modalTextColor)),
               content: SingleChildScrollView(
                 child: Form(
                   key: _formKey,
@@ -77,6 +80,7 @@ class _CombosPageState extends State<CombosPage> {
                     children: [
                       TextFormField(
                         controller: _nombreCtrl,
+                        style: TextStyle(color: modalTextColor),
                         decoration: const InputDecoration(labelText: 'Nombre del Combo', border: OutlineInputBorder()),
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
@@ -84,6 +88,7 @@ class _CombosPageState extends State<CombosPage> {
                       TextFormField(
                         controller: _descripcionCtrl,
                         maxLines: 3,
+                        style: TextStyle(color: modalTextColor),
                         decoration: const InputDecoration(labelText: 'Descripción / Productos incluidos', border: OutlineInputBorder()),
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
@@ -93,6 +98,7 @@ class _CombosPageState extends State<CombosPage> {
                           Expanded(
                             child: TextFormField(
                               controller: _precioCtrl,
+                              style: TextStyle(color: modalTextColor),
                               decoration: const InputDecoration(labelText: 'Precio Especial', prefixText: '\$', border: OutlineInputBorder()),
                               keyboardType: TextInputType.number,
                               validator: (v) => v!.isEmpty ? 'Requerido' : null,
@@ -101,10 +107,10 @@ class _CombosPageState extends State<CombosPage> {
                           const SizedBox(width: 16),
                           Column(
                             children: [
-                              const Text('¿Disponible?', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              Text('¿Disponible?', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey)),
                               Switch(
                                 value: _formActivo,
-                                activeThumbColor: Colors.green, // <-- Corrección de advertencia
+                                activeThumbColor: Colors.green,
                                 onChanged: (v) => setModalState(() => _formActivo = v),
                               ),
                             ],
@@ -170,6 +176,15 @@ class _CombosPageState extends State<CombosPage> {
   Widget build(BuildContext context) {
     final filtrados = _combosFiltrados;
 
+    // DETECTAMOS SI EL MODO OSCURO ESTÁ ACTIVO
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // DECLARACIÓN DE VARIABLES PARA COLORES ADAPTATIVOS
+    final searchFillColor = isDark ? const Color(0xFF1E1E2D) : Colors.white;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final textSubColor = isDark ? Colors.white60 : Colors.grey[700];
+    final hintColor = isDark ? Colors.white38 : Colors.grey;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Padding(
@@ -186,11 +201,13 @@ class _CombosPageState extends State<CombosPage> {
             const SizedBox(height: 24),
             
             TextField(
+              style: TextStyle(color: textColor), // Texto del buscador adaptativo
               decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                prefixIcon: Icon(Icons.search, color: hintColor), // Icono adaptativo
                 hintText: 'Buscar combo por nombre o contenido...',
+                hintStyle: TextStyle(color: hintColor), // Hint adaptativo
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: searchFillColor, // Fondo del buscador adaptativo
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -229,7 +246,10 @@ class _CombosPageState extends State<CombosPage> {
                                   Expanded(
                                     child: Text(
                                       combo.nombre, 
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: textColor, // Nombre del combo adaptativo
+                                      ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -237,7 +257,6 @@ class _CombosPageState extends State<CombosPage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      // <-- Corrección de advertencias (withValues en lugar de withOpacity)
                                       color: combo.activo ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -256,7 +275,10 @@ class _CombosPageState extends State<CombosPage> {
                               Expanded(
                                 child: Text(
                                   combo.descripcion, 
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[700], height: 1.4),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: textSubColor, // Descripción adaptativa (evita negro sobre oscuro)
+                                    height: 1.4,
+                                  ),
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -267,12 +289,16 @@ class _CombosPageState extends State<CombosPage> {
                                 children: [
                                   Text(
                                     '\$${combo.precio.toStringAsFixed(2)}', 
-                                    style: const TextStyle(fontSize: 20, color: Colors.blueAccent, fontWeight: FontWeight.w900)
+                                    style: TextStyle(
+                                      fontSize: 20, 
+                                      color: isDark ? const Color(0xFF82B1FF) : Colors.blueAccent, // Precio legible en oscuro
+                                      fontWeight: FontWeight.w900,
+                                    )
                                   ),
                                   Row(
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueGrey),
+                                        icon: Icon(Icons.edit_outlined, size: 20, color: isDark ? Colors.white60 : Colors.blueGrey),
                                         onPressed: () => _abrirFormularioModal(combo: combo, index: _combos.indexOf(combo)),
                                       ),
                                       IconButton(
