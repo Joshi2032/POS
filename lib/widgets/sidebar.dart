@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../state/app_state.dart';
+import '../providers/theme_provider.dart';
 
 class CustomSidebar extends StatelessWidget {
   final String currentSection;
@@ -14,7 +14,8 @@ class CustomSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
+    // 1. Escuchamos el nuevo ThemeProvider en lugar del AppState
+    final themeProvider = context.watch<ThemeProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Colores dinámicos basados en el tema activo
@@ -144,10 +145,12 @@ class CustomSidebar extends StatelessWidget {
                   ],
                 ),
                 Switch(
-                  value: appState.darkMode,
+                  // 2. Conectamos el valor del switch a la variable isDarkMode
+                  value: themeProvider.isDarkMode,
                   activeThumbColor: activeColor,
                   onChanged: (bool value) {
-                    appState.toggleDarkMode();
+                    // 3. Ejecutamos la función toggleTheme del nuevo provider
+                    themeProvider.toggleTheme();
                   },
                 ),
               ],
