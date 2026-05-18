@@ -30,6 +30,7 @@ final GoRouter appRouter = GoRouter(
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) {
+        // Enviamos las variables exactas que espera recibir el constructor de MainLayout
         return MainLayout(currentPath: state.uri.path, child: child);
       },
       routes: [

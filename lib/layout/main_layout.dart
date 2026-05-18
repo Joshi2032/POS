@@ -40,6 +40,7 @@ class MainLayout extends StatelessWidget {
     final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
     final isMobile = MediaQuery.of(context).size.width < 900;
 
+    // Vinculamos los nombres exactos definidos en las propiedades de CustomSidebar
     Widget sidebar = CustomSidebar(
       currentPath: currentPath,
       onPathSelected: (String path) {
