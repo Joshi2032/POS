@@ -1,40 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/ajustes_provider.dart';
 
-class AjustesPage extends StatefulWidget {
+class AjustesPage extends StatelessWidget {
   const AjustesPage({super.key});
 
   @override
-  State<AjustesPage> createState() => _AjustesPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AjustesProvider(),
+      child: const _AjustesView(),
+    );
+  }
 }
 
-class _AjustesPageState extends State<AjustesPage> {
-  final nombreController =
-      TextEditingController(text: 'La Brasa — Parrilla & Grill');
-  final rfcController = TextEditingController(text: 'XAXX010101000');
-  final direccionController =
-      TextEditingController(text: 'Av. Reforma 123, CDMX');
-  final telefonoController = TextEditingController(text: '+52 55 1234 5678');
-  final pinController = TextEditingController(text: '1234');
-
-  bool alertaStock = true;
-  bool resumenDiario = true;
-  bool nuevasOrdenes = true;
-  bool cierreAutomatico = true;
-  bool showPin = false;
-  String saveStatus = 'idle'; // idle | saving | success
-
-  void _save() {
-    setState(() => saveStatus = 'saving');
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() => saveStatus = 'success');
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) setState(() => saveStatus = 'idle');
-      });
-    });
-  }
+class _AjustesView extends StatelessWidget {
+  const _AjustesView();
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<AjustesProvider>();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes')),
       body: SingleChildScrollView(
@@ -42,80 +28,59 @@ class _AjustesPageState extends State<AjustesPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Información del Negocio',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text('Información del Negocio', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
-            TextField(
-                controller: nombreController,
-                decoration:
-                    const InputDecoration(labelText: 'Nombre del Negocio')),
+            TextField(controller: provider.nombreController, decoration: const InputDecoration(labelText: 'Nombre del Negocio')),
             const SizedBox(height: 8),
-            TextField(
-                controller: rfcController,
-                decoration: const InputDecoration(labelText: 'RFC')),
+            TextField(controller: provider.rfcController, decoration: const InputDecoration(labelText: 'RFC')),
             const SizedBox(height: 8),
-            TextField(
-                controller: direccionController,
-                decoration: const InputDecoration(labelText: 'Dirección')),
+            TextField(controller: provider.direccionController, decoration: const InputDecoration(labelText: 'Dirección')),
             const SizedBox(height: 8),
-            TextField(
-                controller: telefonoController,
-                decoration: const InputDecoration(labelText: 'Teléfono')),
+            TextField(controller: provider.telefonoController, decoration: const InputDecoration(labelText: 'Teléfono')),
             const SizedBox(height: 24),
-            Text('Notificaciones',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text('Notificaciones', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             SwitchListTile(
-                value: alertaStock,
-                onChanged: (v) => setState(() => alertaStock = v),
+                value: provider.alertaStock,
+                onChanged: provider.toggleAlertaStock,
                 title: const Text('Alerta de stock bajo')),
             SwitchListTile(
-                value: resumenDiario,
-                onChanged: (v) => setState(() => resumenDiario = v),
+                value: provider.resumenDiario,
+                onChanged: provider.toggleResumenDiario,
                 title: const Text('Resumen diario')),
             SwitchListTile(
-                value: nuevasOrdenes,
-                onChanged: (v) => setState(() => nuevasOrdenes = v),
+                value: provider.nuevasOrdenes,
+                onChanged: provider.toggleNuevasOrdenes,
                 title: const Text('Nuevas órdenes')),
             const SizedBox(height: 24),
             Text('Seguridad', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             TextField(
-              controller: pinController,
+              controller: provider.pinController,
               decoration: InputDecoration(
                 labelText: 'PIN de seguridad',
                 suffixIcon: IconButton(
-                    icon:
-                        Icon(showPin ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => showPin = !showPin)),
+                    icon: Icon(provider.showPin ? Icons.visibility_off : Icons.visibility),
+                    onPressed: provider.toggleShowPin),
               ),
-              obscureText: !showPin,
+              obscureText: !provider.showPin,
             ),
             const SizedBox(height: 12),
             SwitchListTile(
-                value: cierreAutomatico,
-                onChanged: (v) => setState(() => cierreAutomatico = v),
+                value: provider.cierreAutomatico,
+                onChanged: provider.toggleCierreAutomatico,
                 title: const Text('Cierre automático')),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: saveStatus == 'saving' ? null : _save,
+                onPressed: provider.saveStatus == 'saving' ? null : provider.guardarCambios,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: saveStatus == 'saving'
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : saveStatus == 'success'
-                          ? const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                  Icon(Icons.check),
-                                  SizedBox(width: 8),
-                                  Text('Guardado')
-                                ])
+                  child: provider.saveStatus == 'saving'
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : provider.saveStatus == 'success'
+                          ? const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check), SizedBox(width: 8), Text('Guardado')])
                           : const Text('Guardar Cambios'),
                 ),
               ),
@@ -124,15 +89,5 @@ class _AjustesPageState extends State<AjustesPage> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    nombreController.dispose();
-    rfcController.dispose();
-    direccionController.dispose();
-    telefonoController.dispose();
-    pinController.dispose();
-    super.dispose();
   }
 }
