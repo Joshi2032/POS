@@ -1,52 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../state/app_state.dart';
-import '../widgets/app_widgets.dart'; // Para consumir AppCard y SectionHeader
+import '../providers/proveedores_provider.dart';
+import '../widgets/app_widgets.dart';
 
-class ProveedoresPage extends StatefulWidget {
+class ProveedoresPage extends StatelessWidget {
   const ProveedoresPage({super.key});
 
   @override
-  State<ProveedoresPage> createState() => _ProveedoresPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ProveedoresProvider(),
+      child: const _ProveedoresView(),
+    );
+  }
 }
 
-class _ProveedoresPageState extends State<ProveedoresPage> {
+class _ProveedoresView extends StatefulWidget {
+  const _ProveedoresView();
+
+  @override
+  State<_ProveedoresView> createState() => _ProveedoresViewState();
+}
+
+class _ProveedoresViewState extends State<_ProveedoresView> {
   final _money = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
-  final int pageSize = 10;
-  String searchTerm = '';
-  int currentPage = 1;
 
-  void _setSearch(String value) {
-    setState(() {
-      searchTerm = value;
-      currentPage = 1;
-    });
-  }
-
-  void _goToPage(int page, int totalPages) {
-    setState(() {
-      currentPage = page.clamp(1, totalPages);
-    });
-  }
-
-  void _openEditor({Map<String, dynamic>? payment}) {
+  void _openEditor(ProveedoresProvider provider, {Map<String, dynamic>? payment}) {
     final todayIso = DateTime.now().toIso8601String().split('T').first;
     final idController = TextEditingController(
       text: payment?['id'] ?? 'PAG-${DateTime.now().millisecondsSinceEpoch}',
     );
-    final providerController =
-        TextEditingController(text: payment?['provider'] ?? '');
-    final categoryController =
-        TextEditingController(text: payment?['category'] ?? '');
-    final amountController =
-        TextEditingController(text: payment?['amount']?.toString() ?? '0');
-    final dateController =
-        TextEditingController(text: payment?['date'] ?? todayIso);
-    final timeController =
-        TextEditingController(text: payment?['time'] ?? '09:00 a.m.');
-    final cashierController =
-        TextEditingController(text: payment?['cashier'] ?? 'Laura S.');
+    final providerController = TextEditingController(text: payment?['provider'] ?? '');
+    final categoryController = TextEditingController(text: payment?['category'] ?? '');
+    final amountController = TextEditingController(text: payment?['amount']?.toString() ?? '0');
+    final dateController = TextEditingController(text: payment?['date'] ?? todayIso);
+    final timeController = TextEditingController(text: payment?['time'] ?? '09:00 a.m.');
+    final cashierController = TextEditingController(text: payment?['cashier'] ?? 'Laura S.');
     String method = payment?['method'] ?? 'Transferencia';
 
     showDialog(
@@ -56,28 +46,20 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
           builder: (context, setDialogState) {
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              title: Text(payment == null ? 'Nuevo Pago' : 'Editar Pago',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(payment == null ? 'Nuevo Pago' : 'Editar Pago', style: const TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(
-                        controller: idController,
-                        decoration: const InputDecoration(labelText: 'ID', border: OutlineInputBorder()),
-                        readOnly: true),
+                    TextField(controller: idController, decoration: const InputDecoration(labelText: 'ID', border: OutlineInputBorder()), readOnly: true),
                     const SizedBox(height: 12),
-                    TextField(
-                        controller: providerController,
-                        decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder())),
+                    TextField(controller: providerController, decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder())),
                     const SizedBox(height: 12),
-                    TextField(
-                        controller: categoryController,
-                        decoration: const InputDecoration(labelText: 'Concepto', border: OutlineInputBorder())),
+                    TextField(controller: categoryController, decoration: const InputDecoration(labelText: 'Concepto', border: OutlineInputBorder())),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      dropdownColor: Theme.of(context).cardColor, // Mantiene el menú contextual oscuro
-                      initialValue: method, // Adaptado a los estándares de Flutter 3.33+
+                      dropdownColor: Theme.of(context).cardColor,
+                      initialValue: method,
                       items: const [
                         DropdownMenuItem(value: 'Transferencia', child: Text('Transferencia')),
                         DropdownMenuItem(value: 'Efectivo', child: Text('Efectivo')),
@@ -87,32 +69,20 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
                       decoration: const InputDecoration(labelText: 'Método', border: OutlineInputBorder()),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                        controller: amountController,
-                        decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ ', border: OutlineInputBorder()),
-                        keyboardType: TextInputType.number),
+                    TextField(controller: amountController, decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ ', border: OutlineInputBorder()), keyboardType: TextInputType.number),
                     const SizedBox(height: 12),
-                    TextField(
-                        controller: dateController,
-                        decoration: const InputDecoration(labelText: 'Fecha', border: OutlineInputBorder())),
+                    TextField(controller: dateController, decoration: const InputDecoration(labelText: 'Fecha', border: OutlineInputBorder())),
                     const SizedBox(height: 12),
-                    TextField(
-                        controller: timeController,
-                        decoration: const InputDecoration(labelText: 'Hora', border: OutlineInputBorder())),
+                    TextField(controller: timeController, decoration: const InputDecoration(labelText: 'Hora', border: OutlineInputBorder())),
                     const SizedBox(height: 12),
-                    TextField(
-                        controller: cashierController,
-                        decoration: const InputDecoration(labelText: 'Cajero', border: OutlineInputBorder())),
+                    TextField(controller: cashierController, decoration: const InputDecoration(labelText: 'Cajero', border: OutlineInputBorder())),
                   ],
                 ),
               ),
               actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar')),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
                 ElevatedButton(
                   onPressed: () {
-                    final app = context.read<AppState>();
                     final data = {
                       'id': idController.text,
                       'provider': providerController.text.trim(),
@@ -124,23 +94,16 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
                       'cashier': cashierController.text,
                     };
 
-                    if (data['provider'] is String &&
-                        (data['provider'] as String).isNotEmpty &&
-                        data['category'] is String &&
-                        (data['category'] as String).isNotEmpty &&
-                        (data['amount'] as double) > 0) {
+                    if ((data['provider'] as String).isNotEmpty && (data['category'] as String).isNotEmpty && (data['amount'] as double) > 0) {
                       if (payment == null) {
-                        app.addProviderPayment(data);
+                        provider.addPayment(data);
                       } else {
-                        app.updateProviderPayment(payment['id'], data);
+                        provider.updatePayment(payment['id'], data);
                       }
                       Navigator.pop(context);
                     }
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
                   child: const Text('Guardar'),
                 ),
               ],
@@ -153,53 +116,37 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
 
   @override
   Widget build(BuildContext context) {
-    final app = context.watch<AppState>();
-    final payments = app.providerPayments.where((payment) {
-      if (searchTerm.isEmpty) return true;
-      final q = searchTerm.toLowerCase();
-      return [
-        payment['provider'],
-        payment['category'],
-        payment['method'],
-        payment['cashier']
-      ].whereType<String>().any((v) => v.toLowerCase().contains(q));
-    }).toList();
-
-    final totalPages = (payments.length / pageSize).ceil().clamp(1, 999999);
-    final start = (currentPage - 1) * pageSize;
-    final paginated = payments.skip(start).take(pageSize).toList();
+    final provider = context.watch<ProveedoresProvider>();
+    final paginated = provider.paginatedPayments;
 
     final primaryTextColor = Theme.of(context).colorScheme.onSurface;
     final mutedTextColor = Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;
 
     return Scaffold(
-      backgroundColor: Colors.transparent, // Hereda el lienzo limpio de fondo de tu MainLayout
+      backgroundColor: Colors.transparent, 
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Encabezado Oficial tipo Dashboard/Web
             SectionHeader(
               title: '📦 Control de Proveedores',
               subtitle: 'Historial de pagos y liquidación de insumos',
               actionLabel: 'Nuevo Pago',
-              onAction: () => _openEditor(),
+              onAction: () => _openEditor(provider),
             ),
             const SizedBox(height: 24),
 
-            // 2. Buscador adaptativo global
             TextField(
               style: TextStyle(color: primaryTextColor),
               decoration: const InputDecoration(
                 prefixIcon: Icon(Icons.search),
                 hintText: 'Buscar por proveedor, concepto, método...',
               ),
-              onChanged: _setSearch,
+              onChanged: provider.setSearch,
             ),
             const SizedBox(height: 24),
 
-            // 3. Grid de Tarjetas de Estadísticas unificadas con tu AppCard
             GridView(
               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 220,
@@ -213,33 +160,28 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
                 _buildStatCard(
                   context,
                   label: 'Pagos hoy',
-                  value: _money.format(app.providerPaymentsTodayTotal),
-                  note: '${app.providerPayments.where((p) => p['date'] == DateTime.now().toIso8601String().split('T').first).length} operaciones',
+                  value: _money.format(provider.todayTotal),
+                  note: '${provider.todayPaymentsCount} operaciones',
                   tone: Colors.deepOrange,
                 ),
                 _buildStatCard(
                   context,
                   label: 'Total semana',
-                  value: _money.format(app.providerPaymentsWeekTotal),
+                  value: _money.format(provider.weekTotal),
                   note: 'Últimos 7 días',
                   tone: Colors.red,
                 ),
                 _buildStatCard(
                   context,
                   label: 'Total mes',
-                  value: _money.format(app.providerPaymentsMonthTotal),
+                  value: _money.format(provider.monthTotal),
                   note: 'Mes en curso',
                   tone: Colors.green,
                 ),
                 _buildStatCard(
                   context,
                   label: 'Proveedores',
-                  value: app.providerPayments
-                      .map((e) => e['provider'])
-                      .whereType<String>()
-                      .toSet()
-                      .length
-                      .toString(),
+                  value: provider.uniqueProvidersCount.toString(),
                   note: 'Rastreados distintos',
                   tone: Colors.blue,
                 ),
@@ -247,19 +189,12 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
             ),
             const SizedBox(height: 24),
 
-            Text('${payments.length} registro(s) encontrado(s)',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text('${provider.filteredPayments.length} registro(s) encontrado(s)', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
 
-            // 4. Lista de Historial integrada con el AppCard adaptativo
             Expanded(
               child: paginated.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No hay pagos que coincidan con tu búsqueda.',
-                        style: TextStyle(color: mutedTextColor),
-                      ),
-                    )
+                  ? Center(child: Text('No hay pagos que coincidan con tu búsqueda.', style: TextStyle(color: mutedTextColor)))
                   : ListView.separated(
                       itemCount: paginated.length,
                       separatorBuilder: (_, __) => Divider(color: Theme.of(context).dividerColor.withValues(alpha: 0.3)),
@@ -277,27 +212,19 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
                                 style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
                               ),
                             ),
-                            title: Text(providerName,
-                                style: TextStyle(fontWeight: FontWeight.bold, color: primaryTextColor)),
+                            title: Text(providerName, style: TextStyle(fontWeight: FontWeight.bold, color: primaryTextColor)),
                             subtitle: Padding(
                               padding: const EdgeInsets.only(top: 4.0),
-                              child: Text(
-                                  '${payment['category']} · ${payment['method']} · ${payment['date']} ${payment['time']}\nCajero: ${payment['cashier']}',
-                                  style: TextStyle(color: mutedTextColor)),
+                              child: Text('${payment['category']} · ${payment['method']} · ${payment['date']} ${payment['time']}\nCajero: ${payment['cashier']}', style: TextStyle(color: mutedTextColor)),
                             ),
                             isThreeLine: true,
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(_money.format(payment['amount'] ?? 0.0),
-                                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: primaryTextColor)),
+                                Text(_money.format(payment['amount'] ?? 0.0), style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: primaryTextColor)),
                                 const SizedBox(width: 8),
-                                IconButton(
-                                    icon: const Icon(Icons.edit_outlined, color: Colors.blueGrey, size: 20),
-                                    onPressed: () => _openEditor(payment: payment)),
-                                IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                                    onPressed: () => app.removeProviderPayment(payment['id'] as String)),
+                                IconButton(icon: const Icon(Icons.edit_outlined, color: Colors.blueGrey, size: 20), onPressed: () => _openEditor(provider, payment: payment)),
+                                IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), onPressed: () => provider.removePayment(payment['id'] as String)),
                               ],
                             ),
                           ),
@@ -306,23 +233,22 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
                     ),
             ),
 
-            // 5. Paginador inferior perimetral
-            if (totalPages > 1)
+            if (provider.totalPages > 1)
               Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     OutlinedButton(
-                      onPressed: currentPage > 1 ? () => _goToPage(currentPage - 1, totalPages) : null,
+                      onPressed: provider.currentPage > 1 ? () => provider.goToPage(provider.currentPage - 1) : null,
                       style: OutlinedButton.styleFrom(side: BorderSide(color: Theme.of(context).dividerColor)),
                       child: const Text('Anterior'),
                     ),
                     const SizedBox(width: 16),
-                    Text('Página $currentPage de $totalPages', style: TextStyle(color: primaryTextColor)),
+                    Text('Página ${provider.currentPage} de ${provider.totalPages}', style: TextStyle(color: primaryTextColor)),
                     const SizedBox(width: 16),
                     OutlinedButton(
-                      onPressed: currentPage < totalPages ? () => _goToPage(currentPage + 1, totalPages) : null,
+                      onPressed: provider.currentPage < provider.totalPages ? () => provider.goToPage(provider.currentPage + 1) : null,
                       style: OutlinedButton.styleFrom(side: BorderSide(color: Theme.of(context).dividerColor)),
                       child: const Text('Siguiente'),
                     ),
@@ -335,7 +261,6 @@ class _ProveedoresPageState extends State<ProveedoresPage> {
     );
   }
 
-  // Tarjeta de estadística adaptada al contexto oscuro/claro
   Widget _buildStatCard(BuildContext context, {required String label, required String value, required String note, required Color tone}) {
     return AppCard(
       padding: const EdgeInsets.all(12),
