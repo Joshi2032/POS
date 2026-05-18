@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import 'layout/main_layout.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/ordenes_page.dart';
 import 'pages/productos_page.dart';
@@ -17,42 +20,37 @@ import 'pages/nominas_page.dart';
 import 'pages/historial_cortes_page.dart';
 import 'pages/ajustes_page.dart';
 
-class Routes {
-  static const dashboard = '/';
-  static const ordenes = '/ordenes';
-  static const productos = '/productos';
-  static const tomarOrden = '/tomar-orden';
-  static const inventario = '/inventario';
-  static const mesas = '/mesas';
-  static const empleados = '/empleados';
-  static const reservaciones = '/reservaciones';
-  static const caja = '/caja';
-  static const proveedores = '/proveedores';
-  static const combos = '/combos';
-  static const recetas = '/recetas';
-  static const reportes = '/reportes';
-  static const gastos = '/gastos';
-  static const nominas = '/nominas';
-  static const historialCortes = '/historial-cortes';
-  static const ajustes = '/ajustes';
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-  static Map<String, WidgetBuilder> get map => {
-        dashboard: (_) => const DashboardPage(),
-        ordenes: (_) => const OrdenesPage(),
-        productos: (_) => const ProductosPage(),
-        tomarOrden: (_) => const TomarOrdenPage(),
-        inventario: (_) => const InventarioPage(),
-        mesas: (_) => const MesasPage(),
-        empleados: (_) => const EmpleadosPage(),
-        reservaciones: (_) => const ReservacionesPage(),
-        caja: (_) => const CajaPage(),
-        proveedores: (_) => const ProveedoresPage(),
-        combos: (_) => const CombosPage(),
-        recetas: (_) => const RecetasPage(),
-        reportes: (_) => const ReportesPage(),
-        gastos: (_) => const GastosPage(),
-        nominas: (_) => const NominasPage(),
-        historialCortes: (_) => const HistorialCortesPage(),
-        ajustes: (_) => const AjustesPage(),
-      };
-}
+final GoRouter appRouter = GoRouter(
+  navigatorKey: _rootNavigatorKey,
+  initialLocation: '/dashboard',
+  routes: [
+    ShellRoute(
+      navigatorKey: _shellNavigatorKey,
+      builder: (context, state, child) {
+        return MainLayout(currentPath: state.uri.path, child: child);
+      },
+      routes: [
+        GoRoute(path: '/dashboard', builder: (context, state) => const DashboardPage()),
+        GoRoute(path: '/tomar-orden', builder: (context, state) => const TomarOrdenPage()),
+        GoRoute(path: '/caja', builder: (context, state) => const CajaPage()),
+        GoRoute(path: '/proveedores', builder: (context, state) => const ProveedoresPage()),
+        GoRoute(path: '/ordenes', builder: (context, state) => const OrdenesPage()),
+        GoRoute(path: '/reservaciones', builder: (context, state) => const ReservacionesPage()),
+        GoRoute(path: '/productos', builder: (context, state) => const ProductosPage()),
+        GoRoute(path: '/combos', builder: (context, state) => const CombosPage()),
+        GoRoute(path: '/recetas', builder: (context, state) => const RecetasPage()),
+        GoRoute(path: '/empleados', builder: (context, state) => const EmpleadosPage()),
+        GoRoute(path: '/inventario', builder: (context, state) => const InventarioPage()),
+        GoRoute(path: '/mesas', builder: (context, state) => const MesasPage()),
+        GoRoute(path: '/reportes', builder: (context, state) => const ReportesPage()),
+        GoRoute(path: '/gastos', builder: (context, state) => const GastosPage()),
+        GoRoute(path: '/nominas', builder: (context, state) => const NominasPage()),
+        GoRoute(path: '/historial-cortes', builder: (context, state) => const HistorialCortesPage()),
+        GoRoute(path: '/ajustes', builder: (context, state) => const AjustesPage()),
+      ],
+    ),
+  ],
+);
