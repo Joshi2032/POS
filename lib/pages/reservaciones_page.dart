@@ -90,8 +90,9 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
   }
 
   void guardarReservacion(ReservacionesProvider provider) {
-    if (_formKey.currentState == null || !_formKey.currentState!.validate())
+    if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
+    }
 
     if (formState.customerName.trim().isEmpty ||
         formState.date.trim().isEmpty ||

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'inventario_provider.dart'; // Importamos el almacén para poder comunicarnos
+import 'inventario_provider.dart';
 
 class ProveedoresProvider extends ChangeNotifier {
   final int pageSize = 10;
@@ -31,9 +31,10 @@ class ProveedoresProvider extends ChangeNotifier {
     return filteredPayments.skip(start).take(pageSize).toList();
   }
 
+  // Corrección en los folds garantizando que la lectura trate al valor como num
   double get todayTotal {
     final today = DateTime.now().toIso8601String().split('T').first;
-    return _payments.where((p) => p['date'] == today).fold(0.0, (sum, p) => sum + (p['amount'] ?? 0.0));
+    return _payments.where((p) => p['date'] == today).fold(0.0, (sum, p) => sum + (p['amount'] as num).toDouble());
   }
 
   int get todayPaymentsCount {
@@ -48,7 +49,7 @@ class ProveedoresProvider extends ChangeNotifier {
       if (p['date'] == null) return false;
       final date = DateTime.tryParse(p['date']);
       return date != null && date.isAfter(weekAgo);
-    }).fold(0.0, (sum, p) => sum + (p['amount'] ?? 0.0));
+    }).fold(0.0, (sum, p) => sum + (p['amount'] as num).toDouble());
   }
 
   double get monthTotal {
@@ -57,7 +58,7 @@ class ProveedoresProvider extends ChangeNotifier {
       if (p['date'] == null) return false;
       final date = DateTime.tryParse(p['date']);
       return date != null && date.month == now.month && date.year == now.year;
-    }).fold(0.0, (sum, p) => sum + (p['amount'] ?? 0.0));
+    }).fold(0.0, (sum, p) => sum + (p['amount'] as num).toDouble());
   }
 
   int get uniqueProvidersCount {
@@ -75,19 +76,13 @@ class ProveedoresProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // MODIFICADO: Ahora requiere recibir la instancia del Inventario para actualizarlo en tiempo real
+  // Inyección limpia pasándole un incremento double estándar (ej. 10.0 unidades)
   void addPayment(Map<String, dynamic> data, InventarioProvider inventario) {
     _payments.insert(0, data);
-    
-    // Si en el concepto del pago pusiste algo como "Carne Molida" y tienes stock o notas, 
-    // extraemos el incremento. Para hacerlo simple y automatizado: usamos el campo 'category' (Concepto)
-    // incrementando la cantidad que se registre.
     final nombreInsumo = data['category'] as String;
     
-    // Asumimos por defecto un paquete/unidad de compra (puedes adaptarlo según tus notas)
-    // En este simulador, cada orden recibida suma 10 unidades al stock local de forma automática.
-    inventario.aumentarStockPorCompra(nombreInsumo, 10);
-    
+    // Auto-incrementamos 10.0 unidades reales al stock local
+    inventario.aumentarStockPorCompra(nombreInsumo, 10.0);
     notifyListeners();
   }
 

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 class InventarioProvider extends ChangeNotifier {
-  // Lista de insumos iniciales en memoria
+  // Estandarizamos los valores numéricos a double para evitar errores de casteo
   final List<Map<String, dynamic>> _inventory = [
     {
       'id': 'INS-01',
       'name': 'Carne Molida',
       'category': 'Carnes',
-      'stock': 15,
+      'stock': 15.0, // double
       'cost': 85.0,
       'provider': 'Distribuidora Carnes SA'
     },
@@ -15,7 +15,7 @@ class InventarioProvider extends ChangeNotifier {
       'id': 'INS-02',
       'name': 'Pan de Hamburguesa',
       'category': 'Panadería',
-      'stock': 120,
+      'stock': 120.0, // double
       'cost': 4.5,
       'provider': 'Panificadora Central'
     },
@@ -23,7 +23,7 @@ class InventarioProvider extends ChangeNotifier {
       'id': 'INS-03',
       'name': 'Tomate Bola',
       'category': 'Verduras',
-      'stock': 8,
+      'stock': 8.0, // double
       'cost': 22.0,
       'provider': 'Frutas y Verduras del Centro'
     },
@@ -64,18 +64,17 @@ class InventarioProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // LÓGICA DE INTERCONEXIÓN: Incrementa el stock cuando se compra a un proveedor
-  void aumentarStockPorCompra(String nombreInsumo, int cantidadAumentar) {
+  // LÓGICA DE INTERCONEXIÓN MEJORADA: Suma de forma segura usando números reales
+  void aumentarStockPorCompra(String nombreInsumo, double cantidadAumentar) {
     final index = _inventory.indexWhere(
       (i) => (i['name'] as String).toLowerCase() == nombreInsumo.toLowerCase()
     );
 
     if (index != -1) {
-      // Si el insumo ya existe en el catálogo, sumamos el stock recibido
-      final currentStock = _inventory[index]['stock'] as int;
+      final currentStock = (_inventory[index]['stock'] as num).toDouble();
       _inventory[index]['stock'] = currentStock + cantidadAumentar;
     } else {
-      // Si el proveedor nos trae un insumo nuevo que no teníamos, lo auto-registramos
+      // Si es un insumo nuevo que trajo el proveedor, lo auto-registramos limpio
       _inventory.add({
         'id': 'INS-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
         'name': nombreInsumo,
