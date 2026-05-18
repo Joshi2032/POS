@@ -1,70 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/empleados_provider.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/layout_widgets.dart';
 import '../widgets/search_bar.dart';
 
-class Empleado {
-  final String nombre;
-  final String rol;
-  final String telefono;
-  final bool activo;
-
-  Empleado({
-    required this.nombre,
-    required this.rol,
-    required this.telefono,
-    this.activo = true,
-  });
-}
-
-class EmpleadosPage extends StatefulWidget {
+class EmpleadosPage extends StatelessWidget {
   const EmpleadosPage({super.key});
 
   @override
-  State<EmpleadosPage> createState() => _EmpleadosPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => EmpleadosProvider(),
+      child: const _EmpleadosView(),
+    );
+  }
 }
 
-class _EmpleadosPageState extends State<EmpleadosPage> {
-  final List<Empleado> _empleados = [
-    Empleado(nombre: 'Carlos Mendoza', rol: 'Mesero', telefono: '3521234567'),
-    Empleado(nombre: 'Ana Rodríguez', rol: 'Cocinero', telefono: '3527654321'),
-    Empleado(
-        nombre: 'Juan Pérez', rol: 'Administrador', telefono: '3529876543'),
-    Empleado(
-        nombre: 'Sofia Gómez',
-        rol: 'Cajero',
-        telefono: '3524567890',
-        activo: false),
-  ];
+class _EmpleadosView extends StatefulWidget {
+  const _EmpleadosView();
 
-  String _searchTerm = '';
-  String _selectedRol = 'Todos';
+  @override
+  State<_EmpleadosView> createState() => _EmpleadosViewState();
+}
 
-  final List<String> _roles = [
-    'Todos',
-    'Administrador',
-    'Cocinero',
-    'Mesero',
-    'Cajero'
-  ];
-
-  List<Empleado> get _empleadosFiltrados {
-    return _empleados.where((e) {
-      final matchesSearch =
-          e.nombre.toLowerCase().contains(_searchTerm.toLowerCase()) ||
-              e.telefono.contains(_searchTerm);
-      final matchesRol = _selectedRol == 'Todos' || e.rol == _selectedRol;
-      return matchesSearch && matchesRol;
-    }).toList();
-  }
-
+class _EmpleadosViewState extends State<_EmpleadosView> {
   final _formKey = GlobalKey<FormState>();
   final _nombreCtrl = TextEditingController();
   final _telefonoCtrl = TextEditingController();
   String _formRol = 'Mesero';
   bool _formActivo = true;
 
-  void _abrirFormularioModal({Empleado? empleado, int? index}) {
+  @override
+  void dispose() {
+    _nombreCtrl.dispose();
+    _telefonoCtrl.dispose();
+    super.dispose();
+  }
+
+  void _abrirFormularioModal(EmpleadosProvider provider, {Empleado? empleado, int? index}) {
     if (empleado != null) {
       _nombreCtrl.text = empleado.nombre;
       _telefonoCtrl.text = empleado.telefono;
@@ -83,10 +57,8 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              title: Text(
-                  empleado != null ? 'Editar Empleado' : 'Nuevo Empleado',
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              title: Text(empleado != null ? 'Editar Empleado' : 'Nuevo Empleado',
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Form(
@@ -96,31 +68,24 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                     children: [
                       TextFormField(
                         controller: _nombreCtrl,
-                        decoration: const InputDecoration(
-                            labelText: 'Nombre Completo',
-                            border: OutlineInputBorder()),
+                        decoration: const InputDecoration(labelText: 'Nombre Completo', border: OutlineInputBorder()),
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         dropdownColor: Theme.of(context).cardColor,
                         initialValue: _formRol,
-                        decoration: const InputDecoration(
-                            labelText: 'Puesto / Rol',
-                            border: OutlineInputBorder()),
-                        items: _roles
+                        decoration: const InputDecoration(labelText: 'Puesto / Rol', border: OutlineInputBorder()),
+                        items: provider.roles
                             .where((r) => r != 'Todos')
-                            .map((r) =>
-                                DropdownMenuItem(value: r, child: Text(r)))
+                            .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                             .toList(),
                         onChanged: (v) => setModalState(() => _formRol = v!),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _telefonoCtrl,
-                        decoration: const InputDecoration(
-                            labelText: 'Teléfono',
-                            border: OutlineInputBorder()),
+                        decoration: const InputDecoration(labelText: 'Teléfono', border: OutlineInputBorder()),
                         keyboardType: TextInputType.phone,
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
@@ -132,8 +97,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                           Switch(
                             value: _formActivo,
                             activeThumbColor: Colors.green,
-                            onChanged: (v) =>
-                                setModalState(() => _formActivo = v),
+                            onChanged: (v) => setModalState(() => _formActivo = v),
                           ),
                         ],
                       ),
@@ -142,9 +106,7 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                 ),
               ),
               actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar')),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
                 ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
@@ -154,13 +116,12 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                         telefono: _telefonoCtrl.text,
                         activo: _formActivo,
                       );
-                      setState(() {
-                        if (index != null) {
-                          _empleados[index] = nuevo;
-                        } else {
-                          _empleados.add(nuevo);
-                        }
-                      });
+                      
+                      if (index != null) {
+                        provider.updateEmpleado(index, nuevo);
+                      } else {
+                        provider.addEmpleado(nuevo);
+                      }
                       Navigator.pop(context);
                     }
                   },
@@ -176,7 +137,8 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
 
   @override
   Widget build(BuildContext context) {
-    final filtrados = _empleadosFiltrados;
+    final provider = context.watch<EmpleadosProvider>();
+    final filtrados = provider.empleadosFiltrados;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -189,18 +151,17 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
               title: '👥 Personal y Empleados',
               subtitle: '${filtrados.length} empleados activos en el turno',
               actionLabel: 'Nuevo Empleado',
-              onAction: () => _abrirFormularioModal(),
+              onAction: () => _abrirFormularioModal(provider),
             ),
             const SizedBox(height: 24),
 
-            // Barra de filtrado completamente adaptada al modo oscuro
             Row(
               children: [
                 Expanded(
                   flex: 2,
                   child: CustomSearchBar(
                     hint: 'Buscar empleado por nombre...',
-                    onChanged: (v) => setState(() => _searchTerm = v),
+                    onChanged: provider.setSearchTerm,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -208,18 +169,11 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                   flex: 1,
                   child: DropdownButtonFormField<String>(
                     dropdownColor: Theme.of(context).cardColor,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 14),
-                    decoration: const InputDecoration(
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    initialValue: _selectedRol,
-                    items: _roles
-                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedRol = v!),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                    initialValue: provider.selectedRol,
+                    items: provider.roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                    onChanged: (v) => provider.setRol(v!),
                   ),
                 ),
               ],
@@ -229,18 +183,16 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
             Expanded(
               child: filtrados.isEmpty
                   ? EmptyState(
-                      message:
-                          'No se encontraron colaboradores con este filtro.',
+                      message: 'No se encontraron colaboradores con este filtro.',
                       icon: Icons.person_off_outlined,
                       actionLabel: 'Restablecer',
-                      onAction: () => setState(() {
-                        _searchTerm = '';
-                        _selectedRol = 'Todos';
-                      }),
+                      onAction: () {
+                        provider.setSearchTerm('');
+                        provider.setRol('Todos');
+                      },
                     )
                   : GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: 320,
                         childAspectRatio: 1.3,
                         crossAxisSpacing: 16,
@@ -254,65 +206,39 @@ class _EmpleadosPageState extends State<EmpleadosPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .primaryColor
-                                          .withValues(alpha: 0.1),
+                                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(emp.rol,
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: Theme.of(context)
-                                                .primaryColor)),
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: (emp.activo
-                                              ? Colors.green
-                                              : Colors.red)
-                                          .withValues(alpha: 0.1),
+                                      color: (emp.activo ? Colors.green : Colors.red).withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Text(
-                                        emp.activo ? 'Activo' : 'Inactivo',
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: emp.activo
-                                                ? Colors.green
-                                                : Colors.red)),
+                                    child: Text(emp.activo ? 'Activo' : 'Inactivo',
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: emp.activo ? Colors.green : Colors.red)),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Text(emp.nombre,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold)),
+                              Text(emp.nombre, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
-                              Text('Tel: ${emp.telefono}',
-                                  style: Theme.of(context).textTheme.bodySmall),
+                              Text('Tel: ${emp.telefono}', style: Theme.of(context).textTheme.bodySmall),
                               const Spacer(),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.edit_outlined,
-                                        size: 20, color: Colors.blueGrey),
-                                    onPressed: () => _abrirFormularioModal(
-                                        empleado: emp,
-                                        index: _empleados.indexOf(emp)),
+                                    icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueGrey),
+                                    onPressed: () => _abrirFormularioModal(provider, empleado: emp, index: provider.empleados.indexOf(emp)),
                                   ),
                                 ],
                               )
