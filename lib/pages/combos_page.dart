@@ -1,53 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/combos_provider.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/layout_widgets.dart';
 
-class Combo {
-  final String nombre;
-  final String descripcion;
-  final double precio;
-  final bool activo;
-
-  Combo({
-    required this.nombre,
-    required this.descripcion,
-    required this.precio,
-    this.activo = true,
-  });
-}
-
-class CombosPage extends StatefulWidget {
+class CombosPage extends StatelessWidget {
   const CombosPage({super.key});
 
   @override
-  State<CombosPage> createState() => _CombosPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => CombosProvider(),
+      child: const _CombosView(),
+    );
+  }
 }
 
-class _CombosPageState extends State<CombosPage> {
-  final List<Combo> _combos = [
-    Combo(nombre: 'Combo Familiar Parrillero', descripcion: '1 T-Bone 500g, 1 Arrachera 300g, 2 Guarniciones y 1 Jarra de agua.', precio: 850.00),
-    Combo(nombre: 'Combo Pareja', descripcion: '1 Costilla BBQ, 1 Pechuga Asada, 2 Bebidas y 1 Postre a elegir.', precio: 450.00),
-    Combo(nombre: 'Combo Ejecutivo', descripcion: 'Arrachera 200g, ensalada de la casa y bebida.', precio: 220.00),
-    Combo(nombre: 'Paquete Botanero', descripcion: 'Alitas, Papas al carbón, Queso fundido y 2 Cervezas.', precio: 380.00, activo: false),
-  ];
+class _CombosView extends StatefulWidget {
+  const _CombosView();
 
-  String _searchTerm = '';
+  @override
+  State<_CombosView> createState() => _CombosViewState();
+}
 
-  List<Combo> get _combosFiltrados {
-    return _combos.where((c) {
-      final matchNombre = c.nombre.toLowerCase().contains(_searchTerm.toLowerCase());
-      final matchDesc = c.descripcion.toLowerCase().contains(_searchTerm.toLowerCase());
-      return matchNombre || matchDesc;
-    }).toList();
-  }
-
+class _CombosViewState extends State<_CombosView> {
   final _formKey = GlobalKey<FormState>();
   final _nombreCtrl = TextEditingController();
   final _descripcionCtrl = TextEditingController();
   final _precioCtrl = TextEditingController();
   bool _formActivo = true;
 
-  void _abrirFormularioModal({Combo? combo, int? index}) {
+  @override
+  void dispose() {
+    _nombreCtrl.dispose();
+    _descripcionCtrl.dispose();
+    _precioCtrl.dispose();
+    super.dispose();
+  }
+
+  void _abrirFormularioModal(CombosProvider provider, {Combo? combo, int? index}) {
     if (combo != null) {
       _nombreCtrl.text = combo.nombre;
       _descripcionCtrl.text = combo.descripcion;
@@ -132,13 +123,12 @@ class _CombosPageState extends State<CombosPage> {
                         precio: double.tryParse(_precioCtrl.text) ?? 0,
                         activo: _formActivo,
                       );
-                      setState(() {
-                        if (index != null) {
-                          _combos[index] = nuevo;
-                        } else {
-                          _combos.add(nuevo);
-                        }
-                      });
+                      
+                      if (index != null) {
+                        provider.updateCombo(index, nuevo);
+                      } else {
+                        provider.addCombo(nuevo);
+                      }
                       Navigator.pop(context);
                     }
                   },
@@ -152,7 +142,7 @@ class _CombosPageState extends State<CombosPage> {
     );
   }
 
-  void _solicitarBorrado(Combo combo) {
+  void _solicitarBorrado(CombosProvider provider, Combo combo) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -162,7 +152,7 @@ class _CombosPageState extends State<CombosPage> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
           TextButton(
             onPressed: () {
-              setState(() => _combos.remove(combo));
+              provider.removeCombo(combo);
               Navigator.pop(context);
             },
             child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
@@ -174,7 +164,8 @@ class _CombosPageState extends State<CombosPage> {
 
   @override
   Widget build(BuildContext context) {
-    final filtrados = _combosFiltrados;
+    final provider = context.watch<CombosProvider>();
+    final filtrados = provider.combosFiltrados;
 
     // DETECTAMOS SI EL MODO OSCURO ESTÁ ACTIVO
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -196,24 +187,24 @@ class _CombosPageState extends State<CombosPage> {
               title: '🍱 Combos y Paquetes',
               subtitle: '${filtrados.length} combos registrados',
               actionLabel: 'Crear Combo',
-              onAction: () => _abrirFormularioModal(),
+              onAction: () => _abrirFormularioModal(provider),
             ),
             const SizedBox(height: 24),
             
             TextField(
-              style: TextStyle(color: textColor), // Texto del buscador adaptativo
+              style: TextStyle(color: textColor), 
               decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search, color: hintColor), // Icono adaptativo
+                prefixIcon: Icon(Icons.search, color: hintColor), 
                 hintText: 'Buscar combo por nombre o contenido...',
-                hintStyle: TextStyle(color: hintColor), // Hint adaptativo
+                hintStyle: TextStyle(color: hintColor), 
                 filled: true,
-                fillColor: searchFillColor, // Fondo del buscador adaptativo
+                fillColor: searchFillColor, 
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
                 ),
               ),
-              onChanged: (v) => setState(() => _searchTerm = v),
+              onChanged: provider.setSearchTerm,
             ),
             const SizedBox(height: 24),
             
@@ -223,7 +214,7 @@ class _CombosPageState extends State<CombosPage> {
                       message: 'No hay combos que coincidan con tu búsqueda.',
                       icon: Icons.local_mall_outlined,
                       actionLabel: 'Limpiar Búsqueda',
-                      onAction: () => setState(() => _searchTerm = ''),
+                      onAction: () => provider.setSearchTerm(''),
                     )
                   : GridView.builder(
                       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -248,7 +239,7 @@ class _CombosPageState extends State<CombosPage> {
                                       combo.nombre, 
                                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.bold,
-                                        color: textColor, // Nombre del combo adaptativo
+                                        color: textColor,
                                       ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
@@ -276,7 +267,7 @@ class _CombosPageState extends State<CombosPage> {
                                 child: Text(
                                   combo.descripcion, 
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: textSubColor, // Descripción adaptativa (evita negro sobre oscuro)
+                                    color: textSubColor, 
                                     height: 1.4,
                                   ),
                                   maxLines: 3,
@@ -291,7 +282,7 @@ class _CombosPageState extends State<CombosPage> {
                                     '\$${combo.precio.toStringAsFixed(2)}', 
                                     style: TextStyle(
                                       fontSize: 20, 
-                                      color: isDark ? const Color(0xFF82B1FF) : Colors.blueAccent, // Precio legible en oscuro
+                                      color: isDark ? const Color(0xFF82B1FF) : Colors.blueAccent, 
                                       fontWeight: FontWeight.w900,
                                     )
                                   ),
@@ -299,11 +290,11 @@ class _CombosPageState extends State<CombosPage> {
                                     children: [
                                       IconButton(
                                         icon: Icon(Icons.edit_outlined, size: 20, color: isDark ? Colors.white60 : Colors.blueGrey),
-                                        onPressed: () => _abrirFormularioModal(combo: combo, index: _combos.indexOf(combo)),
+                                        onPressed: () => _abrirFormularioModal(provider, combo: combo, index: provider.combos.indexOf(combo)),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                                        onPressed: () => _solicitarBorrado(combo),
+                                        onPressed: () => _solicitarBorrado(provider, combo),
                                       ),
                                     ],
                                   )
