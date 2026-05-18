@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/gastos_provider.dart';
+import '../utils/formatters.dart';
+import '../utils/ui_utils.dart';
 
-// ==========================================
-// COMPONENTE PRINCIPAL DE INTERFAZ (UI)
-// ==========================================
 class GastosPage extends StatelessWidget {
   const GastosPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Inyectamos el Provider exclusivamente para esta página
     return ChangeNotifierProvider(
       create: (_) => GastosProvider(),
       child: const _GastosView(),
@@ -26,7 +24,6 @@ class _GastosView extends StatefulWidget {
 }
 
 class _GastosViewState extends State<_GastosView> {
-  // Solo conservamos las listas estáticas de UI y el control del modal
   final List<String> categorias = ['Todos', 'Renta', 'Servicios', 'Insumos', 'Mantenimiento', 'Publicidad', 'Impuestos', 'General'];
   final List<String> formCategories = ['General', 'Insumos', 'Servicios', 'Renta', 'Mantenimiento', 'Publicidad', 'Impuestos'];
   final List<String> formMethods = ['Efectivo', 'Tarjeta', 'Transferencia'];
@@ -96,60 +93,30 @@ class _GastosViewState extends State<_GastosView> {
     }
 
     if (editingId != null) {
-      _showConfirmDialog('Actualizar Gasto', '¿Actualizar el gasto ${formState.concept}?', () {
+      UiUtils.showConfirmDialog(context, 'Actualizar Gasto', '¿Actualizar el gasto ${formState.concept}?', () {
         provider.actualizarGasto(editingId!, formState);
-        _showToast('Gasto actualizado', Colors.green);
+        UiUtils.showToast(context, 'Gasto actualizado', color: Colors.green);
         cerrarModal();
       });
     } else {
-      _showConfirmDialog('Registrar Gasto', '¿Registrar gasto ${formState.concept}?', () {
+      UiUtils.showConfirmDialog(context, 'Registrar Gasto', '¿Registrar gasto ${formState.concept}?', () {
         provider.crearGasto(formState);
-        _showToast('Gasto registrado', Colors.green);
+        UiUtils.showToast(context, 'Gasto registrado', color: Colors.green);
         cerrarModal();
       });
     }
   }
 
   void eliminarGastoConfirmado(GastosProvider provider, Gasto g) {
-    _showConfirmDialog('Eliminar Gasto', '¿Eliminar gasto ${g.concept}?', () {
+    UiUtils.showConfirmDialog(context, 'Eliminar Gasto', '¿Eliminar gasto ${g.concept}?', () {
       provider.eliminarGasto(g.id);
-      _showToast('Gasto eliminado', Colors.orange);
+      UiUtils.showToast(context, 'Gasto eliminado', color: Colors.orange);
     });
-  }
-
-  String formatMoney(double value) {
-    return '\$${value.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
-  }
-
-  void _showToast(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 2)));
-  }
-
-  void _showConfirmDialog(String title, String body, VoidCallback onConfirm) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(body),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              onConfirm();
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 900;
-    
-    // AQUÍ ESTÁ LA MAGIA: Nos conectamos al cerebro del módulo
     final provider = context.watch<GastosProvider>();
 
     return Scaffold(
@@ -161,7 +128,6 @@ class _GastosViewState extends State<_GastosView> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // CABECERA
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -186,18 +152,16 @@ class _GastosViewState extends State<_GastosView> {
                   ),
                   const SizedBox(height: 25),
 
-                  // BÚSQUEDA
                   TextField(
                     decoration: InputDecoration(
                       hintText: 'Buscar gasto, método o categoría...',
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    onChanged: provider.onSearch, // Directo al provider
+                    onChanged: provider.onSearch,
                   ),
                   const SizedBox(height: 25),
 
-                  // KPIS (Leyendo desde el provider)
                   GridView.count(
                     crossAxisCount: isDesktop ? 2 : 1,
                     shrinkWrap: true,
@@ -206,13 +170,12 @@ class _GastosViewState extends State<_GastosView> {
                     mainAxisSpacing: 16,
                     childAspectRatio: isDesktop ? 3.5 : 4.0,
                     children: [
-                      _buildStatCard('Gastos este mes', formatMoney(provider.totalThisMonth), '↘', Colors.red.shade900),
-                      _buildStatCard('Total acumulado', formatMoney(provider.totalAccumulated), '\$', Colors.blueGrey.shade800),
+                      _buildStatCard('Gastos este mes', Formatters.money(provider.totalThisMonth), '↘', Colors.red.shade900),
+                      _buildStatCard('Total acumulado', Formatters.money(provider.totalAccumulated), '\$', Colors.blueGrey.shade800),
                     ],
                   ),
                   const SizedBox(height: 25),
 
-                  // FILTROS TIPO PILL
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -221,7 +184,7 @@ class _GastosViewState extends State<_GastosView> {
                       return ChoiceChip(
                         label: Text(categoria),
                         selected: isActive,
-                        onSelected: (_) => provider.seleccionarCategoria(categoria), // Directo al provider
+                        onSelected: (_) => provider.seleccionarCategoria(categoria),
                         selectedColor: Theme.of(context).primaryColor.withAlpha(50),
                         labelStyle: TextStyle(
                           color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade700,
@@ -232,7 +195,6 @@ class _GastosViewState extends State<_GastosView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // TABLA DE DATOS
                   Card(
                     clipBehavior: Clip.antiAlias,
                     child: SizedBox(
@@ -255,7 +217,7 @@ class _GastosViewState extends State<_GastosView> {
                               DataCell(Text(g.concept, style: const TextStyle(fontWeight: FontWeight.w500))),
                               DataCell(Text(g.category)),
                               DataCell(Text(g.method)),
-                              DataCell(Text(formatMoney(g.amount), style: const TextStyle(fontWeight: FontWeight.bold))),
+                              DataCell(Text(Formatters.money(g.amount), style: const TextStyle(fontWeight: FontWeight.bold))),
                               DataCell(Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -278,7 +240,6 @@ class _GastosViewState extends State<_GastosView> {
                     ),
                   const SizedBox(height: 15),
 
-                  // PAGINACIÓN
                   if (provider.totalPages > 1)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -299,7 +260,6 @@ class _GastosViewState extends State<_GastosView> {
             ),
           ),
 
-          // MODAL FLOTANTE
           if (showModal) ...[
             GestureDetector(
               onTap: cerrarModal,

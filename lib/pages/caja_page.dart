@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/caja_provider.dart';
+import '../utils/formatters.dart';
+import '../utils/ui_utils.dart';
 
-// ==========================================
-// COMPONENTE PRINCIPAL DE INTERFAZ (UI)
-// ==========================================
 class CajaPage extends StatelessWidget {
   const CajaPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Inyectamos el cerebro para el módulo de cobro
     return ChangeNotifierProvider(
       create: (_) => CajaProvider(),
       child: const _CajaView(),
@@ -18,25 +16,12 @@ class CajaPage extends StatelessWidget {
   }
 }
 
-// Al separar la lógica, esta vista ya no necesita manejar "Estado" propio
 class _CajaView extends StatelessWidget {
   const _CajaView();
-
-  String _formatMoney(double value) {
-    return '\$${value.toStringAsFixed(2).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
-  }
-
-  void _showToast(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 2)),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 950;
-    
-    // Conectamos la interfaz al Provider
     final provider = context.watch<CajaProvider>();
     final order = provider.selectedOrder;
 
@@ -44,7 +29,6 @@ class _CajaView extends StatelessWidget {
       body: SafeArea(
         child: Row(
           children: [
-            // SECCIÓN IZQUIERDA PRINCIPAL
             Expanded(
               flex: 6,
               child: Padding(
@@ -70,7 +54,7 @@ class _CajaView extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 const Text('Total en Caja', style: TextStyle(fontSize: 12, color: Colors.blueGrey)),
-                                Text(_formatMoney(provider.totalInCash), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onPrimaryContainer)),
+                                Text(Formatters.money(provider.totalInCash), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onPrimaryContainer)),
                               ],
                             ),
                           ),
@@ -79,7 +63,6 @@ class _CajaView extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // LISTADO DE ÓRDENES
                     Expanded(
                       child: SingleChildScrollView(
                         child: Column(
@@ -132,7 +115,7 @@ class _CajaView extends StatelessWidget {
                                                   )
                                                 ],
                                               ),
-                                              Text(_formatMoney(pOrder.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                              Text(Formatters.money(pOrder.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                             ],
                                           ),
                                           const SizedBox(height: 6),
@@ -174,7 +157,7 @@ class _CajaView extends StatelessWidget {
                                             const Text('✓', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
                                           ],
                                         ),
-                                        Text(_formatMoney(pToday.total), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                        Text(Formatters.money(pToday.total), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
                                       ],
                                     ),
                                   ),
@@ -190,7 +173,6 @@ class _CajaView extends StatelessWidget {
               ),
             ),
 
-            // SECCIÓN DERECHA: ASIDE PANEL DE COBRO (Escritorio)
             if (isDesktop)
               Container(
                 width: 400,
@@ -200,7 +182,6 @@ class _CajaView extends StatelessWidget {
           ],
         ),
       ),
-      // Respaldo flotante modal para móviles si hay una orden abierta
       bottomSheet: (!isDesktop && order != null)
           ? SizedBox(
               height: MediaQuery.of(context).size.height * 0.85,
@@ -214,7 +195,6 @@ class _CajaView extends StatelessWidget {
     );
   }
 
-  // WIDGET EXTRAÍDO: PANEL DE DETALLE DE PAGO
   Widget _buildPaymentPanel(BuildContext context, CajaProvider provider, CashOrder order) {
     return Padding(
       padding: const EdgeInsets.all(20.0),
@@ -259,10 +239,10 @@ class _CajaView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(item.name, style: const TextStyle(fontWeight: FontWeight.w500)),
-                          Text('${item.qty} x ${_formatMoney(item.price)}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          Text('${item.qty} x ${Formatters.money(item.price)}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                         ],
                       ),
-                      Text(_formatMoney(item.qty * item.price), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(Formatters.money(item.qty * item.price), style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
                   ),
                 );
@@ -284,7 +264,7 @@ class _CajaView extends StatelessWidget {
             const Text('Monto recibido', style: TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             TextField(
-              controller: provider.receivedAmountController, // Usando el controlador del cerebro
+              controller: provider.receivedAmountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(border: OutlineInputBorder(), hintText: '0.00'),
               onChanged: provider.setReceivedAmount,
@@ -301,7 +281,7 @@ class _CajaView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Subtotal'),
-                    Text(_formatMoney(provider.orderSubtotal)),
+                    Text(Formatters.money(provider.orderSubtotal)),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -309,7 +289,7 @@ class _CajaView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Total', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text(_formatMoney(order.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(Formatters.money(order.total), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
                 ),
                 if (provider.selectedMethod == 'Efectivo') ...[
@@ -318,7 +298,7 @@ class _CajaView extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Cambio', style: TextStyle(color: Colors.blueGrey)),
-                      Text(_formatMoney(provider.changeDue), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                      Text(Formatters.money(provider.changeDue), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
                     ],
                   ),
                 ]
@@ -340,7 +320,7 @@ class _CajaView extends StatelessWidget {
               onPressed: () {
                 final success = provider.chargeSelectedOrder();
                 if (success) {
-                  _showToast(context, 'Orden cobrada exitosamente', Colors.green);
+                  UiUtils.showToast(context, 'Orden cobrada exitosamente', color: Colors.green);
                 }
               },
               child: const Text('Confirmar cobro', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

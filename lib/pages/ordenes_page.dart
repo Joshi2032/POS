@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/ordenes_provider.dart';
+import '../utils/formatters.dart';
+import '../utils/ui_utils.dart';
 
-// ==========================================
-// COMPONENTE PRINCIPAL DE INTERFAZ (UI)
-// ==========================================
 class OrdenesPage extends StatelessWidget {
   const OrdenesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Inyectamos el cerebro para el módulo de órdenes
     return ChangeNotifierProvider(
       create: (_) => OrdenesProvider(),
       child: const _OrdenesView(),
@@ -21,13 +19,6 @@ class OrdenesPage extends StatelessWidget {
 class _OrdenesView extends StatelessWidget {
   const _OrdenesView();
 
-  void _showToast(BuildContext context, String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 2)),
-    );
-  }
-
-  // AUXILIARES DE ESTILOS E IDIOMA
   String _getStatusLabel(OrderStatus status) {
     final Map<OrderStatus, String> labels = {
       'pendiente': 'Pendiente',
@@ -59,8 +50,6 @@ class _OrdenesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 950;
-    
-    // Conectamos la interfaz al Provider
     final provider = context.watch<OrdenesProvider>();
 
     return Scaffold(
@@ -72,7 +61,6 @@ class _OrdenesView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // HEADER
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -99,7 +87,6 @@ class _OrdenesView extends StatelessWidget {
                   ),
                   const SizedBox(height: 25),
 
-                  // BARRA DE FILTROS Y BÚSQUEDA COMBINADA
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12.0),
@@ -168,7 +155,6 @@ class _OrdenesView extends StatelessWidget {
                       ),
                     ),
 
-                  // GRID ADAPTATIVO DE COMANDAS
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -231,7 +217,7 @@ class _OrdenesView extends StatelessWidget {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text('Total: \$${order.totalAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                    Text('Total: ${Formatters.money(order.totalAmount)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                                     const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
                                   ],
                                 )
@@ -264,7 +250,6 @@ class _OrdenesView extends StatelessWidget {
             ),
           ),
 
-          // BACKDROP Y MODAL INTERNO
           if (provider.showModal && provider.selectedOrderForModal != null) ...[
             GestureDetector(
               onTap: provider.cerrarModal,
@@ -319,7 +304,7 @@ class _OrdenesView extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text('${item.quantity}x ${item.productName}', style: const TextStyle(fontSize: 14)),
-                                    Text('\$${item.total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                                    Text(Formatters.money(item.total), style: const TextStyle(fontWeight: FontWeight.w500)),
                                   ],
                                 ),
                               );
@@ -331,7 +316,7 @@ class _OrdenesView extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text('Importe Total:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text('\$${provider.selectedOrderForModal!.totalAmount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
+                            Text(Formatters.money(provider.selectedOrderForModal!.totalAmount), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -348,7 +333,7 @@ class _OrdenesView extends StatelessWidget {
                                 label: const Text('Cocinar'),
                                 onPressed: () {
                                   if (provider.cambiarEstadoOrden(provider.selectedOrderForModal!.id, 'preparando')) {
-                                    _showToast(context, 'Orden movida a cocina', Colors.blue);
+                                    UiUtils.showToast(context, 'Orden movida a cocina', color: Colors.blue);
                                   }
                                 },
                               ),
@@ -359,7 +344,7 @@ class _OrdenesView extends StatelessWidget {
                                 label: const Text('Listo'),
                                 onPressed: () {
                                   if (provider.cambiarEstadoOrden(provider.selectedOrderForModal!.id, 'lista')) {
-                                    _showToast(context, 'Orden marcada como lista', Colors.green);
+                                    UiUtils.showToast(context, 'Orden marcada como lista', color: Colors.green);
                                   }
                                 },
                               ),
@@ -370,7 +355,7 @@ class _OrdenesView extends StatelessWidget {
                                 label: const Text('Entregar'),
                                 onPressed: () {
                                   if (provider.cambiarEstadoOrden(provider.selectedOrderForModal!.id, 'entregada')) {
-                                    _showToast(context, 'Orden despachada', Colors.grey);
+                                    UiUtils.showToast(context, 'Orden despachada', color: Colors.grey);
                                   }
                                 },
                               ),
@@ -381,7 +366,7 @@ class _OrdenesView extends StatelessWidget {
                                 label: const Text('Cancelar Orden'),
                                 onPressed: () {
                                   if (provider.cambiarEstadoOrden(provider.selectedOrderForModal!.id, 'cancelada')) {
-                                    _showToast(context, 'Orden cancelada', Colors.red);
+                                    UiUtils.showToast(context, 'Orden cancelada', color: Colors.red);
                                   }
                                 },
                               ),
