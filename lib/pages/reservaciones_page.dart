@@ -1,204 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/reservaciones_provider.dart';
+import '../utils/ui_utils.dart'; // Asegúrate de tener tu utilidad de alertas
 
-// ==========================================
-// MODELOS DE DATOS (Mapeo de reservaciones.models.ts)
-// ==========================================
-typedef ReservationStatus = String; // 'confirmada' | 'cancelada' | 'completada'
+class ReservacionesPage extends StatelessWidget {
+  const ReservacionesPage({super.key});
 
-class Reservation {
-  final String id;
-  final String clientName;
-  final String email;
-  final String phone;
-  final int partySize;
-  final String date;
-  final String time;
-  final String? specialRequests;
-  final ReservationStatus status;
-  final String createdAt;
-  final String? notes;
-
-  Reservation({
-    required this.id,
-    required this.clientName,
-    required this.email,
-    required this.phone,
-    required this.partySize,
-    required this.date,
-    required this.time,
-    this.specialRequests,
-    required this.status,
-    required this.createdAt,
-    this.notes,
-  });
-
-  Reservation copyWith({
-    String? clientName,
-    String? email,
-    String? phone,
-    int? partySize,
-    String? date,
-    String? time,
-    String? specialRequests,
-    ReservationStatus? status,
-    String? notes,
-  }) {
-    return Reservation(
-      id: id, // Solucionado: Removido 'this.' innecesario
-      clientName: clientName ?? this.clientName,
-      email: email ?? this.email,
-      phone: phone ?? this.phone,
-      partySize: partySize ?? this.partySize,
-      date: date ?? this.date,
-      time: time ?? this.time,
-      specialRequests: specialRequests ?? this.specialRequests,
-      status: status ?? this.status,
-      createdAt: createdAt, // Solucionado: Removido 'this.' innecesario
-      notes: notes ?? this.notes,
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ReservacionesProvider(),
+      child: const _ReservacionesView(),
     );
   }
 }
 
-class ReservationForm {
-  String clientName;
-  String email;
-  String phone;
-  int partySize;
-  String date;
-  String time;
-  String specialRequests;
-  String notes;
-
-  ReservationForm({
-    required this.clientName,
-    required this.email,
-    required this.phone,
-    required this.partySize,
-    required this.date,
-    required this.time,
-    required this.specialRequests,
-    required this.notes,
-  });
-}
-
-// ==========================================
-// COMPONENTE PRINCIPAL
-// ==========================================
-class ReservacionesPage extends StatefulWidget {
-  const ReservacionesPage({super.key});
+class _ReservacionesView extends StatefulWidget {
+  const _ReservacionesView();
 
   @override
-  State<ReservacionesPage> createState() => _ReservacionesPageState();
+  State<_ReservacionesView> createState() => _ReservacionesViewState();
 }
 
-class _ReservacionesPageState extends State<ReservacionesPage> {
-  late final String todayIso;
-  final int pageSize = 10;
-
-  String searchTerm = '';
-  int currentPage = 1;
-  late String selectedDate;
-  String? editingId;
+class _ReservacionesViewState extends State<_ReservacionesView> {
+  final List<String> filtrosEstado = ['Todos', 'Pendiente', 'Confirmada', 'Completada', 'Cancelada'];
+  
   bool showModal = false;
+  String? editingId;
   String modalError = '';
 
-  List<Reservation> reservations = [];
-  late ReservationForm newReservation;
-  
-  // Llave global asignada correctamente para la validación del formulario
+  late ReservacionForm formState;
   final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-    todayIso = DateTime.now().toIso8601String().slice(0, 10);
-    selectedDate = todayIso;
-    
-    reservations = [
-      Reservation(id: 'RES-001', clientName: 'Juan García', email: 'juan@ejemplo.com', phone: '555-1001', partySize: 4, date: todayIso, time: '19:00', specialRequests: 'Mesa cerca de la ventana', status: 'confirmada', createdAt: todayIso, notes: 'Cumpleaños'),
-      Reservation(id: 'RES-002', clientName: 'María López', email: 'maria@ejemplo.com', phone: '555-1002', partySize: 2, date: todayIso, time: '20:00', specialRequests: '', status: 'confirmada', createdAt: todayIso),
-      Reservation(id: 'RES-003', clientName: 'Carlos Rodríguez', email: 'carlos@ejemplo.com', phone: '555-1003', partySize: 6, date: DateTime.now().add(const Duration(days: 1)).toIso8601String().slice(0, 10), time: '19:30', specialRequests: 'Sin mariscos (alergia)', status: 'confirmada', createdAt: todayIso),
-      Reservation(id: 'RES-004', clientName: 'Ana Martínez', email: 'ana@ejemplo.com', phone: '555-1004', partySize: 3, date: todayIso, time: '18:00', specialRequests: 'Mesa alta', status: 'completada', createdAt: todayIso),
-      Reservation(id: 'RES-005', clientName: 'Pedro Sánchez', email: 'pedro@ejemplo.com', phone: '555-1005', partySize: 5, date: DateTime.now().subtract(const Duration(days: 1)).toIso8601String().slice(0, 10), time: '20:00', specialRequests: '', status: 'cancelada', createdAt: todayIso, notes: 'Cancelada por el cliente'),
-    ];
-
     _resetForm();
   }
 
   void _resetForm() {
-    newReservation = ReservationForm(
-      clientName: '',
-      email: '',
-      phone: '',
-      partySize: 2,
-      date: todayIso,
-      time: '19:00',
-      specialRequests: '',
+    formState = ReservacionForm(
+      customerName: '',
+      date: DateTime.now().toIso8601String().substring(0, 10),
+      time: '14:00',
+      guests: 2,
+      table: 'Por asignar',
+      status: 'Pendiente',
       notes: '',
     );
-  }
-
-  // LÓGICA COMPUTADA
-  List<Reservation> get filteredReservations {
-    final search = searchTerm.toLowerCase();
-    return reservations.where((res) {
-      return res.date == selectedDate &&
-          (search.isEmpty || res.clientName.toLowerCase().contains(search));
-    }).toList();
-  }
-
-  List<Reservation> get paginatedReservations {
-    final filtered = filteredReservations;
-    final start = (currentPage - 1) * pageSize;
-    if (start >= filtered.length) return [];
-    final end = (start + pageSize) > filtered.length ? filtered.length : (start + pageSize);
-    return filtered.sublist(start, end);
-  }
-
-  int get totalPages => (filteredReservations.length / pageSize).ceil();
-  int get totalToday => reservations.where((r) => r.date == todayIso).length;
-  int get confirmedToday => reservations.where((r) => r.date == todayIso && r.status == 'confirmada').length;
-  int get guestsTodayCount => reservations
-      .where((r) => r.date == todayIso && r.status == 'confirmada')
-      .fold(0, (sum, r) => sum + r.partySize);
-
-  // CONTROLADORES REACTIVOS
-  void onSearchChange(String value) {
-    setState(() {
-      searchTerm = value;
-      currentPage = 1;
-    });
-  }
-
-  void onDateChange(String date) {
-    setState(() {
-      selectedDate = date;
-      currentPage = 1;
-    });
+    modalError = '';
   }
 
   void abrirModal() {
     setState(() {
       editingId = null;
-      modalError = '';
       _resetForm();
       showModal = true;
     });
   }
 
-  void abrirEditarModal(Reservation reservation) {
+  void abrirEditar(Reservacion r) {
     setState(() {
-      editingId = reservation.id;
+      editingId = r.id;
       modalError = '';
-      newReservation = ReservationForm(
-        clientName: reservation.clientName,
-        email: reservation.email,
-        phone: reservation.phone,
-        partySize: reservation.partySize,
-        date: reservation.date,
-        time: reservation.time,
-        specialRequests: reservation.specialRequests ?? '',
-        notes: reservation.notes ?? '',
+      formState = ReservacionForm(
+        customerName: r.customerName,
+        date: r.date,
+        time: r.time,
+        guests: r.guests,
+        table: r.table,
+        status: r.status,
+        notes: r.notes,
       );
       showModal = true;
     });
@@ -207,174 +79,47 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
   void cerrarModal() {
     setState(() {
       showModal = false;
-      modalError = '';
       editingId = null;
     });
   }
 
-  void guardarReservacion() {
-    // Implementación del uso de _formKey para validación estructural
-    if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
-      return;
-    }
+  void guardarReservacion(ReservacionesProvider provider) {
+    if (_formKey.currentState == null || !_formKey.currentState!.validate()) return;
 
-    final clientName = newReservation.clientName.trim();
-    final email = newReservation.email.trim();
-    final phone = newReservation.phone.trim();
-
-    if (clientName.isEmpty || email.isEmpty || phone.isEmpty || newReservation.partySize <= 0) {
-      setState(() {
-        modalError = 'Completa nombre, email, teléfono y número de personas.';
-      });
+    if (formState.customerName.trim().isEmpty || formState.date.trim().isEmpty || formState.guests <= 0) {
+      setState(() => modalError = 'Completa nombre, fecha y personas válidas.');
       return;
     }
 
     if (editingId != null) {
-      _showConfirmDialog(
-        'Actualizar Reservación',
-        '¿Actualizar reservación de $clientName?',
-        () => actualizarReservacion(clientName, email, phone, newReservation),
-      );
-    } else {
-      _showConfirmDialog(
-        'Nueva Reservación',
-        '¿Confirmar reservación para $clientName (${newReservation.partySize} personas) el ${newReservation.date} a las ${newReservation.time}?',
-        () => crearReservacion(clientName, email, phone, newReservation),
-      );
-    }
-  }
-
-  void crearReservacion(String clientName, String email, String phone, ReservationForm form) {
-    setState(() {
-      final nextIndex = reservations.length + 1;
-      final idString = nextIndex.toString().padLeft(3, '0');
-
-      final newRes = Reservation(
-        id: 'RES-$idString',
-        clientName: clientName,
-        email: email,
-        phone: phone,
-        partySize: form.partySize,
-        date: form.date,
-        time: form.time,
-        specialRequests: form.specialRequests,
-        status: 'confirmada',
-        createdAt: todayIso,
-        notes: form.notes,
-      );
-      reservations.insert(0, newRes);
-      _showToast('Reservación de $clientName creada exitosamente', Colors.green);
-      cerrarModal();
-    });
-  }
-
-  void actualizarReservacion(String clientName, String email, String phone, ReservationForm form) {
-    if (editingId == null) return;
-    setState(() {
-      final index = reservations.findIndex((r) => r.id == editingId);
-      if (index != -1) {
-        reservations[index] = reservations[index].copyWith(
-          clientName: clientName,
-          email: email,
-          phone: phone,
-          partySize: form.partySize,
-          date: form.date,
-          time: form.time,
-          specialRequests: form.specialRequests,
-          notes: form.notes,
-        );
-        _showToast('Reservación actualizada', Colors.green);
+      UiUtils.showConfirmDialog(context, 'Actualizar Reservación', '¿Actualizar a ${formState.customerName}?', () {
+        provider.actualizarReservacion(editingId!, formState);
+        UiUtils.showToast(context, 'Reservación actualizada', color: Colors.green);
         cerrarModal();
-      }
-    });
-  }
-
-  void cancelarReservacion(String id) {
-    final reservation = reservations.firstWhere((r) => r.id == id);
-    _showConfirmDialog(
-      'Cancelar Reservación',
-      '¿Cancelar reservación de ${reservation.clientName}? Esta acción no se puede deshacer.',
-      () {
-        setState(() {
-          final index = reservations.findIndex((r) => r.id == id);
-          if (index != -1) {
-            reservations[index] = reservations[index].copyWith(
-              status: 'cancelada',
-              notes: 'Cancelada por staff',
-            );
-            _showToast('Reservación $id cancelada', Colors.orange);
-          }
-        });
-      },
-    );
-  }
-
-  void eliminarReservacion(String id) {
-    final reservation = reservations.firstWhere((r) => r.id == id);
-    _showConfirmDialog(
-      'Eliminar Reservación',
-      '¿Eliminar reservación de ${reservation.clientName}? Esta acción no se puede deshacer.',
-      () {
-        setState(() {
-          reservations.removeWhere((r) => r.id == id);
-          _showToast('$id eliminado', Colors.red);
-        });
-      },
-    );
-  }
-
-  void goToPage(int page) {
-    if (page >= 1 && page <= totalPages) {
-      setState(() {
-        currentPage = page;
+      });
+    } else {
+      UiUtils.showConfirmDialog(context, 'Crear Reservación', '¿Registrar a ${formState.customerName}?', () {
+        provider.crearReservacion(formState);
+        UiUtils.showToast(context, 'Reservación registrada', color: Colors.green);
+        cerrarModal();
       });
     }
   }
 
-  void _showToast(String message, Color color) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 2)),
-    );
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Pendiente': return Colors.orange;
+      case 'Confirmada': return Colors.blue;
+      case 'Completada': return Colors.green;
+      case 'Cancelada': return Colors.red;
+      default: return Colors.grey;
+    }
   }
 
-  void _showConfirmDialog(String title, String body, VoidCallback onConfirm) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: Text(body),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              onConfirm();
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getStatusColor(ReservationStatus status) {
-    if (status == 'confirmada') return Colors.green;
-    if (status == 'cancelada') return Colors.red;
-    return Colors.blue;
-  }
-
-  String _getStatusLabel(ReservationStatus status) {
-    if (status == 'confirmada') return 'Confirmada';
-    if (status == 'cancelada') return 'Cancelada';
-    return 'Completada';
-  }
-
-  // ==========================================
-  // DISPOSITION DE INTERFAZ
-  // ==========================================
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 900;
+    final provider = context.watch<ReservacionesProvider>();
 
     return Scaffold(
       body: Stack(
@@ -385,6 +130,7 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // CABECERA
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -397,192 +143,161 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
                               Text('Reservaciones', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
                             ],
                           ),
-                          const Text('Gestiona reservaciones de mesas', style: TextStyle(color: Colors.grey)),
+                          Text('Gestión de mesas y agendamientos', style: const TextStyle(color: Colors.grey)),
                         ],
                       ),
-                      Row(
-                        children: [
-                          OutlinedButton.icon(
-                            icon: const Icon(Icons.date_range),
-                            label: Text(selectedDate),
-                            onPressed: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime.parse(selectedDate),
-                                firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                                lastDate: DateTime.now().add(const Duration(days: 365)),
-                              );
-                              if (picked != null) {
-                                onDateChange(picked.toIso8601String().slice(0, 10));
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 10),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
-                            onPressed: abrirModal,
-                            child: const Text('+ Nueva Reservación'),
-                          )
-                        ],
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
+                        onPressed: abrirModal,
+                        child: const Text('+ Nueva Reservación'),
                       )
                     ],
                   ),
                   const SizedBox(height: 25),
 
+                  // BÚSQUEDA
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por nombre, ID o mesa...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onChanged: provider.onSearch,
+                  ),
+                  const SizedBox(height: 25),
+
+                  // KPIS
                   GridView.count(
                     crossAxisCount: isDesktop ? 3 : 1,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: isDesktop ? 2.5 : 3.5,
+                    childAspectRatio: isDesktop ? 3.0 : 4.0,
                     children: [
-                      _buildStatCard('Reservaciones Hoy', '$totalToday', 'confirmadas: $confirmedToday', Colors.blueGrey.shade800),
-                      _buildStatCard('Personas Hoy', '$guestsTodayCount', 'personas confirmadas', Colors.orange.shade800),
-                      _buildStatCard('Fecha Seleccionada', selectedDate, '${filteredReservations.length} reservaciones', Colors.blueGrey.shade800),
+                      _buildStatCard('Para Hoy', '${provider.paraHoyCount}', Icons.today, Colors.blueGrey.shade800),
+                      _buildStatCard('Pendientes', '${provider.pendientesCount}', Icons.pending_actions, Colors.orange.shade900),
+                      _buildStatCard('Confirmadas', '${provider.confirmadasCount}', Icons.check_circle_outline, Colors.green.shade900),
                     ],
                   ),
                   const SizedBox(height: 25),
 
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por nombre del cliente...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onChanged: onSearchChange,
-                  ),
-                  const SizedBox(height: 20),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('${filteredReservations.length} registro(s)', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  if (filteredReservations.isEmpty)
-                    Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.all(40),
-                      child: const Column(
-                        children: [
-                          Text('📭', style: TextStyle(fontSize: 48)),
-                          SizedBox(height: 10),
-                          Text('No hay reservaciones para esta fecha', style: TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                    ),
-
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: paginatedReservations.length,
-                    itemBuilder: (context, idx) {
-                      final reservation = paginatedReservations[idx];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(reservation.id, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(reservation.clientName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                        const SizedBox(width: 10),
-                                        Chip(
-                                          label: Text(_getStatusLabel(reservation.status), style: const TextStyle(color: Colors.white, fontSize: 12)),
-                                          backgroundColor: _getStatusColor(reservation.status),
-                                          padding: EdgeInsets.zero,
-                                        )
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Wrap(
-                                      spacing: 15,
-                                      children: [
-                                        Text('👤 ${reservation.partySize} persona(s)', style: const TextStyle(color: Colors.blueGrey)),
-                                        Text('🕒 ${reservation.time}', style: const TextStyle(color: Colors.blueGrey)),
-                                        Text('📞 ${reservation.phone}', style: const TextStyle(color: Colors.blueGrey)),
-                                      ],
-                                    ),
-                                    if (reservation.specialRequests != null && reservation.specialRequests!.isNotEmpty) ...[
-                                      const SizedBox(height: 8),
-                                      Text.rich(TextSpan(children: [
-                                        const TextSpan(text: 'Notas: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                                        TextSpan(text: reservation.specialRequests)
-                                      ]))
-                                    ]
-                                  ],
-                                ),
-                              ),
-                              Wrap(
-                                spacing: 8,
-                                children: [
-                                  TextButton(
-                                    onPressed: reservation.status == 'completada' ? null : () => abrirEditarModal(reservation),
-                                    child: const Text('✎ Editar'),
-                                  ),
-                                  TextButton(
-                                    onPressed: reservation.status != 'confirmada' ? null : () => cancelarReservacion(reservation.id),
-                                    child: const Text('🚫 Cancelar', style: TextStyle(color: Colors.orange)),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                                    onPressed: () => eliminarReservacion(reservation.id),
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
+                  // FILTROS TIPO PILL
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: filtrosEstado.map((estado) {
+                      final isActive = provider.selectedStatus == estado;
+                      return ChoiceChip(
+                        label: Text(estado),
+                        selected: isActive,
+                        onSelected: (_) => provider.filterByStatus(estado),
+                        selectedColor: Theme.of(context).primaryColor.withAlpha(50),
+                        labelStyle: TextStyle(
+                          color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade700,
+                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal
                         ),
                       );
-                    },
+                    }).toList(),
                   ),
                   const SizedBox(height: 20),
 
-                  if (totalPages > 1)
+                  // TABLA DE DATOS
+                  Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+                          columns: const [
+                            DataColumn(label: Text('Fecha y Hora', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Cliente', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Personas', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Mesa', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(label: Text('Acciones', style: TextStyle(fontWeight: FontWeight.bold))),
+                          ],
+                          rows: provider.paginatedReservaciones.map((r) {
+                            return DataRow(cells: [
+                              DataCell(Text('${r.date} - ${r.time}')),
+                              DataCell(Text(r.customerName, style: const TextStyle(fontWeight: FontWeight.w600))),
+                              DataCell(Text('${r.guests} pax')),
+                              DataCell(Text(r.table)),
+                              DataCell(
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _getStatusColor(r.status).withAlpha(40),
+                                    borderRadius: BorderRadius.circular(8)
+                                  ),
+                                  child: Text(r.status, style: TextStyle(color: _getStatusColor(r.status), fontSize: 12, fontWeight: FontWeight.bold)),
+                                )
+                              ),
+                              DataCell(Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextButton(onPressed: () => abrirEditar(r), child: const Text('Editar')),
+                                  if (r.status == 'Pendiente')
+                                    TextButton(
+                                      onPressed: () => provider.cambiarEstado(r.id, 'Confirmada'), 
+                                      child: const Text('Confirmar', style: TextStyle(color: Colors.green))
+                                    ),
+                                ],
+                              )),
+                            ]);
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (provider.paginatedReservaciones.isEmpty)
+                    Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(32),
+                      child: const Text('No hay reservaciones', style: TextStyle(color: Colors.grey)),
+                    ),
+                  const SizedBox(height: 15),
+
+                  // PAGINACIÓN
+                  if (provider.totalPages > 1)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.arrow_back),
-                          onPressed: currentPage == 1 ? null : () => goToPage(currentPage - 1),
+                          icon: const Icon(Icons.arrow_back_ios, size: 16),
+                          onPressed: provider.currentPage == 1 ? null : () => provider.changePage(provider.currentPage - 1),
                         ),
-                        Text('Página $currentPage de $totalPages', style: const TextStyle(fontWeight: FontWeight.w500)),
+                        Text('Página ${provider.currentPage} de ${provider.totalPages}', style: const TextStyle(fontWeight: FontWeight.w500)),
                         IconButton(
-                          icon: const Icon(Icons.arrow_forward),
-                          onPressed: currentPage == totalPages ? null : () => goToPage(currentPage + 1),
+                          icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                          onPressed: provider.currentPage == provider.totalPages ? null : () => provider.changePage(provider.currentPage + 1),
                         ),
                       ],
-                    ),
+                    )
                 ],
               ),
             ),
           ),
 
+          // MODAL FLOTANTE DE FORMULARIO
           if (showModal) ...[
             GestureDetector(
               onTap: cerrarModal,
-              child: Container(color: Colors.black45),
+              child: Container(color: Colors.black54),
             ),
             Center(
               child: Card(
                 margin: const EdgeInsets.all(20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: Container(
-                  width: 450,
+                  width: isDesktop ? 500 : double.infinity,
                   padding: const EdgeInsets.all(24),
                   child: SingleChildScrollView(
                     child: Form(
-                      key: _formKey, // Enlazado correctamente aquí
+                      key: _formKey,
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -590,25 +305,28 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(editingId != null ? 'Editar Reservación' : 'Nueva Reservación', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                              Text(editingId != null ? 'Editar Reservación' : 'Nueva Reservación', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                               IconButton(icon: const Icon(Icons.close), onPressed: cerrarModal),
                             ],
                           ),
+                          const Divider(),
                           if (modalError.isNotEmpty) ...[
-                            const SizedBox(height: 10),
                             Text(modalError, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 10),
                           ],
-                          const SizedBox(height: 15),
-                          _buildModalFormFields(),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 45,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
-                              onPressed: guardarReservacion,
-                              child: Text(editingId != null ? 'Actualizar Reservación' : 'Guardar Reservación'),
-                            ),
+                          _buildFormFields(),
+                          const SizedBox(height: 25),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              OutlinedButton(onPressed: cerrarModal, child: const Text('Cancelar')),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
+                                onPressed: () => guardarReservacion(provider),
+                                child: const Text('Guardar'),
+                              ),
+                            ],
                           )
                         ],
                       ),
@@ -623,104 +341,94 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, String subtext, Color color) {
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
     return Card(
       color: color,
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
           children: [
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-            const SizedBox(height: 4),
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 2),
-            Text(subtext, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+            Icon(icon, color: Colors.white38, size: 32),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 4),
+                Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildModalFormFields() {
+  Widget _buildFormFields() {
     return Column(
       children: [
         TextFormField(
-          initialValue: newReservation.clientName,
-          decoration: const InputDecoration(labelText: 'Nombre del Cliente', hintText: 'Juan García', border: OutlineInputBorder()),
-          validator: (val) => val == null || val.trim().isEmpty ? 'El nombre es obligatorio' : null,
-          onChanged: (val) => newReservation.clientName = val,
+          initialValue: formState.customerName,
+          decoration: const InputDecoration(labelText: 'Nombre del Cliente', border: OutlineInputBorder()),
+          onChanged: (val) => formState.customerName = val,
         ),
-        const SizedBox(height: 12),
-        TextFormField(
-          initialValue: newReservation.email,
-          decoration: const InputDecoration(labelText: 'Email', hintText: 'juan@ejemplo.com', border: OutlineInputBorder()),
-          validator: (val) => val == null || val.trim().isEmpty ? 'El email es obligatorio' : null,
-          onChanged: (val) => newReservation.email = val,
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          initialValue: newReservation.phone,
-          decoration: const InputDecoration(labelText: 'Teléfono', hintText: '555-1234', border: OutlineInputBorder()),
-          validator: (val) => val == null || val.trim().isEmpty ? 'El teléfono es obligatorio' : null,
-          onChanged: (val) => newReservation.phone = val,
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
               child: TextFormField(
-                initialValue: '${newReservation.partySize}',
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Número de Personas', border: OutlineInputBorder()),
-                onChanged: (val) => newReservation.partySize = int.tryParse(val) ?? 0,
+                initialValue: formState.date,
+                decoration: const InputDecoration(labelText: 'Fecha (YYYY-MM-DD)', border: OutlineInputBorder()),
+                onChanged: (val) => formState.date = val,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: TextFormField(
-                initialValue: newReservation.date,
-                decoration: const InputDecoration(labelText: 'Fecha (YYYY-MM-DD)', border: OutlineInputBorder()),
-                onChanged: (val) => newReservation.date = val,
+                initialValue: formState.time,
+                decoration: const InputDecoration(labelText: 'Hora (HH:MM)', border: OutlineInputBorder()),
+                onChanged: (val) => formState.time = val,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        TextFormField(
-          initialValue: newReservation.time,
-          decoration: const InputDecoration(labelText: 'Hora (HH:MM)', border: OutlineInputBorder()),
-          onChanged: (val) => newReservation.time = val,
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: formState.guests.toString(),
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Personas', border: OutlineInputBorder()),
+                onChanged: (val) => formState.guests = int.tryParse(val) ?? 1,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: formState.status,
+                decoration: const InputDecoration(labelText: 'Estado', border: OutlineInputBorder()),
+                items: ['Pendiente', 'Confirmada', 'Completada', 'Cancelada'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                onChanged: (val) => setState(() => formState.status = val ?? 'Pendiente'),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         TextFormField(
-          initialValue: newReservation.specialRequests,
-          maxLines: 2,
-          decoration: const InputDecoration(labelText: 'Solicitudes Especiales', border: OutlineInputBorder()),
-          onChanged: (val) => newReservation.specialRequests = val,
+          initialValue: formState.table,
+          decoration: const InputDecoration(labelText: 'Mesa Asignada', border: OutlineInputBorder()),
+          onChanged: (val) => formState.table = val,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         TextFormField(
-          initialValue: newReservation.notes,
+          initialValue: formState.notes,
           maxLines: 2,
-          decoration: const InputDecoration(labelText: 'Notas Internas', border: OutlineInputBorder()),
-          onChanged: (val) => newReservation.notes = val,
+          decoration: const InputDecoration(labelText: 'Notas / Peticiones', border: OutlineInputBorder()),
+          onChanged: (val) => formState.notes = val,
         ),
       ],
     );
-  }
-}
-
-extension StringSlice on String {
-  String slice(int start, int end) => substring(start, end);
-}
-
-extension ListFindIndex<T> on List<T> {
-  int findIndex(bool Function(T element) test) {
-    for (int i = 0; i < length; i++) {
-      if (test(this[i])) return i;
-    }
-    return -1;
   }
 }
