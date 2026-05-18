@@ -1,116 +1,134 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/inventario_provider.dart';
-import '../utils/ui_utils.dart';
 
 class InventarioPage extends StatelessWidget {
   const InventarioPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(create: (_) => InventarioProvider(), child: const _InventarioView());
+    // Registramos el provider a nivel página
+    return ChangeNotifierProvider(
+      create: (_) => InventarioProvider(),
+      child: const _InventarioView(),
+    );
   }
 }
 
-class _InventarioView extends StatelessWidget {
+class _InventarioView extends StatefulWidget {
   const _InventarioView();
 
   @override
+  State<_InventarioView> createState() => _InventarioViewState();
+}
+
+class _InventarioViewState extends State<_InventarioView> {
+  void openEditor(InventarioProvider provider, {Map<String, dynamic>? item}) {
+    final idController = TextEditingController(text: item?['id'] ?? 'IT-${DateTime.now().millisecondsSinceEpoch}');
+    final nameController = TextEditingController(text: item?['name'] ?? '');
+    final categoryController = TextEditingController(text: item?['category'] ?? '');
+    final stockController = TextEditingController(text: item?['stock']?.toString() ?? '0');
+    final costController = TextEditingController(text: item?['cost']?.toString() ?? '0');
+    final providerController = TextEditingController(text: item?['provider'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: Text(item == null ? 'Agregar Insumo' : 'Editar Insumo'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(controller: idController, decoration: const InputDecoration(labelText: 'ID')),
+                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Nombre')),
+                TextField(controller: categoryController, decoration: const InputDecoration(labelText: 'Categoría')),
+                TextField(controller: stockController, decoration: const InputDecoration(labelText: 'Stock'), keyboardType: TextInputType.number),
+                TextField(controller: costController, decoration: const InputDecoration(labelText: 'Costo'), keyboardType: TextInputType.number),
+                TextField(controller: providerController, decoration: const InputDecoration(labelText: 'Proveedor')),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+            ElevatedButton(
+              onPressed: () {
+                final data = {
+                  'id': idController.text,
+                  'name': nameController.text,
+                  'category': categoryController.text,
+                  'stock': int.tryParse(stockController.text) ?? 0,
+                  'cost': double.tryParse(costController.text) ?? 0.0,
+                  'provider': providerController.text,
+                };
+
+                if (item == null) {
+                  provider.addInventoryItem(data);
+                } else {
+                  provider.updateInventoryItem(item['id'], data);
+                }
+
+                Navigator.pop(context);
+              },
+              child: const Text('Guardar')
+            )
+          ],
+        );
+      }
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Usamos el InventarioProvider
     final provider = context.watch<InventarioProvider>();
+    final items = provider.filteredItems;
 
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Text('🍎 ', style: TextStyle(fontSize: 26)),
-                      Text('Inventario', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(color: Colors.red.withAlpha(30), borderRadius: BorderRadius.circular(8)),
-                    child: Text('${provider.alertasStock} alertas de stock', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                  )
-                ],
-              ),
-              const SizedBox(height: 25),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(decoration: InputDecoration(hintText: 'Buscar insumo...', prefixIcon: const Icon(Icons.search), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), onChanged: provider.onSearch),
-                  ),
-                  const SizedBox(width: 15),
-                  FilterChip(
-                    label: const Text('Ver bajo stock'),
-                    selected: provider.showLowStock,
-                    onSelected: provider.toggleLowStock,
-                    selectedColor: Colors.orange.withAlpha(50),
-                  )
-                ],
-              ),
-              const SizedBox(height: 20),
-              Card(
-                clipBehavior: Clip.antiAlias,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
-                      columns: const [
-                        DataColumn(label: Text('Insumo')),
-                        DataColumn(label: Text('Unidad')),
-                        DataColumn(label: Text('Stock Actual')),
-                        DataColumn(label: Text('Stock Mínimo')),
-                        DataColumn(label: Text('Estado')),
-                        DataColumn(label: Text('Acciones')),
-                      ],
-                      rows: provider.filteredInsumos.map((i) {
-                        final bool isLow = i.currentStock <= i.minStock;
-                        return DataRow(cells: [
-                          DataCell(Text(i.name, style: const TextStyle(fontWeight: FontWeight.bold))),
-                          DataCell(Text(i.unit, style: const TextStyle(color: Colors.grey))),
-                          DataCell(Text(i.currentStock.toString(), style: TextStyle(fontWeight: FontWeight.bold, color: isLow ? Colors.red : Colors.green))),
-                          DataCell(Text(i.minStock.toString())),
-                          DataCell(isLow ? const Icon(Icons.warning, color: Colors.orange, size: 20) : const Icon(Icons.check_circle, color: Colors.green, size: 20)),
-                          DataCell(
-                            TextButton(
-                              onPressed: () {
-                                String nuevoVal = i.currentStock.toString();
-                                showDialog(context: context, builder: (ctx) => AlertDialog(
-                                  title: Text('Ajustar ${i.name}'),
-                                  content: TextField(keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Nuevo Stock'), onChanged: (v) => nuevoVal = v),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-                                    ElevatedButton(onPressed: () {
-                                      provider.ajustarStock(i.id, double.tryParse(nuevoVal) ?? i.currentStock);
-                                      Navigator.pop(ctx);
-                                      UiUtils.showToast(context, 'Stock actualizado');
-                                    }, child: const Text('Guardar'))
-                                  ],
-                                ));
-                              }, 
-                              child: const Text('Ajustar')
-                            )
+      appBar: AppBar(title: const Text('Inventario')),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            TextField(
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Buscar insumos'),
+              onChanged: provider.setSearch, // Conectado al Provider
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: items.isEmpty
+                  ? const Center(child: Text('No hay insumos'))
+                  : ListView.separated(
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const Divider(),
+                      itemBuilder: (_, i) {
+                        final it = items[i];
+                        return ListTile(
+                          title: Text(it['name']),
+                          subtitle: Text('Stock: ${it['stock']} · ${it['category']}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min, 
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () => openEditor(provider, item: it),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () => provider.removeInventoryItem(it['id'] as String),
+                              ),
+                            ]
                           ),
-                        ]);
-                      }).toList(),
+                        );
+                      },
                     ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            )
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => openEditor(provider),
+        icon: const Icon(Icons.add),
+        label: const Text('Agregar')
       ),
     );
   }
