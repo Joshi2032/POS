@@ -34,7 +34,7 @@ class Reservacion {
     String? notes,
   }) {
     return Reservacion(
-      id: this.id,
+      id: id,
       customerName: customerName ?? this.customerName,
       date: date ?? this.date,
       time: time ?? this.time,
@@ -91,10 +91,42 @@ class ReservacionesProvider extends ChangeNotifier {
   void _initData() {
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
     _reservaciones = [
-      Reservacion(id: 'RES-001', customerName: 'Familia Martínez', date: todayStr, time: '14:30', guests: 6, table: 'Mesa 4', status: 'Confirmada', notes: 'Silla para bebé'),
-      Reservacion(id: 'RES-002', customerName: 'Carlos Slim', date: todayStr, time: '20:00', guests: 2, table: 'Mesa Vip 1', status: 'Pendiente', notes: 'Aniversario'),
-      Reservacion(id: 'RES-003', customerName: 'Empresa XYZ', date: todayStr, time: '15:00', guests: 12, table: 'Terraza 1, 2 y 3', status: 'Confirmada', notes: 'Facturar al final'),
-      Reservacion(id: 'RES-004', customerName: 'Andrea López', date: todayStr, time: '19:00', guests: 4, table: 'Mesa 7', status: 'Cancelada', notes: ''),
+      Reservacion(
+          id: 'RES-001',
+          customerName: 'Familia Martínez',
+          date: todayStr,
+          time: '14:30',
+          guests: 6,
+          table: 'Mesa 4',
+          status: 'Confirmada',
+          notes: 'Silla para bebé'),
+      Reservacion(
+          id: 'RES-002',
+          customerName: 'Carlos Slim',
+          date: todayStr,
+          time: '20:00',
+          guests: 2,
+          table: 'Mesa Vip 1',
+          status: 'Pendiente',
+          notes: 'Aniversario'),
+      Reservacion(
+          id: 'RES-003',
+          customerName: 'Empresa XYZ',
+          date: todayStr,
+          time: '15:00',
+          guests: 12,
+          table: 'Terraza 1, 2 y 3',
+          status: 'Confirmada',
+          notes: 'Facturar al final'),
+      Reservacion(
+          id: 'RES-004',
+          customerName: 'Andrea López',
+          date: todayStr,
+          time: '19:00',
+          guests: 4,
+          table: 'Mesa 7',
+          status: 'Cancelada',
+          notes: ''),
     ];
   }
 
@@ -102,7 +134,7 @@ class ReservacionesProvider extends ChangeNotifier {
   List<Reservacion> get filteredReservaciones {
     final query = _searchTerm.trim().toLowerCase();
     final status = _selectedStatus;
-    
+
     return _reservaciones.where((r) {
       final matchesSearch = query.isEmpty ||
           r.customerName.toLowerCase().contains(query) ||
@@ -118,17 +150,22 @@ class ReservacionesProvider extends ChangeNotifier {
     final list = filteredReservaciones;
     final start = (_currentPage - 1) * pageSize;
     if (start >= list.length) return [];
-    final end = (start + pageSize) > list.length ? list.length : (start + pageSize);
+    final end =
+        (start + pageSize) > list.length ? list.length : (start + pageSize);
     return list.sublist(start, end);
   }
 
   int get totalPages => (filteredReservaciones.length / pageSize).ceil();
-  
-  int get pendientesCount => _reservaciones.where((r) => r.status == 'Pendiente').length;
-  int get confirmadasCount => _reservaciones.where((r) => r.status == 'Confirmada').length;
+
+  int get pendientesCount =>
+      _reservaciones.where((r) => r.status == 'Pendiente').length;
+  int get confirmadasCount =>
+      _reservaciones.where((r) => r.status == 'Confirmada').length;
   int get paraHoyCount {
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
-    return _reservaciones.where((r) => r.date == todayStr && r.status != 'Cancelada').length;
+    return _reservaciones
+        .where((r) => r.date == todayStr && r.status != 'Cancelada')
+        .length;
   }
 
   // --- ACCIONES MUTADORAS ---

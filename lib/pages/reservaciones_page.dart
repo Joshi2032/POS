@@ -23,8 +23,14 @@ class _ReservacionesView extends StatefulWidget {
 }
 
 class _ReservacionesViewState extends State<_ReservacionesView> {
-  final List<String> filtrosEstado = ['Todos', 'Pendiente', 'Confirmada', 'Completada', 'Cancelada'];
-  
+  final List<String> filtrosEstado = [
+    'Todos',
+    'Pendiente',
+    'Confirmada',
+    'Completada',
+    'Cancelada'
+  ];
+
   bool showModal = false;
   String? editingId;
   String modalError = '';
@@ -84,23 +90,30 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
   }
 
   void guardarReservacion(ReservacionesProvider provider) {
-    if (_formKey.currentState == null || !_formKey.currentState!.validate()) return;
+    if (_formKey.currentState == null || !_formKey.currentState!.validate())
+      return;
 
-    if (formState.customerName.trim().isEmpty || formState.date.trim().isEmpty || formState.guests <= 0) {
+    if (formState.customerName.trim().isEmpty ||
+        formState.date.trim().isEmpty ||
+        formState.guests <= 0) {
       setState(() => modalError = 'Completa nombre, fecha y personas válidas.');
       return;
     }
 
     if (editingId != null) {
-      UiUtils.showConfirmDialog(context, 'Actualizar Reservación', '¿Actualizar a ${formState.customerName}?', () {
+      UiUtils.showConfirmDialog(context, 'Actualizar Reservación',
+          '¿Actualizar a ${formState.customerName}?', () {
         provider.actualizarReservacion(editingId!, formState);
-        UiUtils.showToast(context, 'Reservación actualizada', color: Colors.green);
+        UiUtils.showToast(context, 'Reservación actualizada',
+            color: Colors.green);
         cerrarModal();
       });
     } else {
-      UiUtils.showConfirmDialog(context, 'Crear Reservación', '¿Registrar a ${formState.customerName}?', () {
+      UiUtils.showConfirmDialog(context, 'Crear Reservación',
+          '¿Registrar a ${formState.customerName}?', () {
         provider.crearReservacion(formState);
-        UiUtils.showToast(context, 'Reservación registrada', color: Colors.green);
+        UiUtils.showToast(context, 'Reservación registrada',
+            color: Colors.green);
         cerrarModal();
       });
     }
@@ -108,11 +121,16 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'Pendiente': return Colors.orange;
-      case 'Confirmada': return Colors.blue;
-      case 'Completada': return Colors.green;
-      case 'Cancelada': return Colors.red;
-      default: return Colors.grey;
+      case 'Pendiente':
+        return Colors.orange;
+      case 'Confirmada':
+        return Colors.blue;
+      case 'Completada':
+        return Colors.green;
+      case 'Cancelada':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -140,14 +158,21 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
                           Row(
                             children: [
                               const Text('📅 ', style: TextStyle(fontSize: 26)),
-                              Text('Reservaciones', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                              Text('Reservaciones',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold)),
                             ],
                           ),
-                          Text('Gestión de mesas y agendamientos', style: const TextStyle(color: Colors.grey)),
+                          Text('Gestión de mesas y agendamientos',
+                              style: const TextStyle(color: Colors.grey)),
                         ],
                       ),
                       ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white),
                         onPressed: abrirModal,
                         child: const Text('+ Nueva Reservación'),
                       )
@@ -160,7 +185,8 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
                     decoration: InputDecoration(
                       hintText: 'Buscar por nombre, ID o mesa...',
                       prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                     onChanged: provider.onSearch,
                   ),
@@ -175,9 +201,18 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
                     mainAxisSpacing: 16,
                     childAspectRatio: isDesktop ? 3.0 : 4.0,
                     children: [
-                      _buildStatCard('Para Hoy', '${provider.paraHoyCount}', Icons.today, Colors.blueGrey.shade800),
-                      _buildStatCard('Pendientes', '${provider.pendientesCount}', Icons.pending_actions, Colors.orange.shade900),
-                      _buildStatCard('Confirmadas', '${provider.confirmadasCount}', Icons.check_circle_outline, Colors.green.shade900),
+                      _buildStatCard('Para Hoy', '${provider.paraHoyCount}',
+                          Icons.today, Colors.blueGrey.shade800),
+                      _buildStatCard(
+                          'Pendientes',
+                          '${provider.pendientesCount}',
+                          Icons.pending_actions,
+                          Colors.orange.shade900),
+                      _buildStatCard(
+                          'Confirmadas',
+                          '${provider.confirmadasCount}',
+                          Icons.check_circle_outline,
+                          Colors.green.shade900),
                     ],
                   ),
                   const SizedBox(height: 25),
@@ -192,11 +227,14 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
                         label: Text(estado),
                         selected: isActive,
                         onSelected: (_) => provider.filterByStatus(estado),
-                        selectedColor: Theme.of(context).primaryColor.withAlpha(50),
+                        selectedColor:
+                            Theme.of(context).primaryColor.withAlpha(50),
                         labelStyle: TextStyle(
-                          color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade700,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal
-                        ),
+                            color: isActive
+                                ? Theme.of(context).primaryColor
+                                : Colors.grey.shade700,
+                            fontWeight:
+                                isActive ? FontWeight.bold : FontWeight.normal),
                       );
                     }).toList(),
                   ),
@@ -210,40 +248,70 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+                          headingRowColor: WidgetStateProperty.all(
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest),
                           columns: const [
-                            DataColumn(label: Text('Fecha y Hora', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Cliente', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Personas', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Mesa', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Estado', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Acciones', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Fecha y Hora',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Cliente',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Personas',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Mesa',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Estado',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Acciones',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
                           ],
                           rows: provider.paginatedReservaciones.map((r) {
                             return DataRow(cells: [
                               DataCell(Text('${r.date} - ${r.time}')),
-                              DataCell(Text(r.customerName, style: const TextStyle(fontWeight: FontWeight.w600))),
+                              DataCell(Text(r.customerName,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600))),
                               DataCell(Text('${r.guests} pax')),
                               DataCell(Text(r.table)),
-                              DataCell(
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: _getStatusColor(r.status).withAlpha(40),
-                                    borderRadius: BorderRadius.circular(8)
-                                  ),
-                                  child: Text(r.status, style: TextStyle(color: _getStatusColor(r.status), fontSize: 12, fontWeight: FontWeight.bold)),
-                                )
-                              ),
+                              DataCell(Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                    color:
+                                        _getStatusColor(r.status).withAlpha(40),
+                                    borderRadius: BorderRadius.circular(8)),
+                                child: Text(r.status,
+                                    style: TextStyle(
+                                        color: _getStatusColor(r.status),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                              )),
                               DataCell(Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  TextButton(onPressed: () => abrirEditar(r), child: const Text('Editar')),
+                                  TextButton(
+                                      onPressed: () => abrirEditar(r),
+                                      child: const Text('Editar')),
                                   if (r.status == 'Pendiente')
                                     TextButton(
-                                      onPressed: () => provider.cambiarEstado(r.id, 'Confirmada'), 
-                                      child: const Text('Confirmar', style: TextStyle(color: Colors.green))
-                                    ),
+                                        onPressed: () => provider.cambiarEstado(
+                                            r.id, 'Confirmada'),
+                                        child: const Text('Confirmar',
+                                            style: TextStyle(
+                                                color: Colors.green))),
                                 ],
                               )),
                             ]);
@@ -257,7 +325,8 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
                     Container(
                       alignment: Alignment.center,
                       padding: const EdgeInsets.all(32),
-                      child: const Text('No hay reservaciones', style: TextStyle(color: Colors.grey)),
+                      child: const Text('No hay reservaciones',
+                          style: TextStyle(color: Colors.grey)),
                     ),
                   const SizedBox(height: 15),
 
@@ -268,12 +337,21 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back_ios, size: 16),
-                          onPressed: provider.currentPage == 1 ? null : () => provider.changePage(provider.currentPage - 1),
+                          onPressed: provider.currentPage == 1
+                              ? null
+                              : () =>
+                                  provider.changePage(provider.currentPage - 1),
                         ),
-                        Text('Página ${provider.currentPage} de ${provider.totalPages}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                        Text(
+                            'Página ${provider.currentPage} de ${provider.totalPages}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w500)),
                         IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onPressed: provider.currentPage == provider.totalPages ? null : () => provider.changePage(provider.currentPage + 1),
+                          onPressed: provider.currentPage == provider.totalPages
+                              ? null
+                              : () =>
+                                  provider.changePage(provider.currentPage + 1),
                         ),
                       ],
                     )
@@ -291,7 +369,8 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
             Center(
               child: Card(
                 margin: const EdgeInsets.all(20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 child: Container(
                   width: isDesktop ? 500 : double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -305,13 +384,24 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(editingId != null ? 'Editar Reservación' : 'Nueva Reservación', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                              IconButton(icon: const Icon(Icons.close), onPressed: cerrarModal),
+                              Text(
+                                  editingId != null
+                                      ? 'Editar Reservación'
+                                      : 'Nueva Reservación',
+                                  style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold)),
+                              IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: cerrarModal),
                             ],
                           ),
                           const Divider(),
                           if (modalError.isNotEmpty) ...[
-                            Text(modalError, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                            Text(modalError,
+                                style: const TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w500)),
                             const SizedBox(height: 10),
                           ],
                           _buildFormFields(),
@@ -319,10 +409,15 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              OutlinedButton(onPressed: cerrarModal, child: const Text('Cancelar')),
+                              OutlinedButton(
+                                  onPressed: cerrarModal,
+                                  child: const Text('Cancelar')),
                               const SizedBox(width: 12),
                               ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        Theme.of(context).primaryColor,
+                                    foregroundColor: Colors.white),
                                 onPressed: () => guardarReservacion(provider),
                                 child: const Text('Guardar'),
                               ),
@@ -341,7 +436,8 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
     return Card(
       color: color,
       child: Padding(
@@ -354,9 +450,15 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(label,
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 4),
-                Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(value,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold)),
               ],
             ),
           ],
@@ -370,7 +472,8 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
       children: [
         TextFormField(
           initialValue: formState.customerName,
-          decoration: const InputDecoration(labelText: 'Nombre del Cliente', border: OutlineInputBorder()),
+          decoration: const InputDecoration(
+              labelText: 'Nombre del Cliente', border: OutlineInputBorder()),
           onChanged: (val) => formState.customerName = val,
         ),
         const SizedBox(height: 16),
@@ -379,7 +482,9 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
             Expanded(
               child: TextFormField(
                 initialValue: formState.date,
-                decoration: const InputDecoration(labelText: 'Fecha (YYYY-MM-DD)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Fecha (YYYY-MM-DD)',
+                    border: OutlineInputBorder()),
                 onChanged: (val) => formState.date = val,
               ),
             ),
@@ -387,7 +492,8 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
             Expanded(
               child: TextFormField(
                 initialValue: formState.time,
-                decoration: const InputDecoration(labelText: 'Hora (HH:MM)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Hora (HH:MM)', border: OutlineInputBorder()),
                 onChanged: (val) => formState.time = val,
               ),
             ),
@@ -400,17 +506,22 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
               child: TextFormField(
                 initialValue: formState.guests.toString(),
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Personas', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    labelText: 'Personas', border: OutlineInputBorder()),
                 onChanged: (val) => formState.guests = int.tryParse(val) ?? 1,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: formState.status,
-                decoration: const InputDecoration(labelText: 'Estado', border: OutlineInputBorder()),
-                items: ['Pendiente', 'Confirmada', 'Completada', 'Cancelada'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                onChanged: (val) => setState(() => formState.status = val ?? 'Pendiente'),
+                initialValue: formState.status,
+                decoration: const InputDecoration(
+                    labelText: 'Estado', border: OutlineInputBorder()),
+                items: ['Pendiente', 'Confirmada', 'Completada', 'Cancelada']
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (val) =>
+                    setState(() => formState.status = val ?? 'Pendiente'),
               ),
             ),
           ],
@@ -418,14 +529,16 @@ class _ReservacionesViewState extends State<_ReservacionesView> {
         const SizedBox(height: 16),
         TextFormField(
           initialValue: formState.table,
-          decoration: const InputDecoration(labelText: 'Mesa Asignada', border: OutlineInputBorder()),
+          decoration: const InputDecoration(
+              labelText: 'Mesa Asignada', border: OutlineInputBorder()),
           onChanged: (val) => formState.table = val,
         ),
         const SizedBox(height: 16),
         TextFormField(
           initialValue: formState.notes,
           maxLines: 2,
-          decoration: const InputDecoration(labelText: 'Notas / Peticiones', border: OutlineInputBorder()),
+          decoration: const InputDecoration(
+              labelText: 'Notas / Peticiones', border: OutlineInputBorder()),
           onChanged: (val) => formState.notes = val,
         ),
       ],

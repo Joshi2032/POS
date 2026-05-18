@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
+import 'inventario_provider.dart'; // Importamos el almacén para poder comunicarnos
 
 class ProveedoresProvider extends ChangeNotifier {
   final int pageSize = 10;
-  
-  // Lista de pagos (En el futuro la llenarás desde Supabase)
   final List<Map<String, dynamic>> _payments = [];
-  
   String _searchTerm = '';
   int _currentPage = 1;
 
   String get searchTerm => _searchTerm;
   int get currentPage => _currentPage;
-
   List<Map<String, dynamic>> get payments => _payments;
 
   List<Map<String, dynamic>> get filteredPayments {
@@ -34,7 +31,6 @@ class ProveedoresProvider extends ChangeNotifier {
     return filteredPayments.skip(start).take(pageSize).toList();
   }
 
-  // --- LÓGICA COMPUTADA PARA KPIs ---
   double get todayTotal {
     final today = DateTime.now().toIso8601String().split('T').first;
     return _payments.where((p) => p['date'] == today).fold(0.0, (sum, p) => sum + (p['amount'] ?? 0.0));
@@ -68,7 +64,6 @@ class ProveedoresProvider extends ChangeNotifier {
     return _payments.map((e) => e['provider']).whereType<String>().toSet().length;
   }
 
-  // --- ACCIONES ---
   void setSearch(String val) {
     _searchTerm = val;
     _currentPage = 1;
@@ -80,8 +75,19 @@ class ProveedoresProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addPayment(Map<String, dynamic> data) {
-    _payments.add(data);
+  // MODIFICADO: Ahora requiere recibir la instancia del Inventario para actualizarlo en tiempo real
+  void addPayment(Map<String, dynamic> data, InventarioProvider inventario) {
+    _payments.insert(0, data);
+    
+    // Si en el concepto del pago pusiste algo como "Carne Molida" y tienes stock o notas, 
+    // extraemos el incremento. Para hacerlo simple y automatizado: usamos el campo 'category' (Concepto)
+    // incrementando la cantidad que se registre.
+    final nombreInsumo = data['category'] as String;
+    
+    // Asumimos por defecto un paquete/unidad de compra (puedes adaptarlo según tus notas)
+    // En este simulador, cada orden recibida suma 10 unidades al stock local de forma automática.
+    inventario.aumentarStockPorCompra(nombreInsumo, 10);
+    
     notifyListeners();
   }
 
