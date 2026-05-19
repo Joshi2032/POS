@@ -22,57 +22,78 @@ class _InventarioView extends StatefulWidget {
 
 class _InventarioViewState extends State<_InventarioView> {
   void openEditor(InventarioProvider provider, {InventoryItem? item}) {
-    final idController = TextEditingController(text: item?.id ?? 'IT-${DateTime.now().millisecondsSinceEpoch}');
+    final idController = TextEditingController(
+        text: item?.id ?? 'IT-${DateTime.now().millisecondsSinceEpoch}');
     final nameController = TextEditingController(text: item?.name ?? '');
-    final categoryController = TextEditingController(text: item?.category ?? '');
-    final stockController = TextEditingController(text: item?.stock.toString() ?? '0');
-    final costController = TextEditingController(text: item?.cost.toString() ?? '0');
-    final providerController = TextEditingController(text: item?.provider ?? '');
+    final categoryController =
+        TextEditingController(text: item?.category ?? '');
+    final stockController =
+        TextEditingController(text: item?.stock.toString() ?? '0');
+    final costController =
+        TextEditingController(text: item?.cost.toString() ?? '0');
+    final providerController =
+        TextEditingController(text: item?.provider ?? '');
 
     showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: Text(item == null ? 'Agregar Insumo' : 'Editar Insumo'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(controller: idController, decoration: const InputDecoration(labelText: 'ID')),
-                TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Nombre')),
-                TextField(controller: categoryController, decoration: const InputDecoration(labelText: 'Categoría')),
-                TextField(controller: stockController, decoration: const InputDecoration(labelText: 'Stock'), keyboardType: TextInputType.number),
-                TextField(controller: costController, decoration: const InputDecoration(labelText: 'Costo'), keyboardType: TextInputType.number),
-                TextField(controller: providerController, decoration: const InputDecoration(labelText: 'Proveedor')),
-              ],
+        context: context,
+        builder: (_) {
+          return AlertDialog(
+            title: Text(item == null ? 'Agregar Insumo' : 'Editar Insumo'),
+            content: SingleChildScrollView(
+              child: Column(
+                children: [
+                  TextField(
+                      controller: idController,
+                      decoration: const InputDecoration(labelText: 'ID')),
+                  TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Nombre')),
+                  TextField(
+                      controller: categoryController,
+                      decoration:
+                          const InputDecoration(labelText: 'Categoría')),
+                  TextField(
+                      controller: stockController,
+                      decoration: const InputDecoration(labelText: 'Stock'),
+                      keyboardType: TextInputType.number),
+                  TextField(
+                      controller: costController,
+                      decoration: const InputDecoration(labelText: 'Costo'),
+                      keyboardType: TextInputType.number),
+                  TextField(
+                      controller: providerController,
+                      decoration:
+                          const InputDecoration(labelText: 'Proveedor')),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-            ElevatedButton(
-              onPressed: () {
-                final inventoryItem = InventoryItem(
-                  id: idController.text,
-                  name: nameController.text,
-                  category: categoryController.text,
-                  stock: double.tryParse(stockController.text) ?? 0.0,
-                  cost: double.tryParse(costController.text) ?? 0.0,
-                  provider: providerController.text,
-                );
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar')),
+              ElevatedButton(
+                  onPressed: () {
+                    final inventoryItem = InventoryItem(
+                      id: idController.text,
+                      name: nameController.text,
+                      category: categoryController.text,
+                      stock: double.tryParse(stockController.text) ?? 0.0,
+                      cost: double.tryParse(costController.text) ?? 0.0,
+                      provider: providerController.text,
+                    );
 
-                if (item == null) {
-                  provider.addInventoryItem(inventoryItem);
-                } else {
-                  provider.updateInventoryItem(item.id, inventoryItem);
-                }
+                    if (item == null) {
+                      provider.addInventoryItem(inventoryItem);
+                    } else {
+                      provider.updateInventoryItem(item.id, inventoryItem);
+                    }
 
-                Navigator.pop(context);
-              },
-              child: const Text('Guardar')
-            )
-          ],
-        );
-      }
-    );
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Guardar'))
+            ],
+          );
+        });
   }
 
   @override
@@ -88,7 +109,8 @@ class _InventarioViewState extends State<_InventarioView> {
         child: Column(
           children: [
             TextField(
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Buscar insumos'),
+              decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search), hintText: 'Buscar insumos'),
               onChanged: provider.setSearch, // Conectado al Provider
             ),
             const SizedBox(height: 12),
@@ -103,19 +125,18 @@ class _InventarioViewState extends State<_InventarioView> {
                         return ListTile(
                           title: Text(it.name),
                           subtitle: Text('Stock: ${it.stock} · ${it.category}'),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min, 
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit),
-                                onPressed: () => openEditor(provider, item: it),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete),
-                                onPressed: () => provider.removeInventoryItem(it.id),
-                              ),
-                            ]
-                          ),
+                          trailing:
+                              Row(mainAxisSize: MainAxisSize.min, children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              onPressed: () => openEditor(provider, item: it),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete),
+                              onPressed: () =>
+                                  provider.removeInventoryItem(it.id),
+                            ),
+                          ]),
                         );
                       },
                     ),
@@ -124,10 +145,9 @@ class _InventarioViewState extends State<_InventarioView> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => openEditor(provider),
-        icon: const Icon(Icons.add),
-        label: const Text('Agregar')
-      ),
+          onPressed: () => openEditor(provider),
+          icon: const Icon(Icons.add),
+          label: const Text('Agregar')),
     );
   }
 }

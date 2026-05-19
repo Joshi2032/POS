@@ -74,7 +74,8 @@ class InventarioProvider extends ChangeNotifier {
 
     if (index != -1) {
       final currentStock = _inventory[index].stock;
-      _inventory[index] = _inventory[index].copyWith(stock: currentStock + cantidadAumentar);
+      _inventory[index] =
+          _inventory[index].copyWith(stock: currentStock + cantidadAumentar);
     } else {
       // Si es un insumo nuevo que trajo el proveedor, lo auto-registramos limpio
       _inventory.add(

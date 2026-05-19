@@ -25,8 +25,7 @@ class _ProveedoresView extends StatefulWidget {
 class _ProveedoresViewState extends State<_ProveedoresView> {
   final _money = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
 
-  void _openEditor(ProveedoresProvider provider,
-      {ProviderPayment? payment}) {
+  void _openEditor(ProveedoresProvider provider, {ProviderPayment? payment}) {
     final todayIso = DateTime.now().toIso8601String().split('T').first;
     final idController = TextEditingController(
       text: payment?.id ?? 'PAG-${DateTime.now().millisecondsSinceEpoch}',

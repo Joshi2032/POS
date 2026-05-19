@@ -21,7 +21,7 @@ class _ReportesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 950;
-    
+
     // Conectamos la UI a nuestro Provider
     final provider = context.watch<ReportesProvider>();
 
@@ -42,17 +42,25 @@ class _ReportesView extends StatelessWidget {
                       Row(
                         children: [
                           const Text('📈 ', style: TextStyle(fontSize: 26)),
-                          Text('Reportes y Analíticas', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          Text('Reportes y Analíticas',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold)),
                         ],
                       ),
-                      const Text('Visualiza el rendimiento de ventas y flujos financieros', style: TextStyle(color: Colors.grey)),
+                      const Text(
+                          'Visualiza el rendimiento de ventas y flujos financieros',
+                          style: TextStyle(color: Colors.grey)),
                     ],
                   ),
                   DropdownButton<String>(
                     value: provider.selectedPeriodo,
                     underline: Container(),
                     icon: const Icon(Icons.arrow_drop_down_circle_outlined),
-                    items: provider.periodos.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+                    items: provider.periodos
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        .toList(),
                     onChanged: (val) {
                       if (val != null) provider.cambiarPeriodo(val);
                     },
@@ -70,9 +78,21 @@ class _ReportesView extends StatelessWidget {
                 mainAxisSpacing: 16,
                 childAspectRatio: isDesktop ? 2.8 : 4.0,
                 children: [
-                  _buildStatCard('Total de Ventas', Formatters.money(provider.totalIngresos), Icons.attach_money, Colors.green.shade900),
-                  _buildStatCard('Transacciones', '${provider.totalTransacciones}', Icons.receipt_long, Colors.blueGrey.shade800),
-                  _buildStatCard('Ticket Promedio', Formatters.money(provider.ticketPromedio), Icons.analytics, Colors.indigo.shade900),
+                  _buildStatCard(
+                      'Total de Ventas',
+                      Formatters.money(provider.totalIngresos),
+                      Icons.attach_money,
+                      Colors.green.shade900),
+                  _buildStatCard(
+                      'Transacciones',
+                      '${provider.totalTransacciones}',
+                      Icons.receipt_long,
+                      Colors.blueGrey.shade800),
+                  _buildStatCard(
+                      'Ticket Promedio',
+                      Formatters.money(provider.ticketPromedio),
+                      Icons.analytics,
+                      Colors.indigo.shade900),
                 ],
               ),
               const SizedBox(height: 25),
@@ -84,13 +104,25 @@ class _ReportesView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Distribución por Métodos de Pago', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                      const Text('Distribución por Métodos de Pago',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: _buildPaymentTypeIndicator('Efectivo', Formatters.money(provider.ingresosEfectivo), provider.porcentajeEfectivo, Colors.orange)),
+                          Expanded(
+                              child: _buildPaymentTypeIndicator(
+                                  'Efectivo',
+                                  Formatters.money(provider.ingresosEfectivo),
+                                  provider.porcentajeEfectivo,
+                                  Colors.orange)),
                           const SizedBox(width: 16),
-                          Expanded(child: _buildPaymentTypeIndicator('Tarjeta / Transf.', Formatters.money(provider.ingresosTarjeta), provider.porcentajeTarjeta, Colors.blue)),
+                          Expanded(
+                              child: _buildPaymentTypeIndicator(
+                                  'Tarjeta / Transf.',
+                                  Formatters.money(provider.ingresosTarjeta),
+                                  provider.porcentajeTarjeta,
+                                  Colors.blue)),
                         ],
                       )
                     ],
@@ -107,7 +139,8 @@ class _ReportesView extends StatelessWidget {
                       decoration: InputDecoration(
                         hintText: 'Buscar transacción por concepto o ID...',
                         prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                       onChanged: provider.onSearch,
                     ),
@@ -128,15 +161,20 @@ class _ReportesView extends StatelessWidget {
                     onSelected: (_) => provider.cambiarCategoria(cat),
                     selectedColor: Theme.of(context).primaryColor.withAlpha(40),
                     labelStyle: TextStyle(
-                        color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade700,
-                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal),
+                        color: isActive
+                            ? Theme.of(context).primaryColor
+                            : Colors.grey.shade700,
+                        fontWeight:
+                            isActive ? FontWeight.bold : FontWeight.normal),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 20),
 
               // TABLA DE DATOS
-              Text('${provider.filteredVentas.length} transacción(es) registrada(s)', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                  '${provider.filteredVentas.length} transacción(es) registrada(s)',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
               Card(
                 clipBehavior: Clip.antiAlias,
@@ -145,23 +183,42 @@ class _ReportesView extends StatelessWidget {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+                      headingRowColor: WidgetStateProperty.all(Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest),
                       columns: const [
-                        DataColumn(label: Text('ID', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Fecha', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Concepto', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Categoría', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Método', style: TextStyle(fontWeight: FontWeight.bold))),
-                        DataColumn(label: Text('Monto', style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(
+                            label: Text('ID',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(
+                            label: Text('Fecha',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(
+                            label: Text('Concepto',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(
+                            label: Text('Categoría',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(
+                            label: Text('Método',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
+                        DataColumn(
+                            label: Text('Monto',
+                                style: TextStyle(fontWeight: FontWeight.bold))),
                       ],
                       rows: provider.paginatedVentas.map((v) {
                         return DataRow(cells: [
-                          DataCell(Text(v.id, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))),
+                          DataCell(Text(v.id,
+                              style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.bold))),
                           DataCell(Text(v.date)),
                           DataCell(Text(v.concept)),
                           DataCell(Text(v.category)),
                           DataCell(Text(v.paymentMethod)),
-                          DataCell(Text(Formatters.money(v.amount), style: const TextStyle(fontWeight: FontWeight.bold))),
+                          DataCell(Text(Formatters.money(v.amount),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold))),
                         ]);
                       }).toList(),
                     ),
@@ -173,7 +230,9 @@ class _ReportesView extends StatelessWidget {
                 Container(
                   alignment: Alignment.center,
                   padding: const EdgeInsets.all(32),
-                  child: const Text('No hay transacciones registradas para este filtro.', style: TextStyle(color: Colors.grey)),
+                  child: const Text(
+                      'No hay transacciones registradas para este filtro.',
+                      style: TextStyle(color: Colors.grey)),
                 ),
               const SizedBox(height: 15),
 
@@ -184,12 +243,18 @@ class _ReportesView extends StatelessWidget {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.chevron_left),
-                      onPressed: provider.currentPage == 1 ? null : () => provider.changePage(provider.currentPage - 1),
+                      onPressed: provider.currentPage == 1
+                          ? null
+                          : () => provider.changePage(provider.currentPage - 1),
                     ),
-                    Text('Página ${provider.currentPage} de ${provider.totalPages}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                        'Página ${provider.currentPage} de ${provider.totalPages}',
+                        style: const TextStyle(fontWeight: FontWeight.w500)),
                     IconButton(
                       icon: const Icon(Icons.chevron_right),
-                      onPressed: provider.currentPage == provider.totalPages ? null : () => provider.changePage(provider.currentPage + 1),
+                      onPressed: provider.currentPage == provider.totalPages
+                          ? null
+                          : () => provider.changePage(provider.currentPage + 1),
                     ),
                   ],
                 )
@@ -201,7 +266,8 @@ class _ReportesView extends StatelessWidget {
   }
 
   // Helpers visuales
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
     return Card(
       color: color,
       child: Padding(
@@ -214,9 +280,15 @@ class _ReportesView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(label,
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 4),
-                Text(value, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                Text(value,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold)),
               ],
             ),
           ],
@@ -225,20 +297,26 @@ class _ReportesView extends StatelessWidget {
     );
   }
 
-  Widget _buildPaymentTypeIndicator(String label, String value, double percentage, Color color) {
+  Widget _buildPaymentTypeIndicator(
+      String label, String value, double percentage, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-            Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+            Text(label,
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+            Text(value,
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
           ],
         ),
         const SizedBox(height: 6),
         LinearProgressIndicator(
-          value: percentage, // El cálculo ahora se hace en el cerebro, aquí solo pintamos
+          value:
+              percentage, // El cálculo ahora se hace en el cerebro, aquí solo pintamos
           backgroundColor: Colors.grey.shade200,
           valueColor: AlwaysStoppedAnimation<Color>(color),
           minHeight: 8,

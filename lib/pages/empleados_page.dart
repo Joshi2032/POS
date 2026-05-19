@@ -35,7 +35,8 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
     super.dispose();
   }
 
-  void _abrirFormularioModal(EmpleadosProvider provider, {Empleado? empleado, int? index}) {
+  void _abrirFormularioModal(EmpleadosProvider provider,
+      {Empleado? empleado, int? index}) {
     if (empleado != null) {
       _nombreCtrl.text = empleado.nombre;
       _telefonoCtrl.text = empleado.telefono;
@@ -54,8 +55,10 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              title: Text(empleado != null ? 'Editar Empleado' : 'Nuevo Empleado',
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              title: Text(
+                  empleado != null ? 'Editar Empleado' : 'Nuevo Empleado',
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Form(
@@ -65,24 +68,31 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                     children: [
                       TextFormField(
                         controller: _nombreCtrl,
-                        decoration: const InputDecoration(labelText: 'Nombre Completo', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Nombre Completo',
+                            border: OutlineInputBorder()),
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         dropdownColor: Theme.of(context).cardColor,
                         initialValue: _formRol,
-                        decoration: const InputDecoration(labelText: 'Puesto / Rol', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Puesto / Rol',
+                            border: OutlineInputBorder()),
                         items: provider.roles
                             .where((r) => r != 'Todos')
-                            .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                            .map((r) =>
+                                DropdownMenuItem(value: r, child: Text(r)))
                             .toList(),
                         onChanged: (v) => setModalState(() => _formRol = v!),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _telefonoCtrl,
-                        decoration: const InputDecoration(labelText: 'Teléfono', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Teléfono',
+                            border: OutlineInputBorder()),
                         keyboardType: TextInputType.phone,
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
@@ -94,7 +104,8 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                           Switch(
                             value: _formActivo,
                             activeThumbColor: Colors.green,
-                            onChanged: (v) => setModalState(() => _formActivo = v),
+                            onChanged: (v) =>
+                                setModalState(() => _formActivo = v),
                           ),
                         ],
                       ),
@@ -103,7 +114,9 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar')),
                 ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
@@ -113,7 +126,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                         telefono: _telefonoCtrl.text,
                         activo: _formActivo,
                       );
-                      
+
                       if (index != null) {
                         provider.updateEmpleado(index, nuevo);
                       } else {
@@ -151,7 +164,6 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
               onAction: () => _abrirFormularioModal(provider),
             ),
             const SizedBox(height: 24),
-
             Row(
               children: [
                 Expanded(
@@ -166,21 +178,27 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                   flex: 1,
                   child: DropdownButtonFormField<String>(
                     dropdownColor: Theme.of(context).cardColor,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
-                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 14),
+                    decoration: const InputDecoration(
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
                     initialValue: provider.selectedRol,
-                    items: provider.roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                    items: provider.roles
+                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                        .toList(),
                     onChanged: (v) => provider.setRol(v!),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-
             Expanded(
               child: filtrados.isEmpty
                   ? EmptyState(
-                      message: 'No se encontraron colaboradores con este filtro.',
+                      message:
+                          'No se encontraron colaboradores con este filtro.',
                       icon: Icons.person_off_outlined,
                       actionLabel: 'Restablecer',
                       onAction: () {
@@ -189,7 +207,8 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                       },
                     )
                   : GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: 320,
                         childAspectRatio: 1.3,
                         crossAxisSpacing: 16,
@@ -203,39 +222,66 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                                      color: Theme.of(context)
+                                          .primaryColor
+                                          .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(emp.rol,
-                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: Theme.of(context)
+                                                .primaryColor)),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: (emp.activo ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                                      color: (emp.activo
+                                              ? Colors.green
+                                              : Colors.red)
+                                          .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Text(emp.activo ? 'Activo' : 'Inactivo',
-                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: emp.activo ? Colors.green : Colors.red)),
+                                    child: Text(
+                                        emp.activo ? 'Activo' : 'Inactivo',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: emp.activo
+                                                ? Colors.green
+                                                : Colors.red)),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Text(emp.nombre, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                              Text(emp.nombre,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
-                              Text('Tel: ${emp.telefono}', style: Theme.of(context).textTheme.bodySmall),
+                              Text('Tel: ${emp.telefono}',
+                                  style: Theme.of(context).textTheme.bodySmall),
                               const Spacer(),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueGrey),
-                                    onPressed: () => _abrirFormularioModal(provider, empleado: emp, index: provider.empleados.indexOf(emp)),
+                                    icon: const Icon(Icons.edit_outlined,
+                                        size: 20, color: Colors.blueGrey),
+                                    onPressed: () => _abrirFormularioModal(
+                                        provider,
+                                        empleado: emp,
+                                        index: provider.empleados.indexOf(emp)),
                                   ),
                                 ],
                               )

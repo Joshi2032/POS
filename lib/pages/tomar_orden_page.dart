@@ -38,7 +38,8 @@ class TomarOrdenPage extends StatelessWidget {
                     width: 1,
                     color: isDark ? const Color(0xFF2D2D44) : Colors.grey[300],
                   ),
-                  const SizedBox(width: 380, child: _CartSection(isMobile: false)),
+                  const SizedBox(
+                      width: 380, child: _CartSection(isMobile: false)),
                 ],
               );
             }
@@ -56,7 +57,8 @@ class TomarOrdenPage extends StatelessWidget {
             onPressed: () => _openMobileCart(context),
             label: Text(
               '${formatCurrency(provider.total)} (${provider.itemsCount})',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
             icon: const Icon(Icons.shopping_cart, color: Colors.white),
           );
@@ -632,65 +634,77 @@ class _CartSection extends StatelessWidget {
                       ? null
                       : () {
                           // === INTERCONEXIÓN: MANDAMOS A COCINA Y CAJA AQUÍ ===
-                          final ordenesProvider = Provider.of<OrdenesProvider>(context, listen: false);
-                          final cajaProvider = Provider.of<CajaProvider>(context, listen: false);
+                          final ordenesProvider = Provider.of<OrdenesProvider>(
+                              context,
+                              listen: false);
+                          final cajaProvider =
+                              Provider.of<CajaProvider>(context, listen: false);
 
-                          final String idComanda = 'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-                          final String horaActual = '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
-                          
-                          final String identificador = provider.orderType == OrderType.dineIn 
+                          final String idComanda =
+                              'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+                          final String horaActual =
+                              '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
+
+                          final String identificador = provider.orderType ==
+                                  OrderType.dineIn
                               ? 'Mesa ${provider.selectedTable} (Área ${provider.selectedArea})'
                               : 'Para Llevar';
-                          
-                          final String tipoDeServicio = provider.orderType == OrderType.dineIn ? 'comedor' : 'llevar';
+
+                          final String tipoDeServicio =
+                              provider.orderType == OrderType.dineIn
+                                  ? 'comedor'
+                                  : 'llevar';
 
                           // Mapeo de items para los modelos de Cocina y Caja
-                          final cocinaItems = provider.cart.map((c) => OrderItem(
-                            productName: c.product.name,
-                            quantity: c.qty,
-                            total: c.total,
-                          )).toList();
+                          final cocinaItems = provider.cart
+                              .map((c) => OrderItem(
+                                    productName: c.product.name,
+                                    quantity: c.qty,
+                                    total: c.total,
+                                  ))
+                              .toList();
 
-                          final cajaItems = provider.cart.map((c) => CashItem(
-                            name: c.product.name,
-                            qty: c.qty,
-                            price: c.product.price,
-                          )).toList();
+                          final cajaItems = provider.cart
+                              .map((c) => CashItem(
+                                    name: c.product.name,
+                                    qty: c.qty,
+                                    price: c.product.price,
+                                  ))
+                              .toList();
 
                           // Inserción real en los Providers paralelos
-                          ordenesProvider.insertarNuevaComanda(
-                            RestaurantOrder(
-                              id: idComanda,
-                              tableOrCustomer: identificador,
-                              time: horaActual,
-                              status: 'pendiente',
-                              serviceType: tipoDeServicio,
-                              items: cocinaItems,
-                              totalAmount: provider.total,
-                              notes: provider.notes.isNotEmpty ? provider.notes : null,
-                            )
-                          );
+                          ordenesProvider.insertarNuevaComanda(RestaurantOrder(
+                            id: idComanda,
+                            tableOrCustomer: identificador,
+                            time: horaActual,
+                            status: 'pendiente',
+                            serviceType: tipoDeServicio,
+                            items: cocinaItems,
+                            totalAmount: provider.total,
+                            notes: provider.notes.isNotEmpty
+                                ? provider.notes
+                                : null,
+                          ));
 
-                          cajaProvider.agregarCuentaPorCobrar(
-                            CashOrder(
-                              id: idComanda,
-                              label: identificador,
-                              time: horaActual,
-                              status: 'Pendiente',
-                              itemsCount: provider.itemsCount,
-                              items: cajaItems,
-                              total: provider.total,
-                            )
-                          );
+                          cajaProvider.agregarCuentaPorCobrar(CashOrder(
+                            id: idComanda,
+                            label: identificador,
+                            time: horaActual,
+                            status: 'Pendiente',
+                            itemsCount: provider.itemsCount,
+                            items: cajaItems,
+                            total: provider.total,
+                          ));
 
                           // Acción final original
                           provider.sendOrder();
                           if (isMobile) Navigator.pop(context);
-                          
+
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                                content: Text('Orden $idComanda enviada a cocina y caja'),
-                                backgroundColor: Colors.green,
+                              content: Text(
+                                  'Orden $idComanda enviada a cocina y caja'),
+                              backgroundColor: Colors.green,
                             ),
                           );
                         },

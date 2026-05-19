@@ -21,8 +21,25 @@ class _GastosView extends StatefulWidget {
 }
 
 class _GastosViewState extends State<_GastosView> {
-  final List<String> categorias = ['Todos', 'Renta', 'Servicios', 'Insumos', 'Mantenimiento', 'Publicidad', 'Impuestos', 'General'];
-  final List<String> formCategories = ['General', 'Insumos', 'Servicios', 'Renta', 'Mantenimiento', 'Publicidad', 'Impuestos'];
+  final List<String> categorias = [
+    'Todos',
+    'Renta',
+    'Servicios',
+    'Insumos',
+    'Mantenimiento',
+    'Publicidad',
+    'Impuestos',
+    'General'
+  ];
+  final List<String> formCategories = [
+    'General',
+    'Insumos',
+    'Servicios',
+    'Renta',
+    'Mantenimiento',
+    'Publicidad',
+    'Impuestos'
+  ];
   final List<String> formMethods = ['Efectivo', 'Tarjeta', 'Transferencia'];
 
   bool showModal = false;
@@ -82,21 +99,27 @@ class _GastosViewState extends State<_GastosView> {
   }
 
   void guardarGasto(GastosProvider provider) {
-    if (_formKey.currentState == null || !_formKey.currentState!.validate()) return;
+    if (_formKey.currentState == null || !_formKey.currentState!.validate())
+      return;
 
-    if (formState.concept.trim().isEmpty || formState.date.trim().isEmpty || formState.amount <= 0) {
+    if (formState.concept.trim().isEmpty ||
+        formState.date.trim().isEmpty ||
+        formState.amount <= 0) {
       setState(() => modalError = 'Completa fecha, concepto y monto válido.');
       return;
     }
 
     if (editingId != null) {
-      UiUtils.showConfirmDialog(context, 'Actualizar Gasto', '¿Actualizar el gasto ${formState.concept}?', () {
+      UiUtils.showConfirmDialog(context, 'Actualizar Gasto',
+          '¿Actualizar el gasto ${formState.concept}?', () {
         provider.actualizarGasto(editingId!, formState);
         UiUtils.showToast(context, 'Gasto actualizado', color: Colors.green);
         cerrarModal();
       });
     } else {
-      UiUtils.showConfirmDialog(context, 'Registrar Gasto', '¿Registrar gasto ${formState.concept}?', () {
+      UiUtils.showConfirmDialog(
+          context, 'Registrar Gasto', '¿Registrar gasto ${formState.concept}?',
+          () {
         provider.crearGasto(formState);
         UiUtils.showToast(context, 'Gasto registrado', color: Colors.green);
         cerrarModal();
@@ -105,7 +128,8 @@ class _GastosViewState extends State<_GastosView> {
   }
 
   void eliminarGastoConfirmado(GastosProvider provider, Gasto g) {
-    UiUtils.showConfirmDialog(context, 'Eliminar Gasto', '¿Eliminar gasto ${g.concept}?', () {
+    UiUtils.showConfirmDialog(
+        context, 'Eliminar Gasto', '¿Eliminar gasto ${g.concept}?', () {
       provider.eliminarGasto(g.id);
       UiUtils.showToast(context, 'Gasto eliminado', color: Colors.orange);
     });
@@ -134,31 +158,38 @@ class _GastosViewState extends State<_GastosView> {
                           Row(
                             children: [
                               const Text('💸 ', style: TextStyle(fontSize: 26)),
-                              Text('Gastos y Egresos', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                              Text('Gastos y Egresos',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold)),
                             ],
                           ),
-                          Text('${provider.filteredGastos.length} de ${provider.totalGastosLength} gastos', style: const TextStyle(color: Colors.grey)),
+                          Text(
+                              '${provider.filteredGastos.length} de ${provider.totalGastosLength} gastos',
+                              style: const TextStyle(color: Colors.grey)),
                         ],
                       ),
                       ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white),
                         onPressed: abrirModal,
                         child: const Text('+ Registrar Gasto'),
                       )
                     ],
                   ),
                   const SizedBox(height: 25),
-
                   TextField(
                     decoration: InputDecoration(
                       hintText: 'Buscar gasto, método o categoría...',
                       prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                     onChanged: provider.onSearch,
                   ),
                   const SizedBox(height: 25),
-
                   GridView.count(
                     crossAxisCount: isDesktop ? 2 : 1,
                     shrinkWrap: true,
@@ -167,12 +198,19 @@ class _GastosViewState extends State<_GastosView> {
                     mainAxisSpacing: 16,
                     childAspectRatio: isDesktop ? 3.5 : 4.0,
                     children: [
-                      _buildStatCard('Gastos este mes', Formatters.money(provider.totalThisMonth), '↘', Colors.red.shade900),
-                      _buildStatCard('Total acumulado', Formatters.money(provider.totalAccumulated), '\$', Colors.blueGrey.shade800),
+                      _buildStatCard(
+                          'Gastos este mes',
+                          Formatters.money(provider.totalThisMonth),
+                          '↘',
+                          Colors.red.shade900),
+                      _buildStatCard(
+                          'Total acumulado',
+                          Formatters.money(provider.totalAccumulated),
+                          '\$',
+                          Colors.blueGrey.shade800),
                     ],
                   ),
                   const SizedBox(height: 25),
-
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -181,17 +219,20 @@ class _GastosViewState extends State<_GastosView> {
                       return ChoiceChip(
                         label: Text(categoria),
                         selected: isActive,
-                        onSelected: (_) => provider.seleccionarCategoria(categoria),
-                        selectedColor: Theme.of(context).primaryColor.withAlpha(50),
+                        onSelected: (_) =>
+                            provider.seleccionarCategoria(categoria),
+                        selectedColor:
+                            Theme.of(context).primaryColor.withAlpha(50),
                         labelStyle: TextStyle(
-                          color: isActive ? Theme.of(context).primaryColor : Colors.grey.shade700,
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal
-                        ),
+                            color: isActive
+                                ? Theme.of(context).primaryColor
+                                : Colors.grey.shade700,
+                            fontWeight:
+                                isActive ? FontWeight.bold : FontWeight.normal),
                       );
                     }).toList(),
                   ),
                   const SizedBox(height: 20),
-
                   Card(
                     clipBehavior: Clip.antiAlias,
                     child: SizedBox(
@@ -199,27 +240,58 @@ class _GastosViewState extends State<_GastosView> {
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(Theme.of(context).colorScheme.surfaceContainerHighest),
+                          headingRowColor: WidgetStateProperty.all(
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest),
                           columns: const [
-                            DataColumn(label: Text('Fecha', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Concepto', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Categoría', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Método', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('Monto', style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text('', style: TextStyle(fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Fecha',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Concepto',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Categoría',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Método',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('Monto',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
+                            DataColumn(
+                                label: Text('',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold))),
                           ],
                           rows: provider.paginatedGastos.map((g) {
                             return DataRow(cells: [
                               DataCell(Text(g.date)),
-                              DataCell(Text(g.concept, style: const TextStyle(fontWeight: FontWeight.w500))),
+                              DataCell(Text(g.concept,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500))),
                               DataCell(Text(g.category)),
                               DataCell(Text(g.method)),
-                              DataCell(Text(Formatters.money(g.amount), style: const TextStyle(fontWeight: FontWeight.bold))),
+                              DataCell(Text(Formatters.money(g.amount),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold))),
                               DataCell(Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  TextButton(onPressed: () => abrirEditar(g), child: const Text('Editar')),
-                                  TextButton(onPressed: () => eliminarGastoConfirmado(provider, g), child: const Text('Eliminar', style: TextStyle(color: Colors.red))),
+                                  TextButton(
+                                      onPressed: () => abrirEditar(g),
+                                      child: const Text('Editar')),
+                                  TextButton(
+                                      onPressed: () =>
+                                          eliminarGastoConfirmado(provider, g),
+                                      child: const Text('Eliminar',
+                                          style: TextStyle(color: Colors.red))),
                                 ],
                               )),
                             ]);
@@ -228,27 +300,35 @@ class _GastosViewState extends State<_GastosView> {
                       ),
                     ),
                   ),
-
                   if (provider.paginatedGastos.isEmpty)
                     Container(
                       alignment: Alignment.center,
                       padding: const EdgeInsets.all(32),
-                      child: const Text('Sin gastos registrados', style: TextStyle(color: Colors.grey)),
+                      child: const Text('Sin gastos registrados',
+                          style: TextStyle(color: Colors.grey)),
                     ),
                   const SizedBox(height: 15),
-
                   if (provider.totalPages > 1)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back_ios, size: 16),
-                          onPressed: provider.currentPage == 1 ? null : () => provider.changePage(provider.currentPage - 1),
+                          onPressed: provider.currentPage == 1
+                              ? null
+                              : () =>
+                                  provider.changePage(provider.currentPage - 1),
                         ),
-                        Text('Página ${provider.currentPage} de ${provider.totalPages}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                        Text(
+                            'Página ${provider.currentPage} de ${provider.totalPages}',
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w500)),
                         IconButton(
                           icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onPressed: provider.currentPage == provider.totalPages ? null : () => provider.changePage(provider.currentPage + 1),
+                          onPressed: provider.currentPage == provider.totalPages
+                              ? null
+                              : () =>
+                                  provider.changePage(provider.currentPage + 1),
                         ),
                       ],
                     )
@@ -256,7 +336,6 @@ class _GastosViewState extends State<_GastosView> {
               ),
             ),
           ),
-
           if (showModal) ...[
             GestureDetector(
               onTap: cerrarModal,
@@ -265,7 +344,8 @@ class _GastosViewState extends State<_GastosView> {
             Center(
               child: Card(
                 margin: const EdgeInsets.all(20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 child: Container(
                   width: isDesktop ? 500 : double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -279,13 +359,24 @@ class _GastosViewState extends State<_GastosView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(editingId != null ? 'Editar Gasto' : 'Registrar Gasto', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                              IconButton(icon: const Icon(Icons.close), onPressed: cerrarModal),
+                              Text(
+                                  editingId != null
+                                      ? 'Editar Gasto'
+                                      : 'Registrar Gasto',
+                                  style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold)),
+                              IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: cerrarModal),
                             ],
                           ),
                           const Divider(),
                           if (modalError.isNotEmpty) ...[
-                            Text(modalError, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                            Text(modalError,
+                                style: const TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w500)),
                             const SizedBox(height: 10),
                           ],
                           _buildFormFields(),
@@ -293,10 +384,15 @@ class _GastosViewState extends State<_GastosView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              OutlinedButton(onPressed: cerrarModal, child: const Text('Cancelar')),
+                              OutlinedButton(
+                                  onPressed: cerrarModal,
+                                  child: const Text('Cancelar')),
                               const SizedBox(width: 12),
                               ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        Theme.of(context).primaryColor,
+                                    foregroundColor: Colors.white),
                                 onPressed: () => guardarGasto(provider),
                                 child: const Text('Guardar Gasto'),
                               ),
@@ -322,15 +418,25 @@ class _GastosViewState extends State<_GastosView> {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Text(icon, style: const TextStyle(color: Colors.white38, fontSize: 32, fontWeight: FontWeight.bold)),
+            Text(icon,
+                style: const TextStyle(
+                    color: Colors.white38,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(width: 16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                Text(label,
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 4),
-                Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(value,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold)),
               ],
             ),
           ],
@@ -347,8 +453,11 @@ class _GastosViewState extends State<_GastosView> {
             Expanded(
               child: TextFormField(
                 initialValue: formState.date,
-                decoration: const InputDecoration(labelText: 'Fecha (YYYY-MM-DD)', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
+                decoration: const InputDecoration(
+                    labelText: 'Fecha (YYYY-MM-DD)',
+                    border: OutlineInputBorder()),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requerido' : null,
                 onChanged: (val) => formState.date = val,
               ),
             ),
@@ -356,8 +465,12 @@ class _GastosViewState extends State<_GastosView> {
             Expanded(
               child: TextFormField(
                 initialValue: formState.concept,
-                decoration: const InputDecoration(labelText: 'Concepto', hintText: 'Concepto del gasto', border: OutlineInputBorder()),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Requerido' : null,
+                decoration: const InputDecoration(
+                    labelText: 'Concepto',
+                    hintText: 'Concepto del gasto',
+                    border: OutlineInputBorder()),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requerido' : null,
                 onChanged: (val) => formState.concept = val,
               ),
             ),
@@ -369,18 +482,26 @@ class _GastosViewState extends State<_GastosView> {
             Expanded(
               child: DropdownButtonFormField<String>(
                 initialValue: formState.category,
-                decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
-                items: formCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                onChanged: (val) => setState(() => formState.category = val ?? 'General'),
+                decoration: const InputDecoration(
+                    labelText: 'Categoría', border: OutlineInputBorder()),
+                items: formCategories
+                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                    .toList(),
+                onChanged: (val) =>
+                    setState(() => formState.category = val ?? 'General'),
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: DropdownButtonFormField<String>(
                 initialValue: formState.method,
-                decoration: const InputDecoration(labelText: 'Método', border: OutlineInputBorder()),
-                items: formMethods.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-                onChanged: (val) => setState(() => formState.method = val ?? 'Efectivo'),
+                decoration: const InputDecoration(
+                    labelText: 'Método', border: OutlineInputBorder()),
+                items: formMethods
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                    .toList(),
+                onChanged: (val) =>
+                    setState(() => formState.method = val ?? 'Efectivo'),
               ),
             ),
           ],
@@ -389,15 +510,22 @@ class _GastosViewState extends State<_GastosView> {
         TextFormField(
           initialValue: formState.amount == 0.0 ? '' : '${formState.amount}',
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Monto', hintText: '0.00', border: OutlineInputBorder()),
-          validator: (v) => v == null || double.tryParse(v) == null || double.parse(v) <= 0 ? 'Monto no válido' : null,
+          decoration: const InputDecoration(
+              labelText: 'Monto',
+              hintText: '0.00',
+              border: OutlineInputBorder()),
+          validator: (v) =>
+              v == null || double.tryParse(v) == null || double.parse(v) <= 0
+                  ? 'Monto no válido'
+                  : null,
           onChanged: (val) => formState.amount = double.tryParse(val) ?? 0.0,
         ),
         const SizedBox(height: 16),
         TextFormField(
           initialValue: formState.notes,
           maxLines: 4,
-          decoration: const InputDecoration(labelText: 'Notas', border: OutlineInputBorder()),
+          decoration: const InputDecoration(
+              labelText: 'Notas', border: OutlineInputBorder()),
           onChanged: (val) => formState.notes = val,
         ),
       ],

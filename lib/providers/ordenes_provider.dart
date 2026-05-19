@@ -4,9 +4,10 @@ import '../models/restaurant_order.dart';
 
 class OrdenesProvider extends ChangeNotifier {
   final int pageSize = 6;
-  
-  final List<RestaurantOrder> _orders = []; // Inicialmente vacía para recibir comandas reales
-  
+
+  final List<RestaurantOrder> _orders =
+      []; // Inicialmente vacía para recibir comandas reales
+
   String _searchQuery = '';
   String _selectedFilterStatus = 'Todos';
   String _selectedFilterService = 'Todos';
@@ -25,14 +26,18 @@ class OrdenesProvider extends ChangeNotifier {
 
   List<RestaurantOrder> get filteredOrders {
     return _orders.where((order) {
-      final matchesSearch = order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          order.tableOrCustomer.toLowerCase().contains(_searchQuery.toLowerCase());
-      
-      final matchesStatus = _selectedFilterStatus == 'Todos' || 
+      final matchesSearch =
+          order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              order.tableOrCustomer
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase());
+
+      final matchesStatus = _selectedFilterStatus == 'Todos' ||
           order.status.toLowerCase() == _selectedFilterStatus.toLowerCase();
-          
-      final matchesService = _selectedFilterService == 'Todos' || 
-          order.serviceType.toLowerCase() == _selectedFilterService.toLowerCase();
+
+      final matchesService = _selectedFilterService == 'Todos' ||
+          order.serviceType.toLowerCase() ==
+              _selectedFilterService.toLowerCase();
 
       return matchesSearch && matchesStatus && matchesService;
     }).toList();
@@ -42,20 +47,51 @@ class OrdenesProvider extends ChangeNotifier {
     final list = filteredOrders;
     final start = (_currentPage - 1) * pageSize;
     if (start >= list.length) return [];
-    return list.sublist(start, (start + pageSize) > list.length ? list.length : (start + pageSize));
+    return list.sublist(start,
+        (start + pageSize) > list.length ? list.length : (start + pageSize));
   }
 
-  int get totalPages => (filteredOrders.length / pageSize).ceil().clamp(1, 999999);
-  int get activeOrdersCount => _orders.where((o) => o.status == 'pendiente' || o.status == 'preparando').length;
+  int get totalPages =>
+      (filteredOrders.length / pageSize).ceil().clamp(1, 999999);
+  int get activeOrdersCount => _orders
+      .where((o) => o.status == 'pendiente' || o.status == 'preparando')
+      .length;
   int get readyOrdersCount => _orders.where((o) => o.status == 'lista').length;
 
-  void onSearchChange(String val) { _searchQuery = val; _currentPage = 1; notifyListeners(); }
-  void onStatusFilterChange(String val) { _selectedFilterStatus = val; _currentPage = 1; notifyListeners(); }
-  void onServiceFilterChange(String val) { _selectedFilterService = val; _currentPage = 1; notifyListeners(); }
-  void goToPage(int page) { _currentPage = page; notifyListeners(); }
+  void onSearchChange(String val) {
+    _searchQuery = val;
+    _currentPage = 1;
+    notifyListeners();
+  }
 
-  void abrirDetalleModal(RestaurantOrder order) { _selectedOrderForModal = order; _showModal = true; notifyListeners(); }
-  void cerrarModal() { _showModal = false; _selectedOrderForModal = null; notifyListeners(); }
+  void onStatusFilterChange(String val) {
+    _selectedFilterStatus = val;
+    _currentPage = 1;
+    notifyListeners();
+  }
+
+  void onServiceFilterChange(String val) {
+    _selectedFilterService = val;
+    _currentPage = 1;
+    notifyListeners();
+  }
+
+  void goToPage(int page) {
+    _currentPage = page;
+    notifyListeners();
+  }
+
+  void abrirDetalleModal(RestaurantOrder order) {
+    _selectedOrderForModal = order;
+    _showModal = true;
+    notifyListeners();
+  }
+
+  void cerrarModal() {
+    _showModal = false;
+    _selectedOrderForModal = null;
+    notifyListeners();
+  }
 
   // METODO DE INTERCONEXIÓN: Inserta órdenes creadas desde Tomar Orden
   void insertarNuevaComanda(RestaurantOrder nuevaOrden) {

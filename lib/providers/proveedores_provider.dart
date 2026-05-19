@@ -26,7 +26,8 @@ class ProveedoresProvider extends ChangeNotifier {
     }).toList();
   }
 
-  int get totalPages => (filteredPayments.length / pageSize).ceil().clamp(1, 999999);
+  int get totalPages =>
+      (filteredPayments.length / pageSize).ceil().clamp(1, 999999);
 
   List<ProviderPayment> get paginatedPayments {
     final start = (_currentPage - 1) * pageSize;
@@ -49,22 +50,18 @@ class ProveedoresProvider extends ChangeNotifier {
   double get weekTotal {
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
-    return _payments
-        .where((payment) {
-          final date = DateTime.tryParse(payment.date);
-          return date != null && date.isAfter(weekAgo);
-        })
-        .fold(0.0, (sum, payment) => sum + payment.amount);
+    return _payments.where((payment) {
+      final date = DateTime.tryParse(payment.date);
+      return date != null && date.isAfter(weekAgo);
+    }).fold(0.0, (sum, payment) => sum + payment.amount);
   }
 
   double get monthTotal {
     final now = DateTime.now();
-    return _payments
-        .where((payment) {
-          final date = DateTime.tryParse(payment.date);
-          return date != null && date.month == now.month && date.year == now.year;
-        })
-        .fold(0.0, (sum, payment) => sum + payment.amount);
+    return _payments.where((payment) {
+      final date = DateTime.tryParse(payment.date);
+      return date != null && date.month == now.month && date.year == now.year;
+    }).fold(0.0, (sum, payment) => sum + payment.amount);
   }
 
   int get uniqueProvidersCount {

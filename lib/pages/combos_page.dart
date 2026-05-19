@@ -35,7 +35,8 @@ class _CombosViewState extends State<_CombosView> {
     super.dispose();
   }
 
-  void _abrirFormularioModal(CombosProvider provider, {Combo? combo, int? index}) {
+  void _abrirFormularioModal(CombosProvider provider,
+      {Combo? combo, int? index}) {
     if (combo != null) {
       _nombreCtrl.text = combo.nombre;
       _descripcionCtrl.text = combo.descripcion;
@@ -57,9 +58,11 @@ class _CombosViewState extends State<_CombosView> {
             final modalTextColor = isDark ? Colors.white : Colors.black87;
 
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              title: Text(combo != null ? 'Editar Combo' : 'Nuevo Combo', 
-                          style: TextStyle(fontWeight: FontWeight.bold, color: modalTextColor)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              title: Text(combo != null ? 'Editar Combo' : 'Nuevo Combo',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: modalTextColor)),
               content: SingleChildScrollView(
                 child: Form(
                   key: _formKey,
@@ -69,7 +72,9 @@ class _CombosViewState extends State<_CombosView> {
                       TextFormField(
                         controller: _nombreCtrl,
                         style: TextStyle(color: modalTextColor),
-                        decoration: const InputDecoration(labelText: 'Nombre del Combo', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Nombre del Combo',
+                            border: OutlineInputBorder()),
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
                       const SizedBox(height: 12),
@@ -77,7 +82,9 @@ class _CombosViewState extends State<_CombosView> {
                         controller: _descripcionCtrl,
                         maxLines: 3,
                         style: TextStyle(color: modalTextColor),
-                        decoration: const InputDecoration(labelText: 'Descripción / Productos incluidos', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Descripción / Productos incluidos',
+                            border: OutlineInputBorder()),
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
                       const SizedBox(height: 12),
@@ -87,7 +94,10 @@ class _CombosViewState extends State<_CombosView> {
                             child: TextFormField(
                               controller: _precioCtrl,
                               style: TextStyle(color: modalTextColor),
-                              decoration: const InputDecoration(labelText: 'Precio Especial', prefixText: '\$', border: OutlineInputBorder()),
+                              decoration: const InputDecoration(
+                                  labelText: 'Precio Especial',
+                                  prefixText: '\$',
+                                  border: OutlineInputBorder()),
                               keyboardType: TextInputType.number,
                               validator: (v) => v!.isEmpty ? 'Requerido' : null,
                             ),
@@ -95,11 +105,17 @@ class _CombosViewState extends State<_CombosView> {
                           const SizedBox(width: 16),
                           Column(
                             children: [
-                              Text('¿Disponible?', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.grey)),
+                              Text('¿Disponible?',
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? Colors.white54
+                                          : Colors.grey)),
                               Switch(
                                 value: _formActivo,
                                 activeThumbColor: Colors.green,
-                                onChanged: (v) => setModalState(() => _formActivo = v),
+                                onChanged: (v) =>
+                                    setModalState(() => _formActivo = v),
                               ),
                             ],
                           )
@@ -110,7 +126,9 @@ class _CombosViewState extends State<_CombosView> {
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar')),
                 ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
@@ -120,7 +138,7 @@ class _CombosViewState extends State<_CombosView> {
                         precio: double.tryParse(_precioCtrl.text) ?? 0,
                         activo: _formActivo,
                       );
-                      
+
                       if (index != null) {
                         provider.updateCombo(index, nuevo);
                       } else {
@@ -129,7 +147,8 @@ class _CombosViewState extends State<_CombosView> {
                       Navigator.pop(context);
                     }
                   },
-                  child: Text(combo != null ? 'Guardar Cambios' : 'Crear Combo'),
+                  child:
+                      Text(combo != null ? 'Guardar Cambios' : 'Crear Combo'),
                 )
               ],
             );
@@ -146,7 +165,9 @@ class _CombosViewState extends State<_CombosView> {
         title: const Text('Eliminar combo'),
         content: Text('Se eliminará "${combo.nombre}". ¿Estás seguro?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
           TextButton(
             onPressed: () {
               provider.removeCombo(combo);
@@ -187,15 +208,14 @@ class _CombosViewState extends State<_CombosView> {
               onAction: () => _abrirFormularioModal(provider),
             ),
             const SizedBox(height: 24),
-            
             TextField(
-              style: TextStyle(color: textColor), 
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search, color: hintColor), 
+                prefixIcon: Icon(Icons.search, color: hintColor),
                 hintText: 'Buscar combo por nombre o contenido...',
-                hintStyle: TextStyle(color: hintColor), 
+                hintStyle: TextStyle(color: hintColor),
                 filled: true,
-                fillColor: searchFillColor, 
+                fillColor: searchFillColor,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -204,7 +224,6 @@ class _CombosViewState extends State<_CombosView> {
               onChanged: provider.setSearchTerm,
             ),
             const SizedBox(height: 24),
-            
             Expanded(
               child: filtrados.isEmpty
                   ? EmptyState(
@@ -214,7 +233,8 @@ class _CombosViewState extends State<_CombosView> {
                       onAction: () => provider.setSearchTerm(''),
                     )
                   : GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: 350,
                         childAspectRatio: 1.2,
                         crossAxisSpacing: 16,
@@ -228,70 +248,91 @@ class _CombosViewState extends State<_CombosView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      combo.nombre, 
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: textColor,
-                                      ),
+                                      combo.nombre,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: textColor,
+                                          ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: combo.activo ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                                      color: combo.activo
+                                          ? Colors.green.withValues(alpha: 0.1)
+                                          : Colors.red.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      combo.activo ? 'Activo' : 'Inactivo', 
-                                      style: TextStyle(
-                                        fontSize: 10, 
-                                        fontWeight: FontWeight.bold, 
-                                        color: combo.activo ? Colors.green : Colors.red
-                                      )
-                                    ),
+                                        combo.activo ? 'Activo' : 'Inactivo',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: combo.activo
+                                                ? Colors.green
+                                                : Colors.red)),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 8),
                               Expanded(
                                 child: Text(
-                                  combo.descripcion, 
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: textSubColor, 
-                                    height: 1.4,
-                                  ),
+                                  combo.descripcion,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: textSubColor,
+                                        height: 1.4,
+                                      ),
                                   maxLines: 3,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const Divider(),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    '\$${combo.precio.toStringAsFixed(2)}', 
-                                    style: TextStyle(
-                                      fontSize: 20, 
-                                      color: isDark ? const Color(0xFF82B1FF) : Colors.blueAccent, 
-                                      fontWeight: FontWeight.w900,
-                                    )
-                                  ),
+                                  Text('\$${combo.precio.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        color: isDark
+                                            ? const Color(0xFF82B1FF)
+                                            : Colors.blueAccent,
+                                        fontWeight: FontWeight.w900,
+                                      )),
                                   Row(
                                     children: [
                                       IconButton(
-                                        icon: Icon(Icons.edit_outlined, size: 20, color: isDark ? Colors.white60 : Colors.blueGrey),
-                                        onPressed: () => _abrirFormularioModal(provider, combo: combo, index: provider.combos.indexOf(combo)),
+                                        icon: Icon(Icons.edit_outlined,
+                                            size: 20,
+                                            color: isDark
+                                                ? Colors.white60
+                                                : Colors.blueGrey),
+                                        onPressed: () => _abrirFormularioModal(
+                                            provider,
+                                            combo: combo,
+                                            index:
+                                                provider.combos.indexOf(combo)),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
-                                        onPressed: () => _solicitarBorrado(provider, combo),
+                                        icon: const Icon(Icons.delete_outline,
+                                            size: 20, color: Colors.redAccent),
+                                        onPressed: () =>
+                                            _solicitarBorrado(provider, combo),
                                       ),
                                     ],
                                   )

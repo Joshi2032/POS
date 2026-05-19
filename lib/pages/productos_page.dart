@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/productos_provider.dart';
-import '../widgets/app_widgets.dart'; 
-import '../widgets/layout_widgets.dart'; 
+import '../widgets/app_widgets.dart';
+import '../widgets/layout_widgets.dart';
 
 class ProductosPage extends StatelessWidget {
   const ProductosPage({super.key});
@@ -36,7 +36,8 @@ class _ProductosViewState extends State<_ProductosView> {
     super.dispose();
   }
 
-  void _abrirFormularioModal(ProductosProvider provider, {Producto? producto, int? index}) {
+  void _abrirFormularioModal(ProductosProvider provider,
+      {Producto? producto, int? index}) {
     if (producto != null) {
       _nombreCtrl.text = producto.nombre;
       _precioCtrl.text = producto.precio.toString();
@@ -57,8 +58,11 @@ class _ProductosViewState extends State<_ProductosView> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              title: Text(producto != null ? 'Editar Producto' : 'Nuevo Producto', style: const TextStyle(fontWeight: FontWeight.bold)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              title: Text(
+                  producto != null ? 'Editar Producto' : 'Nuevo Producto',
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Form(
                   key: _formKey,
@@ -67,24 +71,32 @@ class _ProductosViewState extends State<_ProductosView> {
                     children: [
                       TextFormField(
                         controller: _nombreCtrl,
-                        decoration: const InputDecoration(labelText: 'Nombre', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Nombre', border: OutlineInputBorder()),
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         dropdownColor: Theme.of(context).cardColor,
                         initialValue: _formCategoria,
-                        decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Categoría',
+                            border: OutlineInputBorder()),
                         items: provider.categorias
                             .where((c) => c != 'Todas')
-                            .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                            .map((c) =>
+                                DropdownMenuItem(value: c, child: Text(c)))
                             .toList(),
-                        onChanged: (v) => setModalState(() => _formCategoria = v!),
+                        onChanged: (v) =>
+                            setModalState(() => _formCategoria = v!),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _precioCtrl,
-                        decoration: const InputDecoration(labelText: 'Precio', prefixText: '\$', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Precio',
+                            prefixText: '\$',
+                            border: OutlineInputBorder()),
                         keyboardType: TextInputType.number,
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
@@ -95,18 +107,35 @@ class _ProductosViewState extends State<_ProductosView> {
                             child: DropdownButtonFormField<String>(
                               dropdownColor: Theme.of(context).cardColor,
                               initialValue: _formUnidad,
-                              decoration: const InputDecoration(labelText: 'Unidad', border: OutlineInputBorder()),
-                              items: ['orden', 'plato', 'pieza', 'botella', 'porción', 'vaso', 'jarra', 'cazuela', 'tarro', 'copa']
-                                  .map((u) => DropdownMenuItem(value: u, child: Text(u)))
+                              decoration: const InputDecoration(
+                                  labelText: 'Unidad',
+                                  border: OutlineInputBorder()),
+                              items: [
+                                'orden',
+                                'plato',
+                                'pieza',
+                                'botella',
+                                'porción',
+                                'vaso',
+                                'jarra',
+                                'cazuela',
+                                'tarro',
+                                'copa'
+                              ]
+                                  .map((u) => DropdownMenuItem(
+                                      value: u, child: Text(u)))
                                   .toList(),
-                              onChanged: (v) => setModalState(() => _formUnidad = v!),
+                              onChanged: (v) =>
+                                  setModalState(() => _formUnidad = v!),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: TextFormField(
                               controller: _stockCtrl,
-                              decoration: const InputDecoration(labelText: 'Stock', border: OutlineInputBorder()),
+                              decoration: const InputDecoration(
+                                  labelText: 'Stock',
+                                  border: OutlineInputBorder()),
                               keyboardType: TextInputType.number,
                               validator: (v) => v!.isEmpty ? 'Req.' : null,
                             ),
@@ -118,7 +147,9 @@ class _ProductosViewState extends State<_ProductosView> {
                 ),
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar')),
                 ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
@@ -129,7 +160,7 @@ class _ProductosViewState extends State<_ProductosView> {
                         stock: int.tryParse(_stockCtrl.text) ?? 0,
                         unidad: _formUnidad,
                       );
-                      
+
                       // Usamos el provider en lugar de setState
                       if (index != null) {
                         provider.updateProducto(index, nuevo);
@@ -156,7 +187,9 @@ class _ProductosViewState extends State<_ProductosView> {
         title: const Text('Eliminar producto'),
         content: Text('Se eliminará "${producto.nombre}". ¿Estás seguro?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar')),
           TextButton(
             onPressed: () {
               provider.removeProducto(producto);
@@ -184,18 +217,19 @@ class _ProductosViewState extends State<_ProductosView> {
           children: [
             SectionHeader(
               title: '🍔 Productos',
-              subtitle: '${filtrados.length} de ${provider.productos.length} productos registrados',
+              subtitle:
+                  '${filtrados.length} de ${provider.productos.length} productos registrados',
               actionLabel: 'Agregar Producto',
               onAction: () => _abrirFormularioModal(provider),
             ),
             const SizedBox(height: 24),
-
             Row(
               children: [
                 Expanded(
                   flex: 2,
                   child: TextField(
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.search),
                       hintText: 'Buscar por nombre o unidad...',
@@ -208,25 +242,37 @@ class _ProductosViewState extends State<_ProductosView> {
                   flex: 1,
                   child: DropdownButtonFormField<String>(
                     dropdownColor: Theme.of(context).cardColor,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 14),
                     decoration: const InputDecoration(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
-                    initialValue: provider.selectedCategory.isEmpty ? 'Todas' : provider.selectedCategory,
+                    initialValue: provider.selectedCategory.isEmpty
+                        ? 'Todas'
+                        : provider.selectedCategory,
                     items: provider.categorias
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c, style: TextStyle(color: Theme.of(context).colorScheme.onSurface))))
+                        .map((c) => DropdownMenuItem(
+                            value: c,
+                            child: Text(c,
+                                style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface))))
                         .toList(),
-                    onChanged: (v) => provider.setCategory(v == 'Todas' ? '' : v!),
+                    onChanged: (v) =>
+                        provider.setCategory(v == 'Todas' ? '' : v!),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-
             Expanded(
               child: filtrados.isEmpty
                   ? EmptyState(
-                      message: 'No hay productos que coincidan con tu búsqueda.\nIntenta con otros filtros.',
+                      message:
+                          'No hay productos que coincidan con tu búsqueda.\nIntenta con otros filtros.',
                       icon: Icons.fastfood_outlined,
                       actionLabel: 'Limpiar Filtros',
                       onAction: () {
@@ -235,7 +281,8 @@ class _ProductosViewState extends State<_ProductosView> {
                       },
                     )
                   : GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: 320,
                         childAspectRatio: 1.4,
                         crossAxisSpacing: 16,
@@ -249,34 +296,59 @@ class _ProductosViewState extends State<_ProductosView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(producto.categoria.toUpperCase(),
-                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).primaryColor)),
                               ),
                               const SizedBox(height: 8),
-                              Text(producto.nombre, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                              Text(producto.nombre,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
-                              Text('Stock disponible: ${producto.stock} ${producto.unidad}', style: Theme.of(context).textTheme.bodySmall),
+                              Text(
+                                  'Stock disponible: ${producto.stock} ${producto.unidad}',
+                                  style: Theme.of(context).textTheme.bodySmall),
                               const Spacer(),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text('\$${producto.precio.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, color: Colors.green, fontWeight: FontWeight.w800)),
+                                  Text(
+                                      '\$${producto.precio.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                          fontSize: 18,
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.w800)),
                                   Row(
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueGrey),
+                                        icon: const Icon(Icons.edit_outlined,
+                                            size: 20, color: Colors.blueGrey),
                                         tooltip: 'Editar',
-                                        onPressed: () => _abrirFormularioModal(provider, producto: producto, index: provider.productos.indexOf(producto)),
+                                        onPressed: () => _abrirFormularioModal(
+                                            provider,
+                                            producto: producto,
+                                            index: provider.productos
+                                                .indexOf(producto)),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                                        icon: const Icon(Icons.delete_outline,
+                                            size: 20, color: Colors.redAccent),
                                         tooltip: 'Eliminar',
-                                        onPressed: () => _solicitarBorrado(provider, producto),
+                                        onPressed: () => _solicitarBorrado(
+                                            provider, producto),
                                       ),
                                     ],
                                   )
