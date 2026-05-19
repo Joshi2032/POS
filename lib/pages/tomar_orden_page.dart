@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+// --- NUEVOS IMPORTS PARA INTERCONEXIÓN ---
+import '../providers/ordenes_provider.dart';
+import '../providers/caja_provider.dart';
+
 // ==========================================================================
 // 1. MODELOS DE DATOS (Equivalente a tomar-orden.models.ts)
 // ==========================================================================
@@ -757,7 +761,7 @@ class _CartSection extends StatelessWidget {
         Expanded(
           child: provider.cart.isEmpty
               ? Center(
-                  child: Text('El carrito está vacío',
+                  child: Text('Elige productos a la izquierda',
                       style: TextStyle(color: textSubColor)))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
@@ -870,7 +874,7 @@ class _CartSection extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Total General',
+                  Text('Total Cuenta:',
                       style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
@@ -901,15 +905,70 @@ class _CartSection extends StatelessWidget {
                   onPressed: provider.cart.isEmpty
                       ? null
                       : () {
+                          // === INTERCONEXIÓN: MANDAMOS A COCINA Y CAJA AQUÍ ===
+                          final ordenesProvider = Provider.of<OrdenesProvider>(context, listen: false);
+                          final cajaProvider = Provider.of<CajaProvider>(context, listen: false);
+
+                          final String idComanda = 'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+                          final String horaActual = '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
+                          
+                          final String identificador = provider.orderType == OrderType.dineIn 
+                              ? 'Mesa ${provider.selectedTable} (Área ${provider.selectedArea})'
+                              : 'Para Llevar';
+                          
+                          final String tipoDeServicio = provider.orderType == OrderType.dineIn ? 'comedor' : 'llevar';
+
+                          // Mapeo de items para los modelos de Cocina y Caja
+                          final cocinaItems = provider.cart.map((c) => OrderItem(
+                            productName: c.product.name,
+                            quantity: c.qty,
+                            total: c.total,
+                          )).toList();
+
+                          final cajaItems = provider.cart.map((c) => CashItem(
+                            name: c.product.name,
+                            qty: c.qty,
+                            price: c.product.price,
+                          )).toList();
+
+                          // Inserción real en los Providers paralelos
+                          ordenesProvider.insertarNuevaComanda(
+                            RestaurantOrder(
+                              id: idComanda,
+                              tableOrCustomer: identificador,
+                              time: horaActual,
+                              status: 'pendiente',
+                              serviceType: tipoDeServicio,
+                              items: cocinaItems,
+                              totalAmount: provider.total,
+                              notes: provider.notes.isNotEmpty ? provider.notes : null,
+                            )
+                          );
+
+                          cajaProvider.agregarCuentaPorCobrar(
+                            CashOrder(
+                              id: idComanda,
+                              label: identificador,
+                              time: horaActual,
+                              status: 'Pendiente',
+                              itemsCount: provider.itemsCount,
+                              items: cajaItems,
+                              total: provider.total,
+                            )
+                          );
+
+                          // Acción final original
                           provider.sendOrder();
                           if (isMobile) Navigator.pop(context);
+                          
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    'Orden mandada a la cocina exitosamente')),
+                            SnackBar(
+                                content: Text('Orden $idComanda enviada a cocina y caja'),
+                                backgroundColor: Colors.green,
+                            ),
                           );
                         },
-                  child: const Text('Enviar a Cocina',
+                  child: const Text('Confirmar y Enviar Orden',
                       style:
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
