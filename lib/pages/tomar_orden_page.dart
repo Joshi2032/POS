@@ -1,45 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+// Importaciones del motor de rutas e interconexión
+import '../providers/ordenes_provider.dart';
+import '../providers/caja_provider.dart';
+import '../providers/tomar_orden_provider.dart';
+
+// Importación de los nuevos modelos de datos centralizados
 import '../models/order_item.dart';
 import '../models/restaurant_order.dart';
-import '../providers/caja_provider.dart';
-import '../providers/ordenes_provider.dart';
-import '../providers/tomar_orden_provider.dart';
+
+// ==========================================================================
+// INTERFAZ DE USUARIO ADAPTATIVA (Tu diseño original intacto)
+// ==========================================================================
 
 class TomarOrdenPage extends StatelessWidget {
   const TomarOrdenPage({super.key});
 
-  // Helper local para formato de moneda mexicana (currency:'MXN')
   String formatCurrency(double value) => '\$${value.toStringAsFixed(2)} MXN';
 
   @override
   Widget build(BuildContext context) {
-    // EVALUAR SI ESTÁ ACTIVO EL MODO OSCURO GLOBAL
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scaffoldBg = isDark ? const Color(0xFF13131A) : Colors.grey[50];
 
     return Scaffold(
-      backgroundColor: scaffoldBg, // COLOR ADAPTATIVO
+      backgroundColor: scaffoldBg,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            // Breakpoint adaptado de la directiva CSS @media (max-width: 1200px)
             final isMobile = constraints.maxWidth <= 1200;
 
             if (isMobile) {
               return const _MenuSection(isMobile: true);
             } else {
-              // Modo Desktop: Split Screen (Menu extendido + Barra lateral de carrito fija)
               return Row(
                 children: [
                   const Expanded(flex: 7, child: _MenuSection(isMobile: false)),
-                  VerticalDivider(
-                    width: 1,
-                    color: isDark ? const Color(0xFF2D2D44) : Colors.grey[300],
-                  ),
-                  const SizedBox(
-                      width: 380, child: _CartSection(isMobile: false)),
+                  VerticalDivider(width: 1, color: isDark ? const Color(0xFF2D2D44) : Colors.grey[300]),
+                  const SizedBox(width: 380, child: _CartSection(isMobile: false)),
                 ],
               );
             }
@@ -57,8 +56,7 @@ class TomarOrdenPage extends StatelessWidget {
             onPressed: () => _openMobileCart(context),
             label: Text(
               '${formatCurrency(provider.total)} (${provider.itemsCount})',
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             icon: const Icon(Icons.shopping_cart, color: Colors.white),
           );
@@ -67,7 +65,6 @@ class TomarOrdenPage extends StatelessWidget {
     );
   }
 
-  // Abre el carrito en la parte inferior como un Drawer en móviles (max-height: 76vh;)
   void _openMobileCart(BuildContext context) {
     final provider = context.read<TomarOrdenProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -92,7 +89,6 @@ class TomarOrdenPage extends StatelessWidget {
   }
 }
 
-// --- VISTA IZQUIERDA: BUSCADOR, CATEGORÍAS Y PRODUCTOS ---
 class _MenuSection extends StatelessWidget {
   final bool isMobile;
   const _MenuSection({required this.isMobile});
@@ -102,7 +98,6 @@ class _MenuSection extends StatelessWidget {
     final provider = context.watch<TomarOrdenProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // COLORES INTERNOS ADAPTATIVOS
     final textColor = isDark ? Colors.white : Colors.black87;
     final textSubColor = isDark ? Colors.white60 : Colors.grey[600];
     final searchFillColor = isDark ? const Color(0xFF1E1E2D) : Colors.grey[100];
@@ -113,58 +108,37 @@ class _MenuSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Principal
-          Text('Tomar Orden',
-              style: TextStyle(
-                  fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
-          Text('Registra los productos del cliente',
-              style: TextStyle(color: textSubColor, fontSize: 14)),
+          Text('Tomar Orden', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
+          Text('Registra los productos del cliente', style: TextStyle(color: textSubColor, fontSize: 14)),
           const SizedBox(height: 14),
-
-          // Selector de Tipo de Orden: Dine-in / Takeaway
           Row(
             children: [
-              _buildTypeButton(
-                  context, 'Comer Aquí', OrderType.dineIn, provider),
+              _buildTypeButton(context, 'Comer Aquí', OrderType.dineIn, provider),
               const SizedBox(width: 8),
-              _buildTypeButton(
-                  context, 'Para Llevar', OrderType.takeaway, provider),
+              _buildTypeButton(context, 'Para Llevar', OrderType.takeaway, provider),
             ],
           ),
           const SizedBox(height: 14),
-
-          // Selectores de Área y Mesas Dinámicos (*ngIf="orderType() === 'dine-in'")
           if (provider.orderType == OrderType.dineIn) ...[
-            _buildChipsRow(context, 'Área:', provider.areas,
-                provider.selectedArea, (v) => provider.setArea(v)),
+            _buildChipsRow(context, 'Área:', provider.areas, provider.selectedArea, (v) => provider.setArea(v)),
             const SizedBox(height: 8),
-            _buildChipsRow(context, 'Mesa:', provider.currentTables,
-                provider.selectedTable, (v) => provider.setTable(v)),
+            _buildChipsRow(context, 'Mesa:', provider.currentTables, provider.selectedTable, (v) => provider.setTable(v)),
             const SizedBox(height: 14),
           ],
-
-          // Input de Búsqueda (app-search-input)
           TextField(
             style: TextStyle(color: textColor),
             decoration: InputDecoration(
               hintText: 'Buscar por nombre, desc...',
-              hintStyle:
-                  TextStyle(color: isDark ? Colors.white38 : Colors.grey),
-              prefixIcon: Icon(Icons.search,
-                  color: isDark ? Colors.white38 : Colors.grey),
+              hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey),
+              prefixIcon: Icon(Icons.search, color: isDark ? Colors.white38 : Colors.grey),
               filled: true,
               fillColor: searchFillColor,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
             onChanged: (v) => provider.setSearchTerm(v),
           ),
           const SizedBox(height: 14),
-
-          // Chips horizontales de Categoría
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -177,11 +151,7 @@ class _MenuSection extends StatelessWidget {
                     selected: isSelected,
                     selectedColor: Theme.of(context).primaryColor,
                     backgroundColor: cardBg,
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : textColor,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
+                    labelStyle: TextStyle(color: isSelected ? Colors.white : textColor, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
                     onSelected: (_) => provider.setCategory(cat),
                   ),
                 );
@@ -189,14 +159,9 @@ class _MenuSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-
-          // Grid Principal de productos con Empty State integrado
           Expanded(
             child: provider.visibleProducts.isEmpty
-                ? Center(
-                    child: Text(
-                        'No hay productos que coincidan con la búsqueda.',
-                        style: TextStyle(color: textSubColor)))
+                ? Center(child: Text('No hay productos que coincidan con la búsqueda.', style: TextStyle(color: textSubColor)))
                 : isMobile
                     ? ListView.separated(
                         padding: const EdgeInsets.only(bottom: 8),
@@ -206,13 +171,7 @@ class _MenuSection extends StatelessWidget {
                           final product = provider.visibleProducts[index];
                           return Card(
                             elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              side: BorderSide(
-                                  color: isDark
-                                      ? const Color(0xFF2D2D44)
-                                      : Colors.grey[200]!),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            shape: RoundedRectangleBorder(side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!), borderRadius: BorderRadius.circular(12)),
                             color: cardBg,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(12),
@@ -224,50 +183,21 @@ class _MenuSection extends StatelessWidget {
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(product.category.toUpperCase(),
-                                              style: TextStyle(
-                                                  fontSize: 10,
-                                                  color: isDark
-                                                      ? Colors.white38
-                                                      : Colors.grey[400],
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 0.5)),
+                                          Text(product.category.toUpperCase(), style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                           const SizedBox(height: 4),
-                                          Text(product.name,
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  color: textColor),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis),
+                                          Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), maxLines: 1, overflow: TextOverflow.ellipsis),
                                           const SizedBox(height: 4),
-                                          Text(product.description,
-                                              style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: isDark
-                                                      ? Colors.white60
-                                                      : Colors.grey[500],
-                                                  height: 1.2),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis),
+                                          Text(product.description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[500], height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
                                           const SizedBox(height: 6),
-                                          Text(
-                                              '\$${product.price.toStringAsFixed(2)}',
-                                              style: TextStyle(
-                                                  color: Theme.of(context)
-                                                      .primaryColor,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14)),
+                                          Text('\$${product.price.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
                                         ],
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    Icon(Icons.add_shopping_cart_outlined,
-                                        color: Theme.of(context).primaryColor),
+                                    Icon(Icons.add_shopping_cart_outlined, color: Theme.of(context).primaryColor),
                                   ],
                                 ),
                               ),
@@ -276,24 +206,13 @@ class _MenuSection extends StatelessWidget {
                         },
                       )
                     : GridView.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 1.2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, childAspectRatio: 1.2, crossAxisSpacing: 12, mainAxisSpacing: 12),
                         itemCount: provider.visibleProducts.length,
                         itemBuilder: (context, index) {
                           final product = provider.visibleProducts[index];
                           return Card(
                             elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              side: BorderSide(
-                                  color: isDark
-                                      ? const Color(0xFF2D2D44)
-                                      : Colors.grey[200]!),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            shape: RoundedRectangleBorder(side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!), borderRadius: BorderRadius.circular(12)),
                             color: cardBg,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(12),
@@ -303,40 +222,13 @@ class _MenuSection extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(product.category.toUpperCase(),
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            color: isDark
-                                                ? Colors.white38
-                                                : Colors.grey[400],
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 0.5)),
+                                    Text(product.category.toUpperCase(), style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                                     const SizedBox(height: 4),
-                                    Text(product.name,
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: textColor),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis),
+                                    Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), maxLines: 1, overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 4),
-                                    Text(product.description,
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDark
-                                                ? Colors.white60
-                                                : Colors.grey[500],
-                                            height: 1.2),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis),
+                                    Text(product.description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[500], height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 4),
-                                    Text(
-                                        '\$${product.price.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                            color:
-                                                Theme.of(context).primaryColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14)),
+                                    Text('\$${product.price.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
                                   ],
                                 ),
                               ),
@@ -350,8 +242,7 @@ class _MenuSection extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeButton(BuildContext context, String text, OrderType type,
-      TomarOrdenProvider provider) {
+  Widget _buildTypeButton(BuildContext context, String text, OrderType type, TomarOrdenProvider provider) {
     final isSelected = provider.orderType == type;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
@@ -359,39 +250,23 @@ class _MenuSection extends StatelessWidget {
         height: 40,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected
-                ? Theme.of(context).primaryColor
-                : (isDark ? const Color(0xFF1E1E2D) : Colors.grey[100]),
-            foregroundColor: isSelected
-                ? Colors.white
-                : (isDark ? Colors.white70 : Colors.black87),
+            backgroundColor: isSelected ? Theme.of(context).primaryColor : (isDark ? const Color(0xFF1E1E2D) : Colors.grey[100]),
+            foregroundColor: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
             elevation: 0,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           onPressed: () => provider.setOrderType(type),
-          child:
-              Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+          child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
         ),
       ),
     );
   }
 
-  Widget _buildChipsRow(
-      BuildContext context,
-      String label,
-      List<String> options,
-      String selectedValue,
-      ValueChanged<String> onSelected) {
+  Widget _buildChipsRow(BuildContext context, String label, List<String> options, String selectedValue, ValueChanged<String> onSelected) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        SizedBox(
-            width: 50,
-            child: Text(label,
-                style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white38 : Colors.grey))),
+        SWidth(width: 50, child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white38 : Colors.grey))),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -404,13 +279,8 @@ class _MenuSection extends StatelessWidget {
                     label: Text(opt),
                     selected: isSelected,
                     selectedColor: Theme.of(context).primaryColor,
-                    backgroundColor:
-                        isDark ? const Color(0xFF1E1E2D) : Colors.white,
-                    labelStyle: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : (isDark ? Colors.white70 : Colors.black87),
-                    ),
+                    backgroundColor: isDark ? const Color(0xFF1E1E2D) : Colors.white,
+                    labelStyle: TextStyle(color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
                     onSelected: (_) => onSelected(opt),
                   ),
                 );
@@ -423,7 +293,6 @@ class _MenuSection extends StatelessWidget {
   }
 }
 
-// --- VISTA DERECHA/BOTTOM SHEET: DETALLE DEL CARRITO ---
 class _CartSection extends StatelessWidget {
   final bool isMobile;
   const _CartSection({required this.isMobile});
@@ -440,7 +309,6 @@ class _CartSection extends StatelessWidget {
 
     return Column(
       children: [
-        // Header del Carrito (Mesa X o Para Llevar)
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
@@ -449,48 +317,23 @@ class _CartSection extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    provider.orderType == OrderType.dineIn
-                        ? 'Mesa ${provider.selectedTable}'
-                        : 'Para Llevar',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textColor),
-                  ),
-                  Text(
-                      provider.orderType == OrderType.dineIn
-                          ? 'Servicio en Mesa'
-                          : 'Recoger en Cocina',
-                      style: TextStyle(fontSize: 12, color: textSubColor)),
+                  Text(provider.orderType == OrderType.dineIn ? 'Mesa ${provider.selectedTable}' : 'Para Llevar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+                  Text(provider.orderType == OrderType.dineIn ? 'Servicio en Mesa' : 'Recoger en Cocina', style: TextStyle(fontSize: 12, color: textSubColor)),
                 ],
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                    color: countBg, borderRadius: BorderRadius.circular(12)),
-                child: Text('${provider.itemsCount} Items',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: textColor)),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: countBg, borderRadius: BorderRadius.circular(12)),
+                child: Text('${provider.itemsCount} Items', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textColor)),
               ),
-              if (isMobile)
-                IconButton(
-                    icon: Icon(Icons.close, size: 22, color: textColor),
-                    onPressed: () => Navigator.pop(context))
+              if (isMobile) IconButton(icon: Icon(Icons.close, size: 22, color: textColor), onPressed: () => Navigator.pop(context))
             ],
           ),
         ),
         const Divider(height: 1),
-
-        // Lista de Productos en el carrito
         Expanded(
           child: provider.cart.isEmpty
-              ? Center(
-                  child: Text('Elige productos a la izquierda',
-                      style: TextStyle(color: textSubColor)))
+              ? Center(child: Text('Elige productos a la izquierda', style: TextStyle(color: textSubColor)))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: provider.cart.length,
@@ -499,12 +342,7 @@ class _CartSection extends StatelessWidget {
                     return Card(
                       elevation: 0,
                       color: cardBg,
-                      shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                              color: isDark
-                                  ? const Color(0xFF2D2D44)
-                                  : Colors.grey[200]!),
-                          borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!), borderRadius: BorderRadius.circular(10)),
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: Padding(
                         padding: const EdgeInsets.all(10.0),
@@ -513,56 +351,22 @@ class _CartSection extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(
-                                    child: Text(item.product.name,
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: textColor),
-                                        overflow: TextOverflow.ellipsis)),
-                                Text('\$${item.total.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                        color: Theme.of(context).primaryColor,
-                                        fontWeight: FontWeight.bold)),
+                                Expanded(child: Text(item.product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), overflow: TextOverflow.ellipsis)),
+                                Text('\$${item.total.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const SizedBox(height: 6),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Controles incrementales/decrementales
                                 Row(
                                   children: [
-                                    IconButton(
-                                      icon: Icon(Icons.remove_circle_outline,
-                                          size: 22,
-                                          color: isDark
-                                              ? Colors.white60
-                                              : Colors.grey),
-                                      onPressed: () => provider.decrement(item),
-                                    ),
-                                    Text('${item.qty}',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: textColor)),
-                                    IconButton(
-                                      icon: Icon(Icons.add_circle_outline,
-                                          size: 22,
-                                          color: isDark
-                                              ? Colors.white60
-                                              : Colors.grey),
-                                      onPressed: () => provider.increment(item),
-                                    ),
+                                    IconButton(icon: Icon(Icons.remove_circle_outline, size: 22, color: isDark ? Colors.white60 : Colors.grey), onPressed: () => provider.decrement(item)),
+                                    Text('${item.qty}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor)),
+                                    IconButton(icon: Icon(Icons.add_circle_outline, size: 22, color: isDark ? Colors.white60 : Colors.grey), onPressed: () => provider.increment(item)),
                                   ],
                                 ),
-                                TextButton(
-                                  onPressed: () => provider.remove(item),
-                                  child: const Text('Eliminar',
-                                      style: TextStyle(
-                                          color: Colors.red,
-                                          fontWeight: FontWeight.w500)),
-                                )
+                                TextButton(onPressed: () => provider.remove(item), child: const Text('Eliminar', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)))
                               ],
                             )
                           ],
@@ -572,8 +376,6 @@ class _CartSection extends StatelessWidget {
                   },
                 ),
         ),
-
-        // Footer del Carrito (Notas, Totalizadores y Botón de Envío)
         const Divider(height: 1),
         Padding(
           padding: const EdgeInsets.all(16.0),
@@ -583,18 +385,10 @@ class _CartSection extends StatelessWidget {
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Notas de la orden (ej: sin cebolla)...',
-                  hintStyle: TextStyle(
-                      color: isDark ? Colors.white38 : Colors.grey[400],
-                      fontSize: 13),
-                  enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                          color:
-                              isDark ? const Color(0xFF2D2D44) : Colors.grey)),
-                  focusedBorder: OutlineInputBorder(
-                      borderSide:
-                          BorderSide(color: Theme.of(context).primaryColor)),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey[400], fontSize: 13),
+                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey)),
+                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).primaryColor)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 ),
                 onChanged: (v) => provider.setNotes(v),
               ),
@@ -602,115 +396,81 @@ class _CartSection extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Total Cuenta:',
-                      style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: textColor)),
-                  Text(
-                    '\$${provider.total.toStringAsFixed(2)}',
-                    style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: textColor),
-                  ),
+                  Text('Total Cuenta:', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textColor)),
+                  Text('\$${provider.total.toStringAsFixed(2)}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
                 ],
               ),
               const SizedBox(height: 14),
-              SizedBox(
+              SWidth(
                 width: double.infinity,
-                height: 46,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[600],
-                    disabledBackgroundColor:
-                        isDark ? const Color(0xFF232334) : Colors.grey[300],
+                    disabledBackgroundColor: isDark ? const Color(0xFF232334) : Colors.grey[300],
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
                   ),
                   onPressed: provider.cart.isEmpty
                       ? null
                       : () {
-                          // === INTERCONEXIÓN: MANDAMOS A COCINA Y CAJA AQUÍ ===
-                          final ordenesProvider = Provider.of<OrdenesProvider>(
-                              context,
-                              listen: false);
-                          final cajaProvider =
-                              Provider.of<CajaProvider>(context, listen: false);
+                          final ordenesProvider = Provider.of<OrdenesProvider>(context, listen: false);
+                          final cajaProvider = Provider.of<CajaProvider>(context, listen: false);
 
-                          final String idComanda =
-                              'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-                          final String horaActual =
-                              '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
-
-                          final String identificador = provider.orderType ==
-                                  OrderType.dineIn
+                          final String idComanda = 'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+                          final String horaActual = '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
+                          
+                          final String identificador = provider.orderType == OrderType.dineIn 
                               ? 'Mesa ${provider.selectedTable} (Área ${provider.selectedArea})'
                               : 'Para Llevar';
+                          
+                          final String tipoDeServicio = provider.orderType == OrderType.dineIn ? 'comedor' : 'llevar';
 
-                          final String tipoDeServicio =
-                              provider.orderType == OrderType.dineIn
-                                  ? 'comedor'
-                                  : 'llevar';
+                          final cocinaItems = provider.cart.map((c) => OrderItem(
+                            productName: c.product.name,
+                            quantity: c.qty,
+                            total: c.total,
+                          )).toList();
 
-                          // Mapeo de items para los modelos de Cocina y Caja
-                          final cocinaItems = provider.cart
-                              .map((c) => OrderItem(
-                                    productName: c.product.name,
-                                    quantity: c.qty,
-                                    total: c.total,
-                                  ))
-                              .toList();
+                          final cajaItems = provider.cart.map((c) => CashItem(
+                            name: c.product.name,
+                            qty: c.qty,
+                            price: c.product.price,
+                          )).toList();
 
-                          final cajaItems = provider.cart
-                              .map((c) => CashItem(
-                                    name: c.product.name,
-                                    qty: c.qty,
-                                    price: c.product.price,
-                                  ))
-                              .toList();
+                          ordenesProvider.insertarNuevaComanda(
+                            RestaurantOrder(
+                              id: idComanda,
+                              tableOrCustomer: identificador,
+                              time: horaActual,
+                              status: 'pendiente',
+                              serviceType: tipoDeServicio,
+                              items: cocinaItems,
+                              totalAmount: provider.total,
+                              notes: provider.notes.isNotEmpty ? provider.notes : null,
+                            )
+                          );
 
-                          // Inserción real en los Providers paralelos
-                          ordenesProvider.insertarNuevaComanda(RestaurantOrder(
-                            id: idComanda,
-                            tableOrCustomer: identificador,
-                            time: horaActual,
-                            status: 'pendiente',
-                            serviceType: tipoDeServicio,
-                            items: cocinaItems,
-                            totalAmount: provider.total,
-                            notes: provider.notes.isNotEmpty
-                                ? provider.notes
-                                : null,
-                          ));
+                          cajaProvider.agregarCuentaPorCobrar(
+                            CashOrder(
+                              id: idComanda,
+                              label: identificador,
+                              time: horaActual,
+                              status: 'Pendiente',
+                              itemsCount: provider.itemsCount,
+                              items: cajaItems,
+                              total: provider.total,
+                            )
+                          );
 
-                          cajaProvider.agregarCuentaPorCobrar(CashOrder(
-                            id: idComanda,
-                            label: identificador,
-                            time: horaActual,
-                            status: 'Pendiente',
-                            itemsCount: provider.itemsCount,
-                            items: cajaItems,
-                            total: provider.total,
-                          ));
-
-                          // Acción final original
                           provider.sendOrder();
                           if (isMobile) Navigator.pop(context);
-
+                          
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Orden $idComanda enviada a cocina y caja'),
-                              backgroundColor: Colors.green,
-                            ),
+                            SnackBar(content: Text('Orden $idComanda enviada a cocina y caja'), backgroundColor: Colors.green),
                           );
                         },
-                  child: const Text('Confirmar y Enviar Orden',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: const Text('Confirmar y Enviar Orden', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
             ],
@@ -718,5 +478,16 @@ class _CartSection extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class SWidth extends StatelessWidget {
+  final double width;
+  final Widget child;
+  const SWidth({super.key, required this.width, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(width: width, child: child);
   }
 }
