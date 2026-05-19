@@ -6,12 +6,12 @@ import '../providers/ordenes_provider.dart';
 import '../providers/caja_provider.dart';
 import '../providers/tomar_orden_provider.dart';
 
-// Importación de los nuevos modelos de datos centralizados
+// Importación de los modelos de datos centralizados
 import '../models/order_item.dart';
 import '../models/restaurant_order.dart';
 
 // ==========================================================================
-// INTERFAZ DE USUARIO ADAPTATIVA (Tu diseño original intacto)
+// INTERFAZ DE USUARIO ADAPTATIVA (Tu diseño original intacto al 100%)
 // ==========================================================================
 
 class TomarOrdenPage extends StatelessWidget {
