@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../models/inventory_item.dart';
 import '../providers/inventario_provider.dart';
 
 class InventarioPage extends StatelessWidget {
@@ -7,11 +9,7 @@ class InventarioPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Registramos el provider a nivel página
-    return ChangeNotifierProvider(
-      create: (_) => InventarioProvider(),
-      child: const _InventarioView(),
-    );
+    return const _InventarioView();
   }
 }
 
@@ -23,13 +21,13 @@ class _InventarioView extends StatefulWidget {
 }
 
 class _InventarioViewState extends State<_InventarioView> {
-  void openEditor(InventarioProvider provider, {Map<String, dynamic>? item}) {
-    final idController = TextEditingController(text: item?['id'] ?? 'IT-${DateTime.now().millisecondsSinceEpoch}');
-    final nameController = TextEditingController(text: item?['name'] ?? '');
-    final categoryController = TextEditingController(text: item?['category'] ?? '');
-    final stockController = TextEditingController(text: item?['stock']?.toString() ?? '0');
-    final costController = TextEditingController(text: item?['cost']?.toString() ?? '0');
-    final providerController = TextEditingController(text: item?['provider'] ?? '');
+  void openEditor(InventarioProvider provider, {InventoryItem? item}) {
+    final idController = TextEditingController(text: item?.id ?? 'IT-${DateTime.now().millisecondsSinceEpoch}');
+    final nameController = TextEditingController(text: item?.name ?? '');
+    final categoryController = TextEditingController(text: item?.category ?? '');
+    final stockController = TextEditingController(text: item?.stock.toString() ?? '0');
+    final costController = TextEditingController(text: item?.cost.toString() ?? '0');
+    final providerController = TextEditingController(text: item?.provider ?? '');
 
     showDialog(
       context: context,
@@ -52,19 +50,19 @@ class _InventarioViewState extends State<_InventarioView> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
             ElevatedButton(
               onPressed: () {
-                final data = {
-                  'id': idController.text,
-                  'name': nameController.text,
-                  'category': categoryController.text,
-                  'stock': int.tryParse(stockController.text) ?? 0,
-                  'cost': double.tryParse(costController.text) ?? 0.0,
-                  'provider': providerController.text,
-                };
+                final inventoryItem = InventoryItem(
+                  id: idController.text,
+                  name: nameController.text,
+                  category: categoryController.text,
+                  stock: double.tryParse(stockController.text) ?? 0.0,
+                  cost: double.tryParse(costController.text) ?? 0.0,
+                  provider: providerController.text,
+                );
 
                 if (item == null) {
-                  provider.addInventoryItem(data);
+                  provider.addInventoryItem(inventoryItem);
                 } else {
-                  provider.updateInventoryItem(item['id'], data);
+                  provider.updateInventoryItem(item.id, inventoryItem);
                 }
 
                 Navigator.pop(context);
@@ -103,8 +101,8 @@ class _InventarioViewState extends State<_InventarioView> {
                       itemBuilder: (_, i) {
                         final it = items[i];
                         return ListTile(
-                          title: Text(it['name']),
-                          subtitle: Text('Stock: ${it['stock']} · ${it['category']}'),
+                          title: Text(it.name),
+                          subtitle: Text('Stock: ${it.stock} · ${it.category}'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min, 
                             children: [
@@ -114,7 +112,7 @@ class _InventarioViewState extends State<_InventarioView> {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete),
-                                onPressed: () => provider.removeInventoryItem(it['id'] as String),
+                                onPressed: () => provider.removeInventoryItem(it.id),
                               ),
                             ]
                           ),

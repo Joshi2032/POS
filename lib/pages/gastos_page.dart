@@ -9,10 +9,7 @@ class GastosPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => GastosProvider(),
-      child: const _GastosView(),
-    );
+    return const _GastosView();
   }
 }
 

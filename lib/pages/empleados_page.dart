@@ -10,10 +10,7 @@ class EmpleadosPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => EmpleadosProvider(),
-      child: const _EmpleadosView(),
-    );
+    return const _EmpleadosView();
   }
 }
 

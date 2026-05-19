@@ -8,10 +8,7 @@ class ReservacionesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ReservacionesProvider(),
-      child: const _ReservacionesView(),
-    );
+    return const _ReservacionesView();
   }
 }
 

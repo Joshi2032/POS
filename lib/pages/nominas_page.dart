@@ -10,10 +10,7 @@ class NominasPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => NominasProvider(),
-      child: const _NominasView(),
-    );
+    return const _NominasView();
   }
 }
 

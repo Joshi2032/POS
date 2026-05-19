@@ -9,10 +9,7 @@ class CajaPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CajaProvider(),
-      child: const _CajaView(),
-    );
+    return const _CajaView();
   }
 }
 

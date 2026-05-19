@@ -7,10 +7,7 @@ class AjustesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AjustesProvider(),
-      child: const _AjustesView(),
-    );
+    return const _AjustesView();
   }
 }
 

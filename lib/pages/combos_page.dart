@@ -9,10 +9,7 @@ class CombosPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CombosProvider(),
-      child: const _CombosView(),
-    );
+    return const _CombosView();
   }
 }
 

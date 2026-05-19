@@ -1,37 +1,6 @@
 import 'package:flutter/material.dart';
 
-typedef OrderStatus = String; // 'pendiente' | 'preparando' | 'lista' | 'entregada' | 'cancelada'
-typedef ServiceType = String; // 'comedor' | 'llevar' | 'domicilio'
-
-class OrderItem {
-  final String productName;
-  final int quantity;
-  final double total;
-
-  OrderItem({required this.productName, required this.quantity, required this.total});
-}
-
-class RestaurantOrder {
-  final String id;
-  final String tableOrCustomer;
-  final String time;
-  final OrderStatus status;
-  final ServiceType serviceType;
-  final List<OrderItem> items;
-  final double totalAmount;
-  final String? notes;
-
-  RestaurantOrder({
-    required this.id,
-    required this.tableOrCustomer,
-    required this.time,
-    required this.status,
-    required this.serviceType,
-    required this.items,
-    required this.totalAmount,
-    this.notes,
-  });
-}
+import '../models/restaurant_order.dart';
 
 class OrdenesProvider extends ChangeNotifier {
   final int pageSize = 6;

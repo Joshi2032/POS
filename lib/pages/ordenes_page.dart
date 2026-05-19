@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/restaurant_order.dart';
 import '../providers/ordenes_provider.dart';
 import '../utils/formatters.dart';
 import '../utils/ui_utils.dart';
@@ -9,10 +10,7 @@ class OrdenesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => OrdenesProvider(),
-      child: const _OrdenesView(),
-    );
+    return const _OrdenesView();
   }
 }
 

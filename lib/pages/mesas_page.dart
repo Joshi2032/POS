@@ -8,10 +8,7 @@ class MesasPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => MesasProvider(),
-      child: const _MesasView(),
-    );
+    return const _MesasView();
   }
 }
 

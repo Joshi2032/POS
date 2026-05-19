@@ -11,11 +11,7 @@ class ReportesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Inyectamos el cerebro de los reportes
-    return ChangeNotifierProvider(
-      create: (_) => ReportesProvider(),
-      child: const _ReportesView(),
-    );
+    return const _ReportesView();
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../models/provider_payment.dart';
 import '../providers/proveedores_provider.dart';
 import '../providers/inventario_provider.dart';
 import '../widgets/app_widgets.dart';
@@ -10,10 +11,7 @@ class ProveedoresPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ProveedoresProvider(),
-      child: const _ProveedoresView(),
-    );
+    return const _ProveedoresView();
   }
 }
 
@@ -28,24 +26,24 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
   final _money = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
 
   void _openEditor(ProveedoresProvider provider,
-      {Map<String, dynamic>? payment}) {
+      {ProviderPayment? payment}) {
     final todayIso = DateTime.now().toIso8601String().split('T').first;
     final idController = TextEditingController(
-      text: payment?['id'] ?? 'PAG-${DateTime.now().millisecondsSinceEpoch}',
+      text: payment?.id ?? 'PAG-${DateTime.now().millisecondsSinceEpoch}',
     );
     final providerController =
-        TextEditingController(text: payment?['provider'] ?? '');
+        TextEditingController(text: payment?.provider ?? '');
     final categoryController =
-        TextEditingController(text: payment?['category'] ?? '');
+        TextEditingController(text: payment?.category ?? '');
     final amountController =
-        TextEditingController(text: payment?['amount']?.toString() ?? '0');
+        TextEditingController(text: payment?.amount.toString() ?? '0');
     final dateController =
-        TextEditingController(text: payment?['date'] ?? todayIso);
+        TextEditingController(text: payment?.date ?? todayIso);
     final timeController =
-        TextEditingController(text: payment?['time'] ?? '09:00 a.m.');
+        TextEditingController(text: payment?.time ?? '09:00 a.m.');
     final cashierController =
-        TextEditingController(text: payment?['cashier'] ?? 'Laura S.');
-    String method = payment?['method'] ?? 'Transferencia';
+        TextEditingController(text: payment?.cashier ?? 'Laura S.');
+    String method = payment?.method ?? 'Transferencia';
 
     showDialog(
       context: context,
@@ -128,27 +126,27 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                     child: const Text('Cancelar')),
                 ElevatedButton(
                   onPressed: () {
-                    final data = {
-                      'id': idController.text,
-                      'provider': providerController.text.trim(),
-                      'category': categoryController.text.trim(),
-                      'method': method,
-                      'amount': double.tryParse(amountController.text) ?? 0.0,
-                      'date': dateController.text,
-                      'time': timeController.text,
-                      'cashier': cashierController.text,
-                    };
+                    final paymentData = ProviderPayment(
+                      id: idController.text,
+                      provider: providerController.text.trim(),
+                      category: categoryController.text.trim(),
+                      method: method,
+                      amount: double.tryParse(amountController.text) ?? 0.0,
+                      date: dateController.text,
+                      time: timeController.text,
+                      cashier: cashierController.text,
+                    );
 
-                    if ((data['provider'] as String).isNotEmpty &&
-                        (data['category'] as String).isNotEmpty &&
-                        (data['amount'] as double) > 0) {
+                    if (paymentData.provider.isNotEmpty &&
+                        paymentData.category.isNotEmpty &&
+                        paymentData.amount > 0) {
                       if (payment == null) {
                         final inventarioGlobal =
                             Provider.of<InventarioProvider>(context,
                                 listen: false);
-                        provider.addPayment(data, inventarioGlobal);
+                        provider.addPayment(paymentData, inventarioGlobal);
                       } else {
-                        provider.updatePayment(payment['id'], data);
+                        provider.updatePayment(payment.id, paymentData);
                       }
                       Navigator.pop(context);
                     }
@@ -256,7 +254,7 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                               .withValues(alpha: 0.3)),
                       itemBuilder: (_, index) {
                         final payment = paginated[index];
-                        final providerName = payment['provider'] ?? '';
+                        final providerName = payment.provider;
                         return AppCard(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
@@ -282,14 +280,14 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                             subtitle: Padding(
                               padding: const EdgeInsets.only(top: 4.0),
                               child: Text(
-                                  '${payment['category']} · ${payment['method']} · ${payment['date']} ${payment['time']}\nCajero: ${payment['cashier']}',
+                                  '${payment.category} · ${payment.method} · ${payment.date} ${payment.time}\nCajero: ${payment.cashier}',
                                   style: TextStyle(color: mutedTextColor)),
                             ),
                             isThreeLine: true,
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(_money.format(payment['amount'] ?? 0.0),
+                                Text(_money.format(payment.amount),
                                     style: TextStyle(
                                         fontWeight: FontWeight.w900,
                                         fontSize: 16,
@@ -303,8 +301,8 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                                 IconButton(
                                     icon: const Icon(Icons.delete_outline,
                                         color: Colors.redAccent, size: 20),
-                                    onPressed: () => provider.removePayment(
-                                        payment['id'] as String)),
+                                    onPressed: () =>
+                                        provider.removePayment(payment.id)),
                               ],
                             ),
                           ),

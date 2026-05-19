@@ -9,11 +9,7 @@ class ProductosPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Inyectamos el Provider manteniendo tu estructura
-    return ChangeNotifierProvider(
-      create: (_) => ProductosProvider(),
-      child: const _ProductosView(),
-    );
+    return const _ProductosView();
   }
 }
 

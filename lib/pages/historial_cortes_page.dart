@@ -8,10 +8,7 @@ class HistorialCortesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => HistorialCortesProvider(),
-      child: const _HistorialCortesView(),
-    );
+    return const _HistorialCortesView();
   }
 }
 

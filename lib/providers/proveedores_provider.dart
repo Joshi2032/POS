@@ -1,32 +1,34 @@
 import 'package:flutter/material.dart';
+
+import '../models/provider_payment.dart';
 import 'inventario_provider.dart';
 
 class ProveedoresProvider extends ChangeNotifier {
   final int pageSize = 10;
-  final List<Map<String, dynamic>> _payments = [];
+  final List<ProviderPayment> _payments = [];
   String _searchTerm = '';
   int _currentPage = 1;
 
   String get searchTerm => _searchTerm;
   int get currentPage => _currentPage;
-  List<Map<String, dynamic>> get payments => _payments;
+  List<ProviderPayment> get payments => List.unmodifiable(_payments);
 
-  List<Map<String, dynamic>> get filteredPayments {
-    if (_searchTerm.isEmpty) return _payments;
+  List<ProviderPayment> get filteredPayments {
+    if (_searchTerm.isEmpty) return List.unmodifiable(_payments);
     final q = _searchTerm.toLowerCase();
     return _payments.where((payment) {
       return [
-        payment['provider'],
-        payment['category'],
-        payment['method'],
-        payment['cashier']
-      ].whereType<String>().any((v) => v.toLowerCase().contains(q));
+        payment.provider,
+        payment.category,
+        payment.method,
+        payment.cashier,
+      ].any((value) => value.toLowerCase().contains(q));
     }).toList();
   }
 
   int get totalPages => (filteredPayments.length / pageSize).ceil().clamp(1, 999999);
 
-  List<Map<String, dynamic>> get paginatedPayments {
+  List<ProviderPayment> get paginatedPayments {
     final start = (_currentPage - 1) * pageSize;
     return filteredPayments.skip(start).take(pageSize).toList();
   }
@@ -34,35 +36,39 @@ class ProveedoresProvider extends ChangeNotifier {
   // Corrección en los folds garantizando que la lectura trate al valor como num
   double get todayTotal {
     final today = DateTime.now().toIso8601String().split('T').first;
-    return _payments.where((p) => p['date'] == today).fold(0.0, (sum, p) => sum + (p['amount'] as num).toDouble());
+    return _payments
+        .where((payment) => payment.date == today)
+        .fold(0.0, (sum, payment) => sum + payment.amount);
   }
 
   int get todayPaymentsCount {
     final today = DateTime.now().toIso8601String().split('T').first;
-    return _payments.where((p) => p['date'] == today).length;
+    return _payments.where((payment) => payment.date == today).length;
   }
 
   double get weekTotal {
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
-    return _payments.where((p) {
-      if (p['date'] == null) return false;
-      final date = DateTime.tryParse(p['date']);
-      return date != null && date.isAfter(weekAgo);
-    }).fold(0.0, (sum, p) => sum + (p['amount'] as num).toDouble());
+    return _payments
+        .where((payment) {
+          final date = DateTime.tryParse(payment.date);
+          return date != null && date.isAfter(weekAgo);
+        })
+        .fold(0.0, (sum, payment) => sum + payment.amount);
   }
 
   double get monthTotal {
     final now = DateTime.now();
-    return _payments.where((p) {
-      if (p['date'] == null) return false;
-      final date = DateTime.tryParse(p['date']);
-      return date != null && date.month == now.month && date.year == now.year;
-    }).fold(0.0, (sum, p) => sum + (p['amount'] as num).toDouble());
+    return _payments
+        .where((payment) {
+          final date = DateTime.tryParse(payment.date);
+          return date != null && date.month == now.month && date.year == now.year;
+        })
+        .fold(0.0, (sum, payment) => sum + payment.amount);
   }
 
   int get uniqueProvidersCount {
-    return _payments.map((e) => e['provider']).whereType<String>().toSet().length;
+    return _payments.map((payment) => payment.provider).toSet().length;
   }
 
   void setSearch(String val) {
@@ -77,25 +83,22 @@ class ProveedoresProvider extends ChangeNotifier {
   }
 
   // Inyección limpia pasándole un incremento double estándar (ej. 10.0 unidades)
-  void addPayment(Map<String, dynamic> data, InventarioProvider inventario) {
-    _payments.insert(0, data);
-    final nombreInsumo = data['category'] as String;
-    
-    // Auto-incrementamos 10.0 unidades reales al stock local
-    inventario.aumentarStockPorCompra(nombreInsumo, 10.0);
+  void addPayment(ProviderPayment payment, InventarioProvider inventario) {
+    _payments.insert(0, payment);
+    inventario.aumentarStockPorCompra(payment.category, 10.0);
     notifyListeners();
   }
 
-  void updatePayment(String id, Map<String, dynamic> data) {
-    final idx = _payments.indexWhere((p) => p['id'] == id);
+  void updatePayment(String id, ProviderPayment payment) {
+    final idx = _payments.indexWhere((p) => p.id == id);
     if (idx != -1) {
-      _payments[idx] = data;
+      _payments[idx] = payment;
       notifyListeners();
     }
   }
 
   void removePayment(String id) {
-    _payments.removeWhere((p) => p['id'] == id);
+    _payments.removeWhere((p) => p.id == id);
     notifyListeners();
   }
 }

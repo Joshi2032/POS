@@ -9,10 +9,7 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => DashboardProvider(),
-      child: const _DashboardView(),
-    );
+    return const _DashboardView();
   }
 }
 
