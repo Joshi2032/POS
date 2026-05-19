@@ -1,233 +1,239 @@
 import 'package:flutter/material.dart';
+import '../models/reservacion.dart';
 
-// ==========================================
-// 1. MODELOS DE DATOS
-// ==========================================
-class Reservacion {
-  final String id;
-  final String customerName;
-  final String date;
-  final String time;
-  final int guests;
-  final String table;
-  final String status; // 'Pendiente', 'Confirmada', 'Completada', 'Cancelada'
-  final String notes;
-
-  Reservacion({
-    required this.id,
-    required this.customerName,
-    required this.date,
-    required this.time,
-    required this.guests,
-    required this.table,
-    required this.status,
-    required this.notes,
-  });
-
-  Reservacion copyWith({
-    String? customerName,
-    String? date,
-    String? time,
-    int? guests,
-    String? table,
-    String? status,
-    String? notes,
-  }) {
-    return Reservacion(
-      id: id,
-      customerName: customerName ?? this.customerName,
-      date: date ?? this.date,
-      time: time ?? this.time,
-      guests: guests ?? this.guests,
-      table: table ?? this.table,
-      status: status ?? this.status,
-      notes: notes ?? this.notes,
-    );
-  }
-}
-
-class ReservacionForm {
-  String customerName;
-  String date;
-  String time;
-  int guests;
-  String table;
-  String status;
-  String notes;
-
-  ReservacionForm({
-    required this.customerName,
-    required this.date,
-    required this.time,
-    required this.guests,
-    required this.table,
-    required this.status,
-    required this.notes,
-  });
-}
-
-// ==========================================
-// 2. GESTOR DE ESTADO (CEREBRO DEL MÓDULO)
-// ==========================================
 class ReservacionesProvider extends ChangeNotifier {
   final int pageSize = 10;
+  final String todayIso = DateTime.now().toIso8601String().substring(0, 10);
 
-  // Variables de estado
-  List<Reservacion> _reservaciones = [];
+  // Semilla alineada al 100% con los campos exactos de tu modelo
+  final List<Reservacion> _reservations = [
+    Reservacion(
+      id: 'RES-001',
+      cliente: 'Juan García',
+      telefono: '555-1001',
+      personas: 4,
+      fecha: DateTime.now().toIso8601String().substring(0, 10),
+      hora: '19:00',
+      mesa: 'Mesa 4',
+      estado: 'confirmada',
+    ),
+    Reservacion(
+      id: 'RES-002',
+      cliente: 'María López',
+      telefono: '555-1002',
+      personas: 2,
+      fecha: DateTime.now().toIso8601String().substring(0, 10),
+      hora: '20:00',
+      mesa: 'Mesa 2',
+      estado: 'confirmada',
+    ),
+    Reservacion(
+      id: 'RES-003',
+      cliente: 'Carlos Rodríguez',
+      telefono: '555-1003',
+      personas: 6,
+      fecha: DateTime.now().add(const Duration(days: 1)).toIso8601String().substring(0, 10),
+      hora: '19:30',
+      mesa: 'Mesa 10',
+      estado: 'confirmada',
+    ),
+    Reservacion(
+      id: 'RES-004',
+      cliente: 'Ana Martínez',
+      telefono: '555-1004',
+      personas: 3,
+      fecha: DateTime.now().toIso8601String().substring(0, 10),
+      hora: '18:00',
+      mesa: 'Mesa 1',
+      estado: 'completada',
+    ),
+    Reservacion(
+      id: 'RES-005',
+      cliente: 'Pedro Sánchez',
+      telefono: '555-1005',
+      personas: 5,
+      fecha: DateTime.now().subtract(const Duration(days: 1)).toIso8601String().substring(0, 10),
+      hora: '20:00',
+      mesa: 'Mesa 5',
+      estado: 'cancelada',
+    )
+  ];
+
   String _searchTerm = '';
-  String _selectedStatus = 'Todos';
   int _currentPage = 1;
+  late String _selectedDate;
+  String? _editingId;
+  bool _showModal = false;
+  String _modalError = '';
 
-  // Getters para la UI
-  String get searchTerm => _searchTerm;
-  String get selectedStatus => _selectedStatus;
-  int get currentPage => _currentPage;
-  int get totalReservacionesLength => _reservaciones.length;
+  Map<String, dynamic> _formValues = {};
 
   ReservacionesProvider() {
-    _initData();
+    _selectedDate = todayIso;
+    _resetForm();
   }
 
-  void _initData() {
-    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
-    _reservaciones = [
-      Reservacion(
-          id: 'RES-001',
-          customerName: 'Familia Martínez',
-          date: todayStr,
-          time: '14:30',
-          guests: 6,
-          table: 'Mesa 4',
-          status: 'Confirmada',
-          notes: 'Silla para bebé'),
-      Reservacion(
-          id: 'RES-002',
-          customerName: 'Carlos Slim',
-          date: todayStr,
-          time: '20:00',
-          guests: 2,
-          table: 'Mesa Vip 1',
-          status: 'Pendiente',
-          notes: 'Aniversario'),
-      Reservacion(
-          id: 'RES-003',
-          customerName: 'Empresa XYZ',
-          date: todayStr,
-          time: '15:00',
-          guests: 12,
-          table: 'Terraza 1, 2 y 3',
-          status: 'Confirmada',
-          notes: 'Facturar al final'),
-      Reservacion(
-          id: 'RES-004',
-          customerName: 'Andrea López',
-          date: todayStr,
-          time: '19:00',
-          guests: 4,
-          table: 'Mesa 7',
-          status: 'Cancelada',
-          notes: ''),
-    ];
-  }
+  String get searchTerm => _searchTerm;
+  int get currentPage => _currentPage;
+  String get selectedDate => _selectedDate;
+  String? get editingId => _editingId;
+  bool get showModal => _showModal;
+  String get modalError => _modalError;
+  Map<String, dynamic> get formValues => _formValues;
 
-  // --- LÓGICA COMPUTADA (Filtros y paginación) ---
-  List<Reservacion> get filteredReservaciones {
-    final query = _searchTerm.trim().toLowerCase();
-    final status = _selectedStatus;
-
-    return _reservaciones.where((r) {
-      final matchesSearch = query.isEmpty ||
-          r.customerName.toLowerCase().contains(query) ||
-          r.id.toLowerCase().contains(query) ||
-          r.table.toLowerCase().contains(query);
-
-      final matchesStatus = status == 'Todos' || r.status == status;
-      return matchesSearch && matchesStatus;
+  List<Reservacion> get filteredReservations {
+    final search = _searchTerm.toLowerCase();
+    return _reservations.where((res) {
+      final matchesDate = res.fecha == _selectedDate;
+      final matchesSearch = search.isEmpty || res.cliente.toLowerCase().contains(search);
+      return matchesDate && matchesSearch;
     }).toList();
   }
 
-  List<Reservacion> get paginatedReservaciones {
-    final list = filteredReservaciones;
+  List<Reservacion> get paginatedReservations {
+    final filtered = filteredReservations;
     final start = (_currentPage - 1) * pageSize;
-    if (start >= list.length) return [];
-    final end =
-        (start + pageSize) > list.length ? list.length : (start + pageSize);
-    return list.sublist(start, end);
+    if (start >= filtered.length) return [];
+    return filtered.skip(start).take(pageSize).toList();
   }
 
-  int get totalPages => (filteredReservaciones.length / pageSize).ceil();
+  int get totalPages => (filteredReservations.length / pageSize).ceil().clamp(1, 999999);
+  int get totalToday => _reservations.where((r) => r.fecha == todayIso).length;
+  int get confirmedToday => _reservations.where((r) => r.fecha == todayIso && r.estado == 'confirmada').length;
+  int get guestsTodayCount => _reservations
+      .where((r) => r.fecha == todayIso && r.estado == 'confirmada')
+      .fold(0, (sum, r) => sum + r.personas);
 
-  int get pendientesCount =>
-      _reservaciones.where((r) => r.status == 'Pendiente').length;
-  int get confirmadasCount =>
-      _reservaciones.where((r) => r.status == 'Confirmada').length;
-  int get paraHoyCount {
-    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
-    return _reservaciones
-        .where((r) => r.date == todayStr && r.status != 'Cancelada')
-        .length;
-  }
-
-  // --- ACCIONES MUTADORAS ---
-  void onSearch(String value) {
-    _searchTerm = value;
+  void setSearchTerm(String val) {
+    _searchTerm = val;
     _currentPage = 1;
     notifyListeners();
   }
 
-  void filterByStatus(String status) {
-    _selectedStatus = status;
+  void setSelectedDate(String val) {
+    _selectedDate = val;
     _currentPage = 1;
     notifyListeners();
   }
 
-  void changePage(int newPage) {
-    _currentPage = newPage;
+  void goToPage(int page) {
+    if (page >= 1 && page <= totalPages) {
+      _currentPage = page;
+      notifyListeners();
+    }
+  }
+
+  void updateFormField(String key, dynamic value) {
+    _formValues[key] = value;
     notifyListeners();
   }
 
-  void crearReservacion(ReservacionForm formState) {
-    final next = _reservaciones.length + 1;
-    final nueva = Reservacion(
-      id: 'RES-${next.toString().padLeft(3, '0')}',
-      customerName: formState.customerName,
-      date: formState.date,
-      time: formState.time,
-      guests: formState.guests,
-      table: formState.table,
-      status: formState.status,
-      notes: formState.notes,
-    );
-    _reservaciones.insert(0, nueva);
+  void _resetForm() {
+    _formValues = {
+      'cliente': '',
+      'telefono': '',
+      'personas': 2,
+      'fecha': todayIso,
+      'hora': '19:00',
+      'mesa': 'General'
+    };
+  }
+
+  void abrirModal() {
+    _editingId = null;
+    _modalError = '';
+    _resetForm();
+    _showModal = true;
     notifyListeners();
   }
 
-  void actualizarReservacion(String id, ReservacionForm formState) {
-    final idx = _reservaciones.indexWhere((x) => x.id == id);
-    if (idx != -1) {
-      _reservaciones[idx] = _reservaciones[idx].copyWith(
-        customerName: formState.customerName,
-        date: formState.date,
-        time: formState.time,
-        guests: formState.guests,
-        table: formState.table,
-        status: formState.status,
-        notes: formState.notes,
+  void abrirEditarModal(Reservacion res) {
+    _editingId = res.id;
+    _modalError = '';
+    _formValues = {
+      'cliente': res.cliente,
+      'telefono': res.telefono,
+      'personas': res.personas,
+      'fecha': res.fecha,
+      'hora': res.hora,
+      'mesa': res.mesa
+    };
+    _showModal = true;
+    notifyListeners();
+  }
+
+  void cerrarModal() {
+    _showModal = false;
+    _editingId = null;
+    _modalError = '';
+    notifyListeners();
+  }
+
+  bool guardarReservacion() {
+    final cliente = (_formValues['cliente'] as String).trim();
+    final telefono = (_formValues['telefono'] as String).trim();
+    final personas = _formValues['personas'] as int;
+
+    if (cliente.isEmpty || telefono.isEmpty || personas <= 0) {
+      _modalError = 'Completa el cliente, teléfono y número de personas.';
+      notifyListeners();
+      return false;
+    }
+
+    if (_editingId != null) {
+      final index = _reservations.indexWhere((r) => r.id == _editingId);
+      if (index != -1) {
+        _reservations[index] = Reservacion(
+          id: _editingId!,
+          cliente: cliente,
+          telefono: telefono,
+          personas: personas,
+          fecha: _formValues['fecha'],
+          hora: _formValues['hora'],
+          estado: _reservations[index].estado,
+          mesa: _formValues['mesa'],
+        );
+      }
+    } else {
+      _reservations.insert(
+        0,
+        Reservacion(
+          id: 'RES-${(_reservations.length + 1).toString().padLeft(3, '0')}',
+          cliente: cliente,
+          telefono: telefono,
+          personas: personas,
+          fecha: _formValues['fecha'],
+          hora: _formValues['hora'],
+          estado: 'confirmada',
+          mesa: _formValues['mesa'],
+        ),
+      );
+    }
+
+    cerrarModal();
+    notifyListeners();
+    return true;
+  }
+
+  void cancelarReservacion(String id) {
+    final index = _reservations.indexWhere((r) => r.id == id);
+    if (index != -1) {
+      _reservations[index] = Reservacion(
+        id: _reservations[index].id,
+        cliente: _reservations[index].cliente,
+        telefono: _reservations[index].telefono,
+        personas: _reservations[index].personas,
+        fecha: _reservations[index].fecha,
+        hora: _reservations[index].hora,
+        estado: 'cancelada',
+        mesa: _reservations[index].mesa,
       );
       notifyListeners();
     }
   }
 
-  void cambiarEstado(String id, String nuevoEstado) {
-    final idx = _reservaciones.indexWhere((x) => x.id == id);
-    if (idx != -1) {
-      _reservaciones[idx] = _reservaciones[idx].copyWith(status: nuevoEstado);
-      notifyListeners();
-    }
-  }
-
   void eliminarReservacion(String id) {
-    _reservaciones.removeWhere((x) => x.id == id);
+    _reservations.removeWhere((r) => r.id == id);
     notifyListeners();
   }
 }
