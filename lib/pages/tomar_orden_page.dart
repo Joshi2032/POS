@@ -9,6 +9,8 @@ import '../providers/tomar_orden_provider.dart';
 // Importación de los modelos de datos centralizados
 import '../models/order_item.dart';
 import '../models/restaurant_order.dart';
+import '../models/product_item.dart';
+import '../models/cart_item.dart';
 
 // ==========================================================================
 // INTERFAZ DE USUARIO ADAPTATIVA (Tu diseño original intacto al 100%)
@@ -37,8 +39,12 @@ class TomarOrdenPage extends StatelessWidget {
               return Row(
                 children: [
                   const Expanded(flex: 7, child: _MenuSection(isMobile: false)),
-                  VerticalDivider(width: 1, color: isDark ? const Color(0xFF2D2D44) : Colors.grey[300]),
-                  const SizedBox(width: 380, child: _CartSection(isMobile: false)),
+                  VerticalDivider(
+                      width: 1,
+                      color:
+                          isDark ? const Color(0xFF2D2D44) : Colors.grey[300]),
+                  const SizedBox(
+                      width: 380, child: _CartSection(isMobile: false)),
                 ],
               );
             }
@@ -50,13 +56,17 @@ class TomarOrdenPage extends StatelessWidget {
           final isMobile = MediaQuery.of(context).size.width <= 1200;
           if (!isMobile) return const SizedBox.shrink();
 
-          final provider = context.watch<TomarOrdenProvider>();
+          final total =
+              context.select<TomarOrdenProvider, double>((p) => p.total);
+          final itemsCount =
+              context.select<TomarOrdenProvider, int>((p) => p.itemsCount);
           return FloatingActionButton.extended(
             backgroundColor: Theme.of(context).primaryColor,
             onPressed: () => _openMobileCart(context),
             label: Text(
-              '${formatCurrency(provider.total)} (${provider.itemsCount})',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              '${formatCurrency(total)} ($itemsCount)',
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
             icon: const Icon(Icons.shopping_cart, color: Colors.white),
           );
@@ -95,7 +105,23 @@ class _MenuSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TomarOrdenProvider>();
+    final orderType =
+        context.select<TomarOrdenProvider, OrderType>((p) => p.orderType);
+    final areas =
+        context.select<TomarOrdenProvider, List<String>>((p) => p.areas);
+    final selectedArea =
+        context.select<TomarOrdenProvider, String>((p) => p.selectedArea);
+    final currentTables = context
+        .select<TomarOrdenProvider, List<String>>((p) => p.currentTables);
+    final selectedTable =
+        context.select<TomarOrdenProvider, String>((p) => p.selectedTable);
+    final categories =
+        context.select<TomarOrdenProvider, List<String>>((p) => p.categories);
+    final selectedCategory =
+        context.select<TomarOrdenProvider, String>((p) => p.selectedCategory);
+    final visibleProducts =
+        context.select<TomarOrdenProvider, List<ProductItem>>(
+            (p) => p.visibleProducts);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final textColor = isDark ? Colors.white : Colors.black87;
@@ -108,42 +134,52 @@ class _MenuSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Tomar Orden', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
-          Text('Registra los productos del cliente', style: TextStyle(color: textSubColor, fontSize: 14)),
+          Text('Tomar Orden',
+              style: TextStyle(
+                  fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
+          Text('Registra los productos del cliente',
+              style: TextStyle(color: textSubColor, fontSize: 14)),
           const SizedBox(height: 14),
           Row(
             children: [
-              _buildTypeButton(context, 'Comer Aquí', OrderType.dineIn, provider),
+              _buildTypeButton(context, 'Comer Aquí', OrderType.dineIn),
               const SizedBox(width: 8),
-              _buildTypeButton(context, 'Para Llevar', OrderType.takeaway, provider),
+              _buildTypeButton(context, 'Para Llevar', OrderType.takeaway),
             ],
           ),
           const SizedBox(height: 14),
-          if (provider.orderType == OrderType.dineIn) ...[
-            _buildChipsRow(context, 'Área:', provider.areas, provider.selectedArea, (v) => provider.setArea(v)),
+          if (orderType == OrderType.dineIn) ...[
+            _buildChipsRow(context, 'Área:', areas, selectedArea,
+                (v) => context.read<TomarOrdenProvider>().setArea(v)),
             const SizedBox(height: 8),
-            _buildChipsRow(context, 'Mesa:', provider.currentTables, provider.selectedTable, (v) => provider.setTable(v)),
+            _buildChipsRow(context, 'Mesa:', currentTables, selectedTable,
+                (v) => context.read<TomarOrdenProvider>().setTable(v)),
             const SizedBox(height: 14),
           ],
           TextField(
             style: TextStyle(color: textColor),
             decoration: InputDecoration(
               hintText: 'Buscar por nombre, desc...',
-              hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey),
-              prefixIcon: Icon(Icons.search, color: isDark ? Colors.white38 : Colors.grey),
+              hintStyle:
+                  TextStyle(color: isDark ? Colors.white38 : Colors.grey),
+              prefixIcon: Icon(Icons.search,
+                  color: isDark ? Colors.white38 : Colors.grey),
               filled: true,
               fillColor: searchFillColor,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            onChanged: (v) => provider.setSearchTerm(v),
+            onChanged: (v) =>
+                context.read<TomarOrdenProvider>().setSearchTerm(v),
           ),
           const SizedBox(height: 14),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: provider.categories.map((cat) {
-                final isSelected = provider.selectedCategory == cat;
+              children: categories.map((cat) {
+                final isSelected = selectedCategory == cat;
                 return Padding(
                   padding: const EdgeInsets.only(right: 6.0),
                   child: ChoiceChip(
@@ -151,8 +187,12 @@ class _MenuSection extends StatelessWidget {
                     selected: isSelected,
                     selectedColor: Theme.of(context).primaryColor,
                     backgroundColor: cardBg,
-                    labelStyle: TextStyle(color: isSelected ? Colors.white : textColor, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
-                    onSelected: (_) => provider.setCategory(cat),
+                    labelStyle: TextStyle(
+                        color: isSelected ? Colors.white : textColor,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.normal),
+                    onSelected: (_) =>
+                        context.read<TomarOrdenProvider>().setCategory(cat),
                   ),
                 );
               }).toList(),
@@ -160,22 +200,32 @@ class _MenuSection extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Expanded(
-            child: provider.visibleProducts.isEmpty
-                ? Center(child: Text('No hay productos que coincidan con la búsqueda.', style: TextStyle(color: textSubColor)))
+            child: visibleProducts.isEmpty
+                ? Center(
+                    child: Text(
+                        'No hay productos que coincidan con la búsqueda.',
+                        style: TextStyle(color: textSubColor)))
                 : isMobile
                     ? ListView.separated(
                         padding: const EdgeInsets.only(bottom: 8),
-                        itemCount: provider.visibleProducts.length,
+                        itemCount: visibleProducts.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
-                          final product = provider.visibleProducts[index];
+                          final product = visibleProducts[index];
                           return Card(
                             elevation: 0,
-                            shape: RoundedRectangleBorder(side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!), borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                side: BorderSide(
+                                    color: isDark
+                                        ? const Color(0xFF2D2D44)
+                                        : Colors.grey[200]!),
+                                borderRadius: BorderRadius.circular(12)),
                             color: cardBg,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(12),
-                              onTap: () => provider.addToCart(product),
+                              onTap: () => context
+                                  .read<TomarOrdenProvider>()
+                                  .addToCart(product),
                               child: Padding(
                                 padding: const EdgeInsets.all(12.0),
                                 child: Row(
@@ -183,21 +233,50 @@ class _MenuSection extends StatelessWidget {
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(product.category.toUpperCase(), style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                          Text(product.category.toUpperCase(),
+                                              style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: isDark
+                                                      ? Colors.white38
+                                                      : Colors.grey[400],
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 0.5)),
                                           const SizedBox(height: 4),
-                                          Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                          Text(product.name,
+                                              style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: textColor),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis),
                                           const SizedBox(height: 4),
-                                          Text(product.description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[500], height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                          Text(product.description,
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: isDark
+                                                      ? Colors.white60
+                                                      : Colors.grey[500],
+                                                  height: 1.2),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis),
                                           const SizedBox(height: 6),
-                                          Text('\$${product.price.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                                          Text(
+                                              '\$${product.price.toStringAsFixed(2)}',
+                                              style: TextStyle(
+                                                  color: Theme.of(context)
+                                                      .primaryColor,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14)),
                                         ],
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    Icon(Icons.add_shopping_cart_outlined, color: Theme.of(context).primaryColor),
+                                    Icon(Icons.add_shopping_cart_outlined,
+                                        color: Theme.of(context).primaryColor),
                                   ],
                                 ),
                               ),
@@ -206,29 +285,68 @@ class _MenuSection extends StatelessWidget {
                         },
                       )
                     : GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, childAspectRatio: 1.2, crossAxisSpacing: 12, mainAxisSpacing: 12),
-                        itemCount: provider.visibleProducts.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                childAspectRatio: 1.2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12),
+                        itemCount: visibleProducts.length,
                         itemBuilder: (context, index) {
-                          final product = provider.visibleProducts[index];
+                          final product = visibleProducts[index];
                           return Card(
                             elevation: 0,
-                            shape: RoundedRectangleBorder(side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!), borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                side: BorderSide(
+                                    color: isDark
+                                        ? const Color(0xFF2D2D44)
+                                        : Colors.grey[200]!),
+                                borderRadius: BorderRadius.circular(12)),
                             color: cardBg,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(12),
-                              onTap: () => provider.addToCart(product),
+                              onTap: () => context
+                                  .read<TomarOrdenProvider>()
+                                  .addToCart(product),
                               child: Padding(
                                 padding: const EdgeInsets.all(12.0),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(product.category.toUpperCase(), style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.grey[400], fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                                    Text(product.category.toUpperCase(),
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: isDark
+                                                ? Colors.white38
+                                                : Colors.grey[400],
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5)),
                                     const SizedBox(height: 4),
-                                    Text(product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    Text(product.name,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: textColor),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 4),
-                                    Text(product.description, style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey[500], height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                    Text(product.description,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDark
+                                                ? Colors.white60
+                                                : Colors.grey[500],
+                                            height: 1.2),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis),
                                     const SizedBox(height: 4),
-                                    Text('\$${product.price.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                                    Text(
+                                        '\$${product.price.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                            color:
+                                                Theme.of(context).primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14)),
                                   ],
                                 ),
                               ),
@@ -242,31 +360,49 @@ class _MenuSection extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeButton(BuildContext context, String text, OrderType type, TomarOrdenProvider provider) {
-    final isSelected = provider.orderType == type;
+  Widget _buildTypeButton(BuildContext context, String text, OrderType type) {
+    final isSelected =
+        context.select<TomarOrdenProvider, bool>((p) => p.orderType == type);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: SizedBox(
         height: 40,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected ? Theme.of(context).primaryColor : (isDark ? const Color(0xFF1E1E2D) : Colors.grey[100]),
-            foregroundColor: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+            backgroundColor: isSelected
+                ? Theme.of(context).primaryColor
+                : (isDark ? const Color(0xFF1E1E2D) : Colors.grey[100]),
+            foregroundColor: isSelected
+                ? Colors.white
+                : (isDark ? Colors.white70 : Colors.black87),
             elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
-          onPressed: () => provider.setOrderType(type),
-          child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
+          onPressed: () =>
+              context.read<TomarOrdenProvider>().setOrderType(type),
+          child:
+              Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
         ),
       ),
     );
   }
 
-  Widget _buildChipsRow(BuildContext context, String label, List<String> options, String selectedValue, ValueChanged<String> onSelected) {
+  Widget _buildChipsRow(
+      BuildContext context,
+      String label,
+      List<String> options,
+      String selectedValue,
+      ValueChanged<String> onSelected) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        SWidth(width: 50, child: Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: isDark ? Colors.white38 : Colors.grey))),
+        SWidth(
+            width: 50,
+            child: Text(label,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white38 : Colors.grey))),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -279,8 +415,12 @@ class _MenuSection extends StatelessWidget {
                     label: Text(opt),
                     selected: isSelected,
                     selectedColor: Theme.of(context).primaryColor,
-                    backgroundColor: isDark ? const Color(0xFF1E1E2D) : Colors.white,
-                    labelStyle: TextStyle(color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                    backgroundColor:
+                        isDark ? const Color(0xFF1E1E2D) : Colors.white,
+                    labelStyle: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : Colors.black87)),
                     onSelected: (_) => onSelected(opt),
                   ),
                 );
@@ -299,13 +439,25 @@ class _CartSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TomarOrdenProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final textColor = isDark ? Colors.white : Colors.black87;
     final textSubColor = isDark ? Colors.white60 : Colors.grey;
     final cardBg = isDark ? const Color(0xFF1E1E2D) : Colors.white;
     final countBg = isDark ? const Color(0xFF232334) : Colors.grey[200];
+
+    final orderType =
+        context.select<TomarOrdenProvider, OrderType>((p) => p.orderType);
+    final selectedTable =
+        context.select<TomarOrdenProvider, String>((p) => p.selectedTable);
+    final selectedArea =
+        context.select<TomarOrdenProvider, String>((p) => p.selectedArea);
+    final itemsCount =
+        context.select<TomarOrdenProvider, int>((p) => p.itemsCount);
+    final cart =
+        context.select<TomarOrdenProvider, List<CartItem>>((p) => p.cart);
+    final notes = context.select<TomarOrdenProvider, String>((p) => p.notes);
+    final total = context.select<TomarOrdenProvider, double>((p) => p.total);
 
     return Column(
       children: [
@@ -317,32 +469,59 @@ class _CartSection extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(provider.orderType == OrderType.dineIn ? 'Mesa ${provider.selectedTable}' : 'Para Llevar', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
-                  Text(provider.orderType == OrderType.dineIn ? 'Servicio en Mesa' : 'Recoger en Cocina', style: TextStyle(fontSize: 12, color: textSubColor)),
+                  Text(
+                      orderType == OrderType.dineIn
+                          ? 'Mesa $selectedTable'
+                          : 'Para Llevar',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textColor)),
+                  Text(
+                      orderType == OrderType.dineIn
+                          ? 'Servicio en Mesa'
+                          : 'Recoger en Cocina',
+                      style: TextStyle(fontSize: 12, color: textSubColor)),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: countBg, borderRadius: BorderRadius.circular(12)),
-                child: Text('${provider.itemsCount} Items', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textColor)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: countBg, borderRadius: BorderRadius.circular(12)),
+                child: Text('$itemsCount Items',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: textColor)),
               ),
-              if (isMobile) IconButton(icon: Icon(Icons.close, size: 22, color: textColor), onPressed: () => Navigator.pop(context))
+              if (isMobile)
+                IconButton(
+                    icon: Icon(Icons.close, size: 22, color: textColor),
+                    onPressed: () => Navigator.pop(context))
             ],
           ),
         ),
         const Divider(height: 1),
         Expanded(
-          child: provider.cart.isEmpty
-              ? Center(child: Text('Elige productos a la izquierda', style: TextStyle(color: textSubColor)))
+          child: cart.isEmpty
+              ? Center(
+                  child: Text('Elige productos a la izquierda',
+                      style: TextStyle(color: textSubColor)))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
-                  itemCount: provider.cart.length,
+                  itemCount: cart.length,
                   itemBuilder: (context, index) {
-                    final item = provider.cart[index];
+                    final item = cart[index];
                     return Card(
                       elevation: 0,
                       color: cardBg,
-                      shape: RoundedRectangleBorder(side: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey[200]!), borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                              color: isDark
+                                  ? const Color(0xFF2D2D44)
+                                  : Colors.grey[200]!),
+                          borderRadius: BorderRadius.circular(10)),
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: Padding(
                         padding: const EdgeInsets.all(10.0),
@@ -351,8 +530,17 @@ class _CartSection extends StatelessWidget {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(child: Text(item.product.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor), overflow: TextOverflow.ellipsis)),
-                                Text('\$${item.total.toStringAsFixed(2)}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+                                Expanded(
+                                    child: Text(item.product.name,
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: textColor),
+                                        overflow: TextOverflow.ellipsis)),
+                                Text('\$${item.total.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                        color: Theme.of(context).primaryColor,
+                                        fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const SizedBox(height: 6),
@@ -361,12 +549,39 @@ class _CartSection extends StatelessWidget {
                               children: [
                                 Row(
                                   children: [
-                                    IconButton(icon: Icon(Icons.remove_circle_outline, size: 22, color: isDark ? Colors.white60 : Colors.grey), onPressed: () => provider.decrement(item)),
-                                    Text('${item.qty}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor)),
-                                    IconButton(icon: Icon(Icons.add_circle_outline, size: 22, color: isDark ? Colors.white60 : Colors.grey), onPressed: () => provider.increment(item)),
+                                    IconButton(
+                                        icon: Icon(Icons.remove_circle_outline,
+                                            size: 22,
+                                            color: isDark
+                                                ? Colors.white60
+                                                : Colors.grey),
+                                        onPressed: () => context
+                                            .read<TomarOrdenProvider>()
+                                            .decrement(item)),
+                                    Text('${item.qty}',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: textColor)),
+                                    IconButton(
+                                        icon: Icon(Icons.add_circle_outline,
+                                            size: 22,
+                                            color: isDark
+                                                ? Colors.white60
+                                                : Colors.grey),
+                                        onPressed: () => context
+                                            .read<TomarOrdenProvider>()
+                                            .increment(item)),
                                   ],
                                 ),
-                                TextButton(onPressed: () => provider.remove(item), child: const Text('Eliminar', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)))
+                                TextButton(
+                                    onPressed: () => context
+                                        .read<TomarOrdenProvider>()
+                                        .remove(item),
+                                    child: const Text('Eliminar',
+                                        style: TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.w500)))
                               ],
                             )
                           ],
@@ -385,19 +600,36 @@ class _CartSection extends StatelessWidget {
                 style: TextStyle(color: textColor),
                 decoration: InputDecoration(
                   hintText: 'Notas de la orden (ej: sin cebolla)...',
-                  hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.grey[400], fontSize: 13),
-                  enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: isDark ? const Color(0xFF2D2D44) : Colors.grey)),
-                  focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).primaryColor)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  hintStyle: TextStyle(
+                      color: isDark ? Colors.white38 : Colors.grey[400],
+                      fontSize: 13),
+                  enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                          color:
+                              isDark ? const Color(0xFF2D2D44) : Colors.grey)),
+                  focusedBorder: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Theme.of(context).primaryColor)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 ),
-                onChanged: (v) => provider.setNotes(v),
+                onChanged: (v) =>
+                    context.read<TomarOrdenProvider>().setNotes(v),
               ),
               const SizedBox(height: 14),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Total Cuenta:', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: textColor)),
-                  Text('\$${provider.total.toStringAsFixed(2)}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textColor)),
+                  Text('Total Cuenta:',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: textColor)),
+                  Text('\$${total.toStringAsFixed(2)}',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: textColor)),
                 ],
               ),
               const SizedBox(height: 14),
@@ -406,71 +638,87 @@ class _CartSection extends StatelessWidget {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green[600],
-                    disabledBackgroundColor: isDark ? const Color(0xFF232334) : Colors.grey[300],
+                    disabledBackgroundColor:
+                        isDark ? const Color(0xFF232334) : Colors.grey[300],
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                     elevation: 0,
                   ),
-                  onPressed: provider.cart.isEmpty
+                  onPressed: cart.isEmpty
                       ? null
                       : () {
-                          final ordenesProvider = Provider.of<OrdenesProvider>(context, listen: false);
-                          final cajaProvider = Provider.of<CajaProvider>(context, listen: false);
+                          final ordenesProvider = Provider.of<OrdenesProvider>(
+                              context,
+                              listen: false);
+                          final cajaProvider =
+                              Provider.of<CajaProvider>(context, listen: false);
 
-                          final String idComanda = 'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-                          final String horaActual = '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
-                          
-                          final String identificador = provider.orderType == OrderType.dineIn 
-                              ? 'Mesa ${provider.selectedTable} (Área ${provider.selectedArea})'
-                              : 'Para Llevar';
-                          
-                          final String tipoDeServicio = provider.orderType == OrderType.dineIn ? 'comedor' : 'llevar';
+                          final String idComanda =
+                              'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+                          final String horaActual =
+                              '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
 
-                          final cocinaItems = provider.cart.map((c) => OrderItem(
-                            productName: c.product.name,
-                            quantity: c.qty,
-                            total: c.total,
-                          )).toList();
+                          final String identificador =
+                              orderType == OrderType.dineIn
+                                  ? 'Mesa $selectedTable (Área $selectedArea)'
+                                  : 'Para Llevar';
 
-                          final cajaItems = provider.cart.map((c) => CashItem(
-                            name: c.product.name,
-                            qty: c.qty,
-                            price: c.product.price,
-                          )).toList();
+                          final String tipoDeServicio =
+                              orderType == OrderType.dineIn
+                                  ? 'comedor'
+                                  : 'llevar';
 
-                          ordenesProvider.insertarNuevaComanda(
-                            RestaurantOrder(
-                              id: idComanda,
-                              tableOrCustomer: identificador,
-                              time: horaActual,
-                              status: 'pendiente',
-                              serviceType: tipoDeServicio,
-                              items: cocinaItems,
-                              totalAmount: provider.total,
-                              notes: provider.notes.isNotEmpty ? provider.notes : null,
-                            )
-                          );
+                          final cocinaItems = cart
+                              .map((c) => OrderItem(
+                                    productName: c.product.name,
+                                    quantity: c.qty,
+                                    total: c.total,
+                                  ))
+                              .toList();
 
-                          cajaProvider.agregarCuentaPorCobrar(
-                            CashOrder(
-                              id: idComanda,
-                              label: identificador,
-                              time: horaActual,
-                              status: 'Pendiente',
-                              itemsCount: provider.itemsCount,
-                              items: cajaItems,
-                              total: provider.total,
-                            )
-                          );
+                          final cajaItems = cart
+                              .map((c) => CashItem(
+                                    name: c.product.name,
+                                    qty: c.qty,
+                                    price: c.product.price,
+                                  ))
+                              .toList();
 
-                          provider.sendOrder();
+                          ordenesProvider.insertarNuevaComanda(RestaurantOrder(
+                            id: idComanda,
+                            tableOrCustomer: identificador,
+                            time: horaActual,
+                            status: 'pendiente',
+                            serviceType: tipoDeServicio,
+                            items: cocinaItems,
+                            totalAmount: total,
+                            notes: notes.isNotEmpty ? notes : null,
+                          ));
+
+                          cajaProvider.agregarCuentaPorCobrar(CashOrder(
+                            id: idComanda,
+                            label: identificador,
+                            time: horaActual,
+                            status: 'Pendiente',
+                            itemsCount: itemsCount,
+                            items: cajaItems,
+                            total: total,
+                          ));
+
+                          context.read<TomarOrdenProvider>().sendOrder();
                           if (isMobile) Navigator.pop(context);
-                          
+
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Orden $idComanda enviada a cocina y caja'), backgroundColor: Colors.green),
+                            SnackBar(
+                                content: Text(
+                                    'Orden $idComanda enviada a cocina y caja'),
+                                backgroundColor: Colors.green),
                           );
                         },
-                  child: const Text('Confirmar y Enviar Orden', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  child: const Text('Confirmar y Enviar Orden',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 ),
               ),
             ],
