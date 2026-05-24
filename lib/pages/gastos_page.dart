@@ -100,8 +100,9 @@ class _GastosViewState extends State<_GastosView> {
   }
 
   void guardarGasto(GastosProvider provider) {
-    if (_formKey.currentState == null || !_formKey.currentState!.validate())
+    if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
+    }
 
     if (formState.concept.trim().isEmpty ||
         formState.date.trim().isEmpty ||
