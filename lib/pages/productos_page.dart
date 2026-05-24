@@ -4,7 +4,8 @@ import '../providers/productos_provider.dart';
 import '../models/product.dart'; // Importación crucial
 
 class ProductosPage extends StatelessWidget {
-  const ProductosPage({Key? key}) : super(key: key);
+  // CORRECCIÓN: super.key
+  const ProductosPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +17,6 @@ class ProductosPage extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // BARRA DE BÚSQUEDA
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -28,8 +28,6 @@ class ProductosPage extends StatelessWidget {
               onChanged: provider.setSearchTerm,
             ),
           ),
-
-          // CHIPS DE CATEGORÍAS
           SizedBox(
             height: 50,
             child: ListView.builder(
@@ -51,8 +49,6 @@ class ProductosPage extends StatelessWidget {
               },
             ),
           ),
-
-          // LISTA DE PRODUCTOS
           Expanded(
             child: provider.productosFiltrados.isEmpty
                 ? const Center(child: Text('No hay productos para mostrar.'))
@@ -98,17 +94,14 @@ class ProductosPage extends StatelessWidget {
     );
   }
 
-  // DIÁLOGO REUTILIZABLE PARA CREAR O EDITAR
   void _mostrarDialogoFormulario(BuildContext context, Producto? productoExistente) {
     final provider = context.read<ProductosProvider>();
     final isEditing = productoExistente != null;
 
-    // Controladores con valores iniciales si estamos editando
     final nombreCtrl = TextEditingController(text: isEditing ? productoExistente.nombre : '');
     final precioCtrl = TextEditingController(text: isEditing ? productoExistente.precio.toString() : '');
     final stockCtrl = TextEditingController(text: isEditing ? productoExistente.stock.toString() : '');
     
-    // Categoría por defecto (evitamos que sea 'Todas' al crear un producto nuevo)
     String categoriaSeleccionada = isEditing 
         ? productoExistente.categoria 
         : provider.categorias.firstWhere((c) => c != 'Todas');
@@ -150,10 +143,11 @@ class ProductosPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
-                      value: provider.categorias.contains(categoriaSeleccionada) ? categoriaSeleccionada : null,
+                      // CORRECCIÓN: initialValue en lugar de value
+                      initialValue: provider.categorias.contains(categoriaSeleccionada) ? categoriaSeleccionada : null,
                       decoration: const InputDecoration(labelText: 'Categoría'),
                       items: provider.categorias
-                          .where((c) => c != 'Todas') // Ocultar 'Todas' de las opciones de guardado
+                          .where((c) => c != 'Todas')
                           .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
                           .toList(),
                       onChanged: (val) {
@@ -170,9 +164,8 @@ class ProductosPage extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    // 1. Construir el objeto Producto
                     final nuevoProducto = Producto(
-                      id: productoExistente?.id, // Mantenemos el ID si estamos editando
+                      id: productoExistente?.id,
                       nombre: nombreCtrl.text,
                       precio: double.tryParse(precioCtrl.text) ?? 0.0,
                       stock: int.tryParse(stockCtrl.text) ?? 0,
@@ -180,14 +173,11 @@ class ProductosPage extends StatelessWidget {
                       unidad: productoExistente?.unidad ?? 'unidad',
                     );
 
-                    // 2. Decidir si actualizar o crear
                     if (isEditing) {
                       provider.updateProducto(nuevoProducto);
                     } else {
                       provider.addProducto(nuevoProducto);
                     }
-
-                    // 3. Cerrar diálogo
                     Navigator.pop(dialogContext);
                   },
                   child: Text(isEditing ? 'Guardar Cambios' : 'Añadir'),

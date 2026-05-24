@@ -131,7 +131,7 @@ class _GastosViewState extends State<_GastosView> {
   void eliminarGastoConfirmado(GastosProvider provider, Gasto g) {
     UiUtils.showConfirmDialog(
         context, 'Eliminar Gasto', '¿Eliminar gasto ${g.concept}?', () {
-      provider.eliminarGasto(g.id);
+      provider.eliminarGasto(g.id!);
       UiUtils.showToast(context, 'Gasto eliminado', color: Colors.orange);
     });
   }

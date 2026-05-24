@@ -2,10 +2,6 @@ import '../services/supabase_service.dart';
 import '../models/product.dart';
 
 class ProductoRepository {
-  final SupabaseService _supabase;
-
-  ProductoRepository(this._supabase);
-
   // READ: Obtener todos
   Future<List<Producto>> getAll() async {
     final response = await SupabaseService.client

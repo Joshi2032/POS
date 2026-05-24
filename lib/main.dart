@@ -41,25 +41,21 @@ void main() {
         // ==========================================
         // 2. REPOSITORIOS
         // ==========================================
+        Provider(create: (_) => ProductoRepository()),
         Provider(create: (_) => GastoRepository()),
-        ProxyProvider<SupabaseService, GastoRepository>(
-          update: (_, service, __) => GastoRepository(),
-        ),
 
         // ==========================================
-        // 3. PROVIDERS REFACTORIZADOS (Usan Repositorios)
+        // 3. PROVIDERS REFACTORIZADOS
         // ==========================================
-        ChangeNotifierProxyProvider<ProductoRepository, ProductosProvider>(
+        ChangeNotifierProvider(
           create: (context) => ProductosProvider(context.read<ProductoRepository>()),
-          update: (_, repo, __) => ProductosProvider(repo),
         ),
-        ChangeNotifierProxyProvider<GastoRepository, GastosProvider>(
+        ChangeNotifierProvider(
           create: (context) => GastosProvider(context.read<GastoRepository>()),
-          update: (_, repo, __) => GastosProvider(repo),
         ),
 
         // ==========================================
-        // 4. PROVIDERS SIMPLES (Aún por refactorizar)
+        // 4. PROVIDERS SIMPLES
         // ==========================================
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AjustesProvider()),
