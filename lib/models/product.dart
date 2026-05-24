@@ -1,4 +1,6 @@
+// lib/models/producto.dart
 class Producto {
+  final String? id;
   final String nombre;
   final String categoria;
   final double precio;
@@ -6,6 +8,7 @@ class Producto {
   final String unidad;
 
   Producto({
+    this.id,
     required this.nombre,
     required this.categoria,
     required this.precio,
@@ -13,19 +16,24 @@ class Producto {
     required this.unidad,
   });
 
-  Producto copyWith({
-    String? nombre,
-    String? categoria,
-    double? precio,
-    int? stock,
-    String? unidad,
-  }) {
+  factory Producto.fromJson(Map<String, dynamic> json) {
     return Producto(
-      nombre: nombre ?? this.nombre,
-      categoria: categoria ?? this.categoria,
-      precio: precio ?? this.precio,
-      stock: stock ?? this.stock,
-      unidad: unidad ?? this.unidad,
+      id: json['id']?.toString(),
+      nombre: json['nombre'] ?? '',
+      categoria: json['categoria'] ?? '',
+      precio: (json['precio'] as num).toDouble(),
+      stock: (json['stock'] as num).toInt(),
+      unidad: json['unidad'] ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'nombre': nombre,
+      'categoria': categoria,
+      'precio': precio,
+      'stock': stock,
+      'unidad': unidad,
+    };
   }
 }

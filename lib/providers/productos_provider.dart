@@ -1,55 +1,50 @@
+// lib/providers/productos_provider.dart
 import 'package:flutter/material.dart';
-
-class Producto {
-  final String nombre;
-  final String categoria;
-  final double precio;
-  final int stock;
-  final String unidad;
-
-  Producto({
-    required this.nombre,
-    required this.categoria,
-    required this.precio,
-    required this.stock,
-    required this.unidad,
-  });
-}
+import '../repositories/producto_repository.dart';
+import '../models/producto.dart';
 
 class ProductosProvider extends ChangeNotifier {
-  // Datos iniciales mudados desde la UI
-  final List<Producto> _productos = [
-    Producto(nombre: 'Arrachera 300g', categoria: 'Parrilla', precio: 285, stock: 40, unidad: 'plato'),
-    Producto(nombre: 'T-Bone 500g', categoria: 'Parrilla', precio: 450, stock: 15, unidad: 'plato'),
-    Producto(nombre: 'Costillas BBQ', categoria: 'Parrilla', precio: 320, stock: 25, unidad: 'rack'),
-    Producto(nombre: 'Cerveza Artesanal', categoria: 'Bebidas', precio: 85, stock: 100, unidad: 'tarro'),
-  ];
+  final ProductoRepository _repository;
 
-  final List<String> categorias = [
-    'Todas', 'Parrilla', 'Entradas', 'Guarniciones', 'Ensaladas', 'Bebidas', 'Postres'
-  ];
+  ProductosProvider(this._repository) {
+    loadProductos();
+  }
 
+  List<Producto> _productos = [];
   String _searchTerm = '';
-  String _selectedCategory = '';
+  String _selectedCategory = 'Todas';
+  bool _isLoading = false;
 
   // Getters
   List<Producto> get productos => _productos;
+  bool get isLoading => _isLoading;
   String get searchTerm => _searchTerm;
   String get selectedCategory => _selectedCategory;
 
-  // Lógica de filtrado mudada desde la UI
   List<Producto> get productosFiltrados {
     return _productos.where((p) {
       final matchesSearch = p.nombre.toLowerCase().contains(_searchTerm.toLowerCase()) ||
           p.unidad.toLowerCase().contains(_searchTerm.toLowerCase());
-      final matchesCategory = _selectedCategory.isEmpty ||
-          _selectedCategory == 'Todas' ||
+      final matchesCategory = _selectedCategory == 'Todas' ||
           p.categoria.toLowerCase() == _selectedCategory.toLowerCase();
       return matchesSearch && matchesCategory;
     }).toList();
   }
 
   // Acciones
+  Future<void> loadProductos() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _productos = await _repository.fetchProductos();
+    } catch (e) {
+      debugPrint('Error: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   void setSearchTerm(String term) {
     _searchTerm = term;
     notifyListeners();
@@ -60,18 +55,15 @@ class ProductosProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addProducto(Producto producto) {
-    _productos.add(producto);
-    notifyListeners();
+  Future<void> addProducto(Producto producto) async {
+    await _repository.insertProducto(producto);
+    await loadProductos();
   }
 
-  void updateProducto(int index, Producto producto) {
-    _productos[index] = producto;
-    notifyListeners();
-  }
-
-  void removeProducto(Producto producto) {
-    _productos.remove(producto);
-    notifyListeners();
+  Future<void> removeProducto(Producto producto) async {
+    if (producto.id != null) {
+      await _repository.deleteProducto(producto.id!);
+      await loadProductos();
+    }
   }
 }
