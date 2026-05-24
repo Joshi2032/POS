@@ -1,368 +1,202 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/productos_provider.dart';
-import '../widgets/app_widgets.dart';
-import '../widgets/layout_widgets.dart';
+import '../models/product.dart'; // Importación crucial
 
 class ProductosPage extends StatelessWidget {
-  const ProductosPage({super.key});
+  const ProductosPage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return const _ProductosView();
+    final provider = context.watch<ProductosProvider>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Inventario de Productos'),
+      ),
+      body: Column(
+        children: [
+          // BARRA DE BÚSQUEDA
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              decoration: InputDecoration(
+                labelText: 'Buscar producto...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onChanged: provider.setSearchTerm,
+            ),
+          ),
+
+          // CHIPS DE CATEGORÍAS
+          SizedBox(
+            height: 50,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              itemCount: provider.categorias.length,
+              itemBuilder: (context, index) {
+                final cat = provider.categorias[index];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ChoiceChip(
+                    label: Text(cat),
+                    selected: cat == provider.selectedCategory,
+                    onSelected: (selected) {
+                      if (selected) provider.setCategory(cat);
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // LISTA DE PRODUCTOS
+          Expanded(
+            child: provider.productosFiltrados.isEmpty
+                ? const Center(child: Text('No hay productos para mostrar.'))
+                : ListView.builder(
+                    itemCount: provider.productosFiltrados.length,
+                    itemBuilder: (context, index) {
+                      final producto = provider.productosFiltrados[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: ListTile(
+                          title: Text(producto.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('${producto.categoria} | Stock: ${producto.stock} ${producto.unidad}'),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('\$${producto.precio.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16)),
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _mostrarDialogoFormulario(context, producto),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  if (producto.id != null) {
+                                    provider.deleteProducto(producto.id!);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _mostrarDialogoFormulario(context, null),
+        label: const Text('Nuevo Producto'),
+        icon: const Icon(Icons.add),
+      ),
+    );
   }
-}
 
-class _ProductosView extends StatefulWidget {
-  const _ProductosView();
+  // DIÁLOGO REUTILIZABLE PARA CREAR O EDITAR
+  void _mostrarDialogoFormulario(BuildContext context, Producto? productoExistente) {
+    final provider = context.read<ProductosProvider>();
+    final isEditing = productoExistente != null;
 
-  @override
-  State<_ProductosView> createState() => _ProductosViewState();
-}
-
-class _ProductosViewState extends State<_ProductosView> {
-  final _formKey = GlobalKey<FormState>();
-  final _nombreCtrl = TextEditingController();
-  final _precioCtrl = TextEditingController();
-  final _stockCtrl = TextEditingController();
-  String _formCategoria = 'Parrilla';
-  String _formUnidad = 'orden';
-
-  @override
-  void dispose() {
-    _nombreCtrl.dispose();
-    _precioCtrl.dispose();
-    _stockCtrl.dispose();
-    super.dispose();
-  }
-
-  void _abrirFormularioModal(ProductosProvider provider,
-      {Producto? producto, int? index}) {
-    if (producto != null) {
-      _nombreCtrl.text = producto.nombre;
-      _precioCtrl.text = producto.precio.toString();
-      _stockCtrl.text = producto.stock.toString();
-      _formCategoria = producto.categoria;
-      _formUnidad = producto.unidad;
-    } else {
-      _nombreCtrl.clear();
-      _precioCtrl.clear();
-      _stockCtrl.clear();
-      _formCategoria = 'Parrilla';
-      _formUnidad = 'orden';
-    }
+    // Controladores con valores iniciales si estamos editando
+    final nombreCtrl = TextEditingController(text: isEditing ? productoExistente.nombre : '');
+    final precioCtrl = TextEditingController(text: isEditing ? productoExistente.precio.toString() : '');
+    final stockCtrl = TextEditingController(text: isEditing ? productoExistente.stock.toString() : '');
+    
+    // Categoría por defecto (evitamos que sea 'Todas' al crear un producto nuevo)
+    String categoriaSeleccionada = isEditing 
+        ? productoExistente.categoria 
+        : provider.categorias.firstWhere((c) => c != 'Todas');
 
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
+          builder: (context, setState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              title: Text(
-                  producto != null ? 'Editar Producto' : 'Nuevo Producto',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(isEditing ? 'Editar Producto' : 'Añadir Producto'),
               content: SingleChildScrollView(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: _nombreCtrl,
-                        decoration: const InputDecoration(
-                            labelText: 'Nombre', border: OutlineInputBorder()),
-                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        dropdownColor: Theme.of(context).cardColor,
-                        initialValue: _formCategoria,
-                        decoration: const InputDecoration(
-                            labelText: 'Categoría',
-                            border: OutlineInputBorder()),
-                        items: provider.categorias
-                            .where((c) => c != 'Todas')
-                            .map((c) =>
-                                DropdownMenuItem(value: c, child: Text(c)))
-                            .toList(),
-                        onChanged: (v) =>
-                            setModalState(() => _formCategoria = v!),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _precioCtrl,
-                        decoration: const InputDecoration(
-                            labelText: 'Precio',
-                            prefixText: '\$',
-                            border: OutlineInputBorder()),
-                        keyboardType: TextInputType.number,
-                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              dropdownColor: Theme.of(context).cardColor,
-                              initialValue: _formUnidad,
-                              decoration: const InputDecoration(
-                                  labelText: 'Unidad',
-                                  border: OutlineInputBorder()),
-                              items: [
-                                'orden',
-                                'plato',
-                                'pieza',
-                                'botella',
-                                'porción',
-                                'vaso',
-                                'jarra',
-                                'cazuela',
-                                'tarro',
-                                'copa'
-                              ]
-                                  .map((u) => DropdownMenuItem(
-                                      value: u, child: Text(u)))
-                                  .toList(),
-                              onChanged: (v) =>
-                                  setModalState(() => _formUnidad = v!),
-                            ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nombreCtrl,
+                      decoration: const InputDecoration(labelText: 'Nombre del producto'),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: precioCtrl,
+                            decoration: const InputDecoration(labelText: 'Precio (\$)', prefixText: '\$'),
+                            keyboardType: TextInputType.number,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _stockCtrl,
-                              decoration: const InputDecoration(
-                                  labelText: 'Stock',
-                                  border: OutlineInputBorder()),
-                              keyboardType: TextInputType.number,
-                              validator: (v) => v!.isEmpty ? 'Req.' : null,
-                            ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: stockCtrl,
+                            decoration: const InputDecoration(labelText: 'Stock actual'),
+                            keyboardType: TextInputType.number,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: provider.categorias.contains(categoriaSeleccionada) ? categoriaSeleccionada : null,
+                      decoration: const InputDecoration(labelText: 'Categoría'),
+                      items: provider.categorias
+                          .where((c) => c != 'Todas') // Ocultar 'Todas' de las opciones de guardado
+                          .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => categoriaSeleccionada = val);
+                      },
+                    ),
+                  ],
                 ),
               ),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar')),
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancelar'),
+                ),
                 ElevatedButton(
                   onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      final nuevo = Producto(
-                        nombre: _nombreCtrl.text,
-                        categoria: _formCategoria,
-                        precio: double.tryParse(_precioCtrl.text) ?? 0,
-                        stock: int.tryParse(_stockCtrl.text) ?? 0,
-                        unidad: _formUnidad,
-                      );
+                    // 1. Construir el objeto Producto
+                    final nuevoProducto = Producto(
+                      id: productoExistente?.id, // Mantenemos el ID si estamos editando
+                      nombre: nombreCtrl.text,
+                      precio: double.tryParse(precioCtrl.text) ?? 0.0,
+                      stock: int.tryParse(stockCtrl.text) ?? 0,
+                      categoria: categoriaSeleccionada,
+                      unidad: productoExistente?.unidad ?? 'unidad',
+                    );
 
-                      // Usamos el provider en lugar de setState
-                      if (index != null) {
-                        provider.updateProducto(index, nuevo);
-                      } else {
-                        provider.addProducto(nuevo);
-                      }
-                      Navigator.pop(context);
+                    // 2. Decidir si actualizar o crear
+                    if (isEditing) {
+                      provider.updateProducto(nuevoProducto);
+                    } else {
+                      provider.addProducto(nuevoProducto);
                     }
+
+                    // 3. Cerrar diálogo
+                    Navigator.pop(dialogContext);
                   },
-                  child: Text(producto != null ? 'Guardar Cambios' : 'Agregar'),
-                )
+                  child: Text(isEditing ? 'Guardar Cambios' : 'Añadir'),
+                ),
               ],
             );
-          },
+          }
         );
       },
-    );
-  }
-
-  void _solicitarBorrado(ProductosProvider provider, Producto producto) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar producto'),
-        content: Text('Se eliminará "${producto.nombre}". ¿Estás seguro?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () {
-              provider.removeProducto(producto);
-              Navigator.pop(context);
-            },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Conectamos la interfaz al Provider
-    final provider = context.watch<ProductosProvider>();
-    final filtrados = provider.productosFiltrados;
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SectionHeader(
-              title: '🍔 Productos',
-              subtitle:
-                  '${filtrados.length} de ${provider.productos.length} productos registrados',
-              actionLabel: 'Agregar Producto',
-              onAction: () => _abrirFormularioModal(provider),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface),
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.search),
-                      hintText: 'Buscar por nombre o unidad...',
-                    ),
-                    onChanged: provider.setSearchTerm,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 1,
-                  child: DropdownButtonFormField<String>(
-                    dropdownColor: Theme.of(context).cardColor,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 14),
-                    decoration: const InputDecoration(
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    initialValue: provider.selectedCategory.isEmpty
-                        ? 'Todas'
-                        : provider.selectedCategory,
-                    items: provider.categorias
-                        .map((c) => DropdownMenuItem(
-                            value: c,
-                            child: Text(c,
-                                style: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface))))
-                        .toList(),
-                    onChanged: (v) =>
-                        provider.setCategory(v == 'Todas' ? '' : v!),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: filtrados.isEmpty
-                  ? EmptyState(
-                      message:
-                          'No hay productos que coincidan con tu búsqueda.\nIntenta con otros filtros.',
-                      icon: Icons.fastfood_outlined,
-                      actionLabel: 'Limpiar Filtros',
-                      onAction: () {
-                        provider.setSearchTerm('');
-                        provider.setCategory('');
-                      },
-                    )
-                  : GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 320,
-                        childAspectRatio: 1.4,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      itemCount: filtrados.length,
-                      itemBuilder: (context, idx) {
-                        final producto = filtrados[idx];
-                        return AppCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .primaryColor
-                                      .withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(producto.categoria.toUpperCase(),
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).primaryColor)),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(producto.nombre,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              Text(
-                                  'Stock disponible: ${producto.stock} ${producto.unidad}',
-                                  style: Theme.of(context).textTheme.bodySmall),
-                              const Spacer(),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                      '\$${producto.precio.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                          fontSize: 18,
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.w800)),
-                                  Row(
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_outlined,
-                                            size: 20, color: Colors.blueGrey),
-                                        tooltip: 'Editar',
-                                        onPressed: () => _abrirFormularioModal(
-                                            provider,
-                                            producto: producto,
-                                            index: provider.productos
-                                                .indexOf(producto)),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline,
-                                            size: 20, color: Colors.redAccent),
-                                        tooltip: 'Eliminar',
-                                        onPressed: () => _solicitarBorrado(
-                                            provider, producto),
-                                      ),
-                                    ],
-                                  )
-                                ],
-                              )
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

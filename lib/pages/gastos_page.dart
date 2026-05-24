@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/gastos_provider.dart';
 import '../utils/formatters.dart';
 import '../utils/ui_utils.dart';
+import '../models/gasto.dart';
 
 class GastosPage extends StatelessWidget {
   const GastosPage({super.key});
@@ -83,9 +84,9 @@ class _GastosViewState extends State<_GastosView> {
         date: g.date,
         concept: g.concept,
         category: g.category,
-        method: g.method,
+        method: g.method ?? 'Efectivo',
         amount: g.amount,
-        notes: g.notes,
+        notes: g.notes ?? '',
       );
       showModal = true;
     });
@@ -277,7 +278,7 @@ class _GastosViewState extends State<_GastosView> {
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w500))),
                               DataCell(Text(g.category)),
-                              DataCell(Text(g.method)),
+                              DataCell(Text(g.method ?? 'N/A'),),
                               DataCell(Text(Formatters.money(g.amount),
                                   style: const TextStyle(
                                       fontWeight: FontWeight.bold))),

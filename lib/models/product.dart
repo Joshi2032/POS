@@ -1,4 +1,3 @@
-// lib/models/producto.dart
 class Producto {
   final String? id;
   final String nombre;
@@ -19,21 +18,21 @@ class Producto {
   factory Producto.fromJson(Map<String, dynamic> json) {
     return Producto(
       id: json['id']?.toString(),
-      nombre: json['nombre'] ?? '',
-      categoria: json['categoria'] ?? '',
-      precio: (json['precio'] as num).toDouble(),
-      stock: (json['stock'] as num).toInt(),
-      unidad: json['unidad'] ?? '',
+      nombre: json['name'] ?? '',
+      // Extraemos el nombre de la categoría si viene anidado en la respuesta de Supabase
+      categoria: json['categories'] != null ? json['categories']['name'] : 'General',
+      precio: (json['price'] as num?)?.toDouble() ?? 0.0,
+      stock: json['stock'] as int? ?? 0,
+      unidad: json['unit'] ?? 'unidad',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'nombre': nombre,
-      'categoria': categoria,
-      'precio': precio,
+      'name': nombre,
+      'price': precio,
       'stock': stock,
-      'unidad': unidad,
+      'unit': unidad,
     };
   }
 }
