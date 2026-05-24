@@ -1,13 +1,12 @@
-import 'package:flutter/material.dart';
-
 import '../models/restaurant_order.dart';
+import '../repositories/orden_repository.dart';
+import 'base_provider.dart';
 
-class OrdenesProvider extends ChangeNotifier {
+class OrdenesProvider extends BaseProvider {
+  final OrdenRepository _repository;
   final int pageSize = 6;
 
-  final List<RestaurantOrder> _orders =
-      []; // Inicialmente vacía para recibir comandas reales
-
+  List<RestaurantOrder> _orders = [];
   String _searchQuery = '';
   String _selectedFilterStatus = 'Todos';
   String _selectedFilterService = 'Todos';
@@ -16,7 +15,12 @@ class OrdenesProvider extends ChangeNotifier {
   bool _showModal = false;
   RestaurantOrder? _selectedOrderForModal;
 
-  // Getters
+  OrdenesProvider(this._repository) {
+    cargarOrdenes();
+  }
+
+  // --- GETTERS (Exactamente como los necesita tu UI) ---
+  List<RestaurantOrder> get orders => _orders;
   String get searchQuery => _searchQuery;
   String get selectedFilterStatus => _selectedFilterStatus;
   String get selectedFilterService => _selectedFilterService;
@@ -28,16 +32,13 @@ class OrdenesProvider extends ChangeNotifier {
     return _orders.where((order) {
       final matchesSearch =
           order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              order.tableOrCustomer
-                  .toLowerCase()
-                  .contains(_searchQuery.toLowerCase());
+              order.tableOrCustomer.toLowerCase().contains(_searchQuery.toLowerCase());
 
       final matchesStatus = _selectedFilterStatus == 'Todos' ||
           order.status.toLowerCase() == _selectedFilterStatus.toLowerCase();
 
       final matchesService = _selectedFilterService == 'Todos' ||
-          order.serviceType.toLowerCase() ==
-              _selectedFilterService.toLowerCase();
+          order.serviceType.toLowerCase() == _selectedFilterService.toLowerCase();
 
       return matchesSearch && matchesStatus && matchesService;
     }).toList();
@@ -47,77 +48,82 @@ class OrdenesProvider extends ChangeNotifier {
     final list = filteredOrders;
     final start = (_currentPage - 1) * pageSize;
     if (start >= list.length) return [];
-    return list.sublist(start,
-        (start + pageSize) > list.length ? list.length : (start + pageSize));
+    return list.sublist(start, (start + pageSize) > list.length ? list.length : (start + pageSize));
   }
 
-  int get totalPages =>
-      (filteredOrders.length / pageSize).ceil().clamp(1, 999999);
-  int get activeOrdersCount => _orders
-      .where((o) => o.status == 'pendiente' || o.status == 'preparando')
-      .length;
+  int get totalPages => (filteredOrders.length / pageSize).ceil().clamp(1, 999999);
+  int get activeOrdersCount => _orders.where((o) => o.status == 'pendiente' || o.status == 'preparando').length;
   int get readyOrdersCount => _orders.where((o) => o.status == 'lista').length;
 
+  // --- CONTROLES DE INTERFAZ ---
   void onSearchChange(String val) {
     _searchQuery = val;
     _currentPage = 1;
     notifyListeners();
   }
-
   void onStatusFilterChange(String val) {
     _selectedFilterStatus = val;
     _currentPage = 1;
     notifyListeners();
   }
-
   void onServiceFilterChange(String val) {
     _selectedFilterService = val;
     _currentPage = 1;
     notifyListeners();
   }
-
   void goToPage(int page) {
     _currentPage = page;
     notifyListeners();
   }
-
   void abrirDetalleModal(RestaurantOrder order) {
     _selectedOrderForModal = order;
     _showModal = true;
     notifyListeners();
   }
-
   void cerrarModal() {
     _showModal = false;
     _selectedOrderForModal = null;
     notifyListeners();
   }
 
-  // METODO DE INTERCONEXIÓN: Inserta órdenes creadas desde Tomar Orden
-  void insertarNuevaComanda(RestaurantOrder nuevaOrden) {
-    _orders.insert(0, nuevaOrden);
-    notifyListeners();
+  // ==========================================
+  // CONEXIÓN A SUPABASE (Reemplazando listas locales)
+  // ==========================================
+
+  Future<void> cargarOrdenes() async {
+    await ejecutarOperacion(() async {
+      _orders = await _repository.getOrdenesActivas();
+    });
   }
 
-  bool cambiarEstadoOrden(String id, OrderStatus nuevoEstado) {
-    final idx = _orders.indexWhere((o) => o.id == id);
-    if (idx != -1) {
-      _orders[idx] = RestaurantOrder(
-        id: _orders[idx].id,
-        tableOrCustomer: _orders[idx].tableOrCustomer,
-        time: _orders[idx].time,
-        status: nuevoEstado,
-        serviceType: _orders[idx].serviceType,
-        items: _orders[idx].items,
-        totalAmount: _orders[idx].totalAmount,
-        notes: _orders[idx].notes,
-      );
+  // Este es el método que tu tomar_orden_page estaba buscando
+  Future<void> insertarNuevaComanda(RestaurantOrder nuevaOrden) async {
+    await ejecutarOperacion(() async {
+      final itemsMap = nuevaOrden.items.map((i) => {
+        'product_name': i.productName,
+        'quantity': i.quantity,
+        'total': i.total,
+      }).toList();
+
+      await _repository.crearOrden(nuevaOrden, itemsMap);
+      await cargarOrdenes(); // Sincroniza desde la BD al crear
+    });
+  }
+
+  // Actualizado para devolver bool y tener manejo asíncrono
+  Future<bool> cambiarEstadoOrden(String id, OrderStatus nuevoEstado) async {
+    bool exito = false;
+    await ejecutarOperacion(() async {
+      await _repository.actualizarEstado(id, nuevoEstado);
+      await cargarOrdenes();
+      
+      // Actualiza el modal en vivo si está abierto
       if (_selectedOrderForModal?.id == id) {
-        _selectedOrderForModal = _orders[idx];
+        final idx = _orders.indexWhere((o) => o.id == id);
+        if (idx != -1) _selectedOrderForModal = _orders[idx];
       }
-      notifyListeners();
-      return true;
-    }
-    return false;
+      exito = true;
+    });
+    return exito;
   }
 }

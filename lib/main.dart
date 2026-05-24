@@ -3,12 +3,13 @@ import 'package:provider/provider.dart';
 
 import 'app.dart';
 
-// --- Importaciones de Servicios y Repositorios ---
+// --- Servicios y Repositorios ---
 import 'services/supabase_service.dart';
 import 'repositories/producto_repository.dart';
 import 'repositories/gasto_repository.dart';
+import 'repositories/orden_repository.dart'; // Nuevo repositorio inyectado
 
-// --- Importaciones de Providers ---
+// --- Providers ---
 import 'providers/ajustes_provider.dart';
 import 'providers/caja_provider.dart';
 import 'providers/combos_provider.dart';
@@ -39,13 +40,14 @@ void main() {
         Provider(create: (_) => SupabaseService()),
 
         // ==========================================
-        // 2. REPOSITORIOS
+        // 2. REPOSITORIOS (Capa de Datos Estática)
         // ==========================================
         Provider(create: (_) => ProductoRepository()),
         Provider(create: (_) => GastoRepository()),
+        Provider(create: (_) => OrdenRepository()),
 
         // ==========================================
-        // 3. PROVIDERS REFACTORIZADOS
+        // 3. PROVIDERS REFACTORIZADOS (Conexión a BD)
         // ==========================================
         ChangeNotifierProvider(
           create: (context) => ProductosProvider(context.read<ProductoRepository>()),
@@ -53,9 +55,12 @@ void main() {
         ChangeNotifierProvider(
           create: (context) => GastosProvider(context.read<GastoRepository>()),
         ),
+        ChangeNotifierProvider(
+          create: (context) => OrdenesProvider(context.read<OrdenRepository>()),
+        ),
 
         // ==========================================
-        // 4. PROVIDERS SIMPLES
+        // 4. PROVIDERS SIMPLES (Estado Local)
         // ==========================================
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AjustesProvider()),
@@ -66,7 +71,6 @@ void main() {
         ChangeNotifierProvider(create: (_) => HistorialCortesProvider()),
         ChangeNotifierProvider(create: (_) => MesasProvider()),
         ChangeNotifierProvider(create: (_) => NominasProvider()),
-        ChangeNotifierProvider(create: (_) => OrdenesProvider()),
         ChangeNotifierProvider(create: (_) => ProveedoresProvider()),
         ChangeNotifierProvider(create: (_) => ReportesProvider()),
         ChangeNotifierProvider(create: (_) => ReservacionesProvider()),

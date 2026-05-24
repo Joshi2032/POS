@@ -456,13 +456,12 @@ class _OrdenesView extends StatelessWidget {
                                 icon: const Icon(Icons.soup_kitchen),
                                 label: const Text('Cocinar'),
                                 onPressed: () {
-                                  if (provider.cambiarEstadoOrden(
+                                  provider.cambiarEstadoOrden(
                                       provider.selectedOrderForModal!.id,
-                                      'preparando')) {
-                                    UiUtils.showToast(
-                                        context, 'Orden movida a cocina',
-                                        color: Colors.blue);
-                                  }
+                                      'preparando');
+                                  UiUtils.showToast(
+                                      context, 'Orden movida a cocina',
+                                      color: Colors.blue);
                                 },
                               ),
                             if (provider.selectedOrderForModal!.status ==
@@ -474,13 +473,12 @@ class _OrdenesView extends StatelessWidget {
                                 icon: const Icon(Icons.check),
                                 label: const Text('Listo'),
                                 onPressed: () {
-                                  if (provider.cambiarEstadoOrden(
+                                  provider.cambiarEstadoOrden(
                                       provider.selectedOrderForModal!.id,
-                                      'lista')) {
-                                    UiUtils.showToast(
-                                        context, 'Orden marcada como lista',
-                                        color: Colors.green);
-                                  }
+                                      'lista');
+                                  UiUtils.showToast(
+                                      context, 'Orden marcada como lista',
+                                      color: Colors.green);
                                 },
                               ),
                             if (provider.selectedOrderForModal!.status ==
@@ -492,13 +490,12 @@ class _OrdenesView extends StatelessWidget {
                                 icon: const Icon(Icons.delivery_dining),
                                 label: const Text('Entregar'),
                                 onPressed: () {
-                                  if (provider.cambiarEstadoOrden(
+                                  provider.cambiarEstadoOrden(
                                       provider.selectedOrderForModal!.id,
-                                      'entregada')) {
-                                    UiUtils.showToast(
-                                        context, 'Orden despachada',
-                                        color: Colors.grey);
-                                  }
+                                      'entregada');
+                                  UiUtils.showToast(
+                                      context, 'Orden despachada',
+                                      color: Colors.grey);
                                 },
                               ),
                             if (provider.selectedOrderForModal!.status !=
@@ -512,13 +509,12 @@ class _OrdenesView extends StatelessWidget {
                                 icon: const Icon(Icons.cancel_outlined),
                                 label: const Text('Cancelar Orden'),
                                 onPressed: () {
-                                  if (provider.cambiarEstadoOrden(
+                                  provider.cambiarEstadoOrden(
                                       provider.selectedOrderForModal!.id,
-                                      'cancelada')) {
-                                    UiUtils.showToast(
-                                        context, 'Orden cancelada',
-                                        color: Colors.red);
-                                  }
+                                      'cancelada');
+                                  UiUtils.showToast(
+                                      context, 'Orden cancelada',
+                                      color: Colors.red);
                                 },
                               ),
                           ],

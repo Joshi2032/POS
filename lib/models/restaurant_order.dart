@@ -25,29 +25,41 @@ class RestaurantOrder {
   });
 
   factory RestaurantOrder.fromJson(Map<String, dynamic> json) {
-    return RestaurantOrder(
-      id: json['id'] as String,
-      tableOrCustomer: json['tableOrCustomer'] as String,
-      time: json['time'] as String,
-      status: json['status'] as String,
-      serviceType: json['serviceType'] as String,
-      items: (json['items'] as List<dynamic>)
+    // Extraemos los items si la consulta de Supabase trae los order_items anidados
+    List<OrderItem> parsedItems = [];
+    if (json['order_items'] != null) {
+      parsedItems = (json['order_items'] as List<dynamic>).map((i) => OrderItem(
+        productName: i['product_name'] ?? '',
+        quantity: i['quantity'] ?? 1,
+        total: (i['total'] as num?)?.toDouble() ?? 0.0,
+      )).toList();
+    } else if (json['items'] != null) {
+      parsedItems = (json['items'] as List<dynamic>)
           .map((item) => OrderItem.fromJson(item as Map<String, dynamic>))
-          .toList(),
-      totalAmount: (json['totalAmount'] as num).toDouble(),
-      notes: json['notes'] as String?,
+          .toList();
+    }
+
+    return RestaurantOrder(
+      id: json['id']?.toString() ?? '',
+      // Si viene de Supabase usa table_number, si es local usa tableOrCustomer
+      tableOrCustomer: json['table_number']?.toString() ?? json['tableOrCustomer']?.toString() ?? 'Sin mesa',
+      time: json['time']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'pendiente',
+      serviceType: json['service_type']?.toString() ?? json['serviceType']?.toString() ?? 'comedor',
+      items: parsedItems,
+      totalAmount: (json['total'] as num?)?.toDouble() ?? (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
+      notes: json['notes']?.toString(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'tableOrCustomer': tableOrCustomer,
+      'table_number': tableOrCustomer, // Mapeado hacia la columna de Supabase
       'time': time,
       'status': status,
-      'serviceType': serviceType,
-      'items': items.map((item) => item.toJson()).toList(),
-      'totalAmount': totalAmount,
+      'service_type': serviceType,
+      'total': totalAmount,
       'notes': notes,
     };
   }
