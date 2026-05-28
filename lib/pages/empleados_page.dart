@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/empleado.dart';
 import '../providers/empleados_provider.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/layout_widgets.dart';
@@ -24,7 +25,7 @@ class _EmpleadosView extends StatefulWidget {
 class _EmpleadosViewState extends State<_EmpleadosView> {
   final _formKey = GlobalKey<FormState>();
   final _nombreCtrl = TextEditingController();
-  final _telefonoCtrl = TextEditingController();
+  final _correoCtrl = TextEditingController();
   String _formRol = 'Mesero';
   bool _formActivo = true;
 
@@ -35,16 +36,15 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
     super.dispose();
   }
 
-  void _abrirFormularioModal(EmpleadosProvider provider,
-      {Empleado? empleado, int? index}) {
+  void _abrirFormularioModal(EmpleadosProvider provider, {Empleado? empleado}) {
     if (empleado != null) {
       _nombreCtrl.text = empleado.nombre;
-      _telefonoCtrl.text = empleado.telefono;
+      _correoCtrl.text = empleado.correo;
       _formRol = empleado.rol;
       _formActivo = empleado.activo;
     } else {
       _nombreCtrl.clear();
-      _telefonoCtrl.clear();
+      _correoCtrl.clear();
       _formRol = 'Mesero';
       _formActivo = true;
     }
@@ -89,11 +89,11 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
-                        controller: _telefonoCtrl,
+                        controller: _correoCtrl,
                         decoration: const InputDecoration(
-                            labelText: 'Teléfono',
+                            labelText: 'Correo electrónico',
                             border: OutlineInputBorder()),
-                        keyboardType: TextInputType.phone,
+                        keyboardType: TextInputType.emailAddress,
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
                       const SizedBox(height: 12),
@@ -188,7 +188,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                     items: provider.roles
                         .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                         .toList(),
-                    onChanged: (v) => provider.setRol(v!),
+                    onChanged: (v) => provider.setSelectedRol(v!),
                   ),
                 ),
               ],
@@ -269,7 +269,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                                       .titleMedium
                                       ?.copyWith(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
-                              Text('Tel: ${emp.telefono}',
+                              Text('Email: ${emp.correo}',
                                   style: Theme.of(context).textTheme.bodySmall),
                               const Spacer(),
                               Row(
@@ -280,8 +280,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                                         size: 20, color: Colors.blueGrey),
                                     onPressed: () => _abrirFormularioModal(
                                         provider,
-                                        empleado: emp,
-                                        index: provider.empleados.indexOf(emp)),
+                                        empleado: emp),
                                   ),
                                 ],
                               )

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../models/nomina_pago.dart';
 import '../providers/nominas_provider.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/layout_widgets.dart';
@@ -24,20 +25,20 @@ class _NominasView extends StatefulWidget {
 class _NominasViewState extends State<_NominasView> {
   final _money = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
 
-  void _openEditor(NominasProvider provider, {Map<String, dynamic>? nomina}) {
+  void _openEditor(NominasProvider provider, {NominaPago? nomina}) {
     final idController = TextEditingController(
-        text: nomina?['id'] ?? 'NOM-${DateTime.now().millisecondsSinceEpoch}');
+        text: nomina?.id ?? 'NOM-${DateTime.now().millisecondsSinceEpoch}');
     final fechaController = TextEditingController(
-        text: nomina?['fecha'] ??
-            DateTime.now().toIso8601String().split('T').first);
+        text:
+            nomina?.fecha ?? DateTime.now().toIso8601String().split('T').first);
     final empleadoController =
-        TextEditingController(text: nomina?['empleado'] ?? '');
+        TextEditingController(text: nomina?.empleado ?? '');
     final montoController =
-        TextEditingController(text: nomina?['monto']?.toString() ?? '0');
-    final notasController = TextEditingController(text: nomina?['notas'] ?? '');
-    String tipo = nomina?['tipo'] ?? 'Salario';
-    String periodo = nomina?['periodo'] ?? 'Quincenal';
-    String metodo = nomina?['metodo'] ?? 'Transferencia';
+        TextEditingController(text: nomina?.monto.toString() ?? '0');
+    final notasController = TextEditingController(text: nomina?.notas ?? '');
+    String tipo = nomina?.tipo ?? 'Salario';
+    String periodo = nomina?.periodo ?? 'Quincenal';
+    String metodo = nomina?.metodo ?? 'Transferencia';
 
     showDialog(
       context: context,
@@ -270,20 +271,20 @@ class _NominasViewState extends State<_NominasView> {
                             return ListTile(
                               contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 4),
-                              title: Text(nomina['empleado'] ?? '',
+                              title: Text(nomina.empleado,
                                   style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: primaryTextColor)),
                               subtitle: Padding(
                                 padding: const EdgeInsets.only(top: 4.0),
                                 child: Text(
-                                    '${nomina['tipo']} · ${nomina['periodo']} · ${nomina['fecha']}',
+                                    '${nomina.tipo} · ${nomina.periodo} · ${nomina.fecha}',
                                     style: TextStyle(color: mutedTextColor)),
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(_money.format(nomina['monto'] ?? 0.0),
+                                  Text(_money.format(nomina.monto),
                                       style: const TextStyle(
                                           fontWeight: FontWeight.w900,
                                           fontSize: 16,
@@ -301,7 +302,7 @@ class _NominasViewState extends State<_NominasView> {
                                         color: Colors.redAccent, size: 20),
                                     tooltip: 'Eliminar',
                                     onPressed: () =>
-                                        provider.removeNomina(nomina['id']),
+                                        provider.eliminarNomina(nomina.id),
                                   ),
                                 ],
                               ),

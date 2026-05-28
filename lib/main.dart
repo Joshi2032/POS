@@ -8,11 +8,17 @@ import 'services/supabase_service.dart';
 import 'repositories/producto_repository.dart';
 import 'repositories/gasto_repository.dart';
 import 'repositories/orden_repository.dart';
-import 'repositories/caja_repository.dart'; // Repositorio de caja integrado
+import 'repositories/caja_repository.dart';
 import 'repositories/reservacion_repository.dart';
 import 'repositories/mesa_repository.dart';
-import 'repositories/inventario_repository.dart'; // Repositorio de inventario integrado
-import 'repositories/payment_repository.dart'; // Repositorio de pagos integrado
+import 'repositories/inventario_repository.dart';
+import 'repositories/payment_repository.dart';
+import 'repositories/combo_repository.dart';
+import 'repositories/movimiento_caja_repository.dart';
+import 'repositories/corte_caja_repository.dart';
+import 'repositories/empleado_repository.dart';
+import 'repositories/nomina_pago_repository.dart';
+import 'repositories/recipe_repository.dart';
 
 // --- Providers ---
 import 'providers/ajustes_provider.dart';
@@ -32,6 +38,8 @@ import 'providers/reservaciones_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/tomar_orden_provider.dart';
 import 'providers/inventario_provider.dart';
+import 'providers/movimiento_caja_provider.dart';
+import 'providers/recipe_provider.dart';
 
 Future<void> main() async {
   // Asegura que los canales de la plataforma nativa estén listos antes de inicializar servicios externos
@@ -40,8 +48,10 @@ Future<void> main() async {
   // Inicialización asíncrona de Supabase antes del arranque de la UI
   // Coloca aquí tu URL y Anon Key reales correspondientes a tu proyecto de Supabase
   await SupabaseService.init(
-    url: 'https://cavapauhxtotjtlousch.supabase.co', // Reemplaza si es necesario
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdmFwYXVoeHRvdGp0bG91c2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODkxMTMsImV4cCI6MjA4Njc2NTExM30.32eAT6dH05FAy86vhXMsRZD0jwdeGoQjYUnpmdvvQCA', // REEMPLAZA CON TU CLAVE REAL
+    url:
+        'https://cavapauhxtotjtlousch.supabase.co', // Reemplaza si es necesario
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdmFwYXVoeHRvdGp0bG91c2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODkxMTMsImV4cCI6MjA4Njc2NTExM30.32eAT6dH05FAy86vhXMsRZD0jwdeGoQjYUnpmdvvQCA', // REEMPLAZA CON TU CLAVE REAL
   );
 
   runApp(
@@ -63,6 +73,12 @@ Future<void> main() async {
         Provider(create: (_) => MesaRepository()),
         Provider(create: (_) => InventarioRepository()),
         Provider(create: (_) => PaymentRepository()),
+        Provider(create: (_) => ComboRepository()),
+        Provider(create: (_) => MovimientoCajaRepository()),
+        Provider(create: (_) => CorteCajaRepository()),
+        Provider(create: (_) => EmpleadoRepository()),
+        Provider(create: (_) => NominaPagoRepository()),
+        Provider(create: (_) => RecipeRepository()),
         // ==========================================
         // 3. PROVIDERS REFACTORIZADOS (Conexión a BD)
         // ==========================================
@@ -92,17 +108,35 @@ Future<void> main() async {
           create: (context) =>
               PaymentsProvider(context.read<PaymentRepository>()),
         ),
+        ChangeNotifierProvider(
+          create: (context) => CombosProvider(context.read<ComboRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              MovimientoCajaProvider(context.read<MovimientoCajaRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              HistorialCortesProvider(context.read<CorteCajaRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              EmpleadosProvider(context.read<EmpleadoRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              NominasProvider(context.read<NominaPagoRepository>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => RecipeProvider(context.read<RecipeRepository>()),
+        ),
 
         // ==========================================
         // 4. PROVIDERS SIMPLES (Estado Local)
         // ==========================================
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AjustesProvider()),
-        ChangeNotifierProvider(create: (_) => CombosProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
-        ChangeNotifierProvider(create: (_) => EmpleadosProvider()),
-        ChangeNotifierProvider(create: (_) => HistorialCortesProvider()),
-        ChangeNotifierProvider(create: (_) => NominasProvider()),
         ChangeNotifierProvider(create: (_) => ReportesProvider()),
         ChangeNotifierProvider(create: (_) => TomarOrdenProvider()),
       ],
