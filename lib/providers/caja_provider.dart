@@ -1,34 +1,21 @@
 import 'package:flutter/material.dart';
-
-class CashItem {
-  final String name;
-  final int qty;
-  final double price;
-  CashItem({required this.name, required this.qty, required this.price});
-}
-
-class CashOrder {
-  final String id;
-  final String label;
-  final String time;
-  final String status;
-  final int itemsCount;
-  final List<CashItem> items;
-  final double total;
-
-  CashOrder({
-    required this.id, required this.label, required this.time, 
-    required this.status, required this.itemsCount, required this.items, required this.total,
-  });
-}
+import '../ui_models/cash_order.dart';
+import '../repositories/caja_repository.dart';
 
 class CajaProvider extends ChangeNotifier {
+  final CajaRepository _repository;
+
+  // Constructor que recibe el repositorio e inicializa los datos
+  CajaProvider(this._repository) {
+    _inicializarDatos();
+  }
+
   final List<String> paymentMethods = ['Efectivo', 'Tarjeta', 'Transferencia'];
   final TextEditingAmountController receivedAmountController = TextEditingAmountController();
 
   final List<CashOrder> _pendingOrders = []; // Vacía para recibir datos vivos de Tomar Orden
   final List<CashOrder> _paidToday = [];
-  double _totalInCash = 15420.00;
+  double _totalInCash = 0.0; // Se inicializa en 0 y se llena desde el repositorio
 
   String? _selectedOrderId;
   CashOrder? _selectedOrder;
@@ -50,6 +37,12 @@ class CajaProvider extends ChangeNotifier {
   double get changeDue {
     if (_selectedOrder == null || _receivedAmount < _selectedOrder!.total) return 0.0;
     return _receivedAmount - _selectedOrder!.total;
+  }
+
+  // Método para cargar los datos asíncronos desde Supabase/Repositorio
+  Future<void> _inicializarDatos() async {
+    _totalInCash = await _repository.obtenerTotalEnCaja();
+    notifyListeners();
   }
 
   void selectOrder(CashOrder order) {
@@ -74,7 +67,11 @@ class CajaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setPaymentMethod(String m) { _selectedMethod = m; _cashError = ''; notifyListeners(); }
+  void setPaymentMethod(String m) { 
+    _selectedMethod = m; 
+    _cashError = ''; 
+    notifyListeners(); 
+  }
   
   void setReceivedAmount(String val) {
     _receivedAmount = double.tryParse(val) ?? 0.0;
@@ -89,6 +86,9 @@ class CajaProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+
+    // Guardamos el cobro en la base de datos a través del repositorio
+    _repository.registrarCobro(_selectedOrder!.total, _selectedMethod);
 
     _totalInCash += _selectedOrder!.total;
     _paidToday.insert(0, _selectedOrder!);

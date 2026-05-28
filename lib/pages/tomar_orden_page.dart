@@ -11,6 +11,8 @@ import '../models/order_item.dart';
 import '../models/restaurant_order.dart';
 import '../models/product_item.dart';
 import '../models/cart_item.dart';
+import '../ui_models/cash_item.dart';
+import '../ui_models/cash_order.dart';
 
 // ==========================================================================
 // INTERFAZ DE USUARIO ADAPTATIVA (Tu diseño original intacto al 100%)

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // Importación corregida para evitar el conflicto con Provider:
 import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
+import 'package:zapata_flutter/repositories/caja_repository.dart';
 
 import 'app.dart';
 
@@ -54,6 +55,7 @@ Future<void> main() async {
         Provider(create: (_) => ProductoRepository()),
         Provider(create: (_) => GastoRepository()),
         Provider(create: (_) => OrdenRepository()),
+        Provider(create: (_) => CajaRepository()),
 
         // ==========================================
         // 3. PROVIDERS CONECTADOS A REPOSITORIOS
@@ -67,13 +69,16 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (context) => OrdenesProvider(context.read<OrdenRepository>()),
         ),
+        ChangeNotifierProvider(
+          create: (context) => CajaProvider(context.read<CajaRepository>()), 
+        ),
 
         // ==========================================
         // 4. PROVIDERS DE ESTADO LOCAL
         // ==========================================
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AjustesProvider()),
-        ChangeNotifierProvider(create: (_) => CajaProvider()),
+        //ChangeNotifierProvider(create: (_) => CajaProvider()),
         ChangeNotifierProvider(create: (_) => CombosProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => EmpleadosProvider()),

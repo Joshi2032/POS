@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/caja_provider.dart';
 import '../utils/formatters.dart';
 import '../utils/ui_utils.dart';
+import '../ui_models/cash_order.dart';
 
 class CajaPage extends StatelessWidget {
   const CajaPage({super.key});
