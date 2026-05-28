@@ -242,7 +242,6 @@ class _DashboardView extends StatelessWidget {
                             change: 'En cocina',
                             icon: Icons.restaurant,
                             isPositive: true),
-                        // CORREGIDO: Título e importe mutan dinámicamente según el Dropdown activo (Semanal/Mensual/Anual)
                         _buildMetricCard(context,
                             title: 'Ingreso ${provider.labelFiltro}',
                             value: '\$${provider.ingresoFiltroTotal.toStringAsFixed(2)}',
@@ -381,26 +380,7 @@ class _DashboardView extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 32),
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Rendimiento de Productos',
-                          style: Theme.of(context).textTheme.titleMedium),
-                      const Divider(),
-                      _buildThemeTable(context, [
-                        'Producto',
-                        'Categoría',
-                        'Unidades Vendidas',
-                        'Monto Total'
-                      ], [
-                        ['Arrachera 300g', 'Parrilla', '142', '\$40,470.00'],
-                        ['Cerveza Artesanal', 'Bebidas', '320', '\$27,200.00'],
-                        ['T-Bone 500g', 'Parrilla', '45', '\$20,250.00']
-                      ]),
-                    ],
-                  ),
-                ),
+                _buildPremiumProductTable(context, provider),
               ],
             ),
           );
@@ -473,24 +453,77 @@ class _DashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeTable(
-      BuildContext context, List<String> columns, List<List<String>> rows) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        headingTextStyle: TextStyle(
-            fontWeight: FontWeight.bold,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-        columns: columns.map((c) => DataColumn(label: Text(c))).toList(),
-        rows: rows
-            .map((row) => DataRow(
-                cells: row
-                    .map((cell) => DataCell(Text(cell,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface))))
-                    .toList()))
-            .toList(),
+  Widget _buildPremiumProductTable(BuildContext context, DashboardProvider provider) {
+    final theme = Theme.of(context);
+    final textStyleHeader = TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface);
+    
+    return AppCard(
+      padding: EdgeInsets.zero, 
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Rendimiento de Productos', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('Datos correspondientes a: ${provider.labelFiltro.toLowerCase()}', 
+                      style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                  ],
+                ),
+                Icon(Icons.assessment_outlined, color: theme.primaryColor.withValues(alpha: 0.7)),
+              ],
+            ),
+          ),
+          ClipRRect(
+            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12)),
+            // CORREGIDO DEFINITIVO: Removido el contenedor con la propiedad 'overflow' oculta que causaba el error de compilación.
+            // En su lugar, el SingleChildScrollView maneja el desbordamiento de forma nativa.
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                horizontalMargin: 20,
+                columnSpacing: 40,
+                headingRowColor: WidgetStateProperty.all(theme.primaryColor.withValues(alpha: 0.06)),
+                dataRowMinHeight: 48,
+                dataRowMaxHeight: 52,
+                columns: [
+                  DataColumn(label: Text('Producto', style: textStyleHeader)),
+                  DataColumn(label: Text('Categoría', style: textStyleHeader)),
+                  DataColumn(label: Center(child: Text('Unidades Vendidas', style: textStyleHeader))),
+                  DataColumn(label: Container(alignment: Alignment.centerRight, child: Text('Monto Total', style: textStyleHeader)), numeric: true),
+                ],
+                rows: provider.currentProductos.asMap().entries.map((entry) {
+                  final int index = entry.key;
+                  final prod = entry.value;
+                  final rowColor = index % 2 == 0 ? Colors.transparent : theme.primaryColor.withValues(alpha: 0.02);
+                  
+                  return DataRow(
+                    color: WidgetStateProperty.all(rowColor),
+                    cells: [
+                      DataCell(Text(prod.nombre, style: const TextStyle(fontWeight: FontWeight.w600))),
+                      DataCell(Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(prod.categoria, style: TextStyle(fontSize: 11, color: theme.primaryColor, fontWeight: FontWeight.bold)),
+                      )),
+                      DataCell(Center(child: Text('${prod.unidadesVendidas}', style: const TextStyle(fontWeight: FontWeight.w500)))),
+                      DataCell(Text('\$${prod.montoTotal.toStringAsFixed(2)}', style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold))),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
