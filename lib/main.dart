@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+// Importación corregida para evitar el conflicto con Provider:
+import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
 
 import 'app.dart';
 
@@ -7,7 +9,7 @@ import 'app.dart';
 import 'services/supabase_service.dart';
 import 'repositories/producto_repository.dart';
 import 'repositories/gasto_repository.dart';
-import 'repositories/orden_repository.dart'; // Nuevo repositorio inyectado
+import 'repositories/orden_repository.dart';
 
 // --- Providers ---
 import 'providers/ajustes_provider.dart';
@@ -28,8 +30,15 @@ import 'providers/theme_provider.dart';
 import 'providers/tomar_orden_provider.dart';
 import 'providers/inventario_provider.dart';
 
-void main() {
+Future<void> main() async {
+  // 1. Asegurar que los widgets y el motor de Flutter estén listos
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. Inicialización de Supabase antes de arrancar la App
+  await Supabase.initialize(
+    url: 'https://cavapauhxtotjtlousch.supabase.co', // Reemplaza si es necesario
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdmFwYXVoeHRvdGp0bG91c2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODkxMTMsImV4cCI6MjA4Njc2NTExM30.32eAT6dH05FAy86vhXMsRZD0jwdeGoQjYUnpmdvvQCA', // REEMPLAZA CON TU CLAVE REAL
+  );
 
   runApp(
     MultiProvider(
@@ -40,14 +49,14 @@ void main() {
         Provider(create: (_) => SupabaseService()),
 
         // ==========================================
-        // 2. REPOSITORIOS (Capa de Datos Estática)
+        // 2. REPOSITORIOS (Capa de Datos)
         // ==========================================
         Provider(create: (_) => ProductoRepository()),
         Provider(create: (_) => GastoRepository()),
         Provider(create: (_) => OrdenRepository()),
 
         // ==========================================
-        // 3. PROVIDERS REFACTORIZADOS (Conexión a BD)
+        // 3. PROVIDERS CONECTADOS A REPOSITORIOS
         // ==========================================
         ChangeNotifierProvider(
           create: (context) => ProductosProvider(context.read<ProductoRepository>()),
@@ -60,7 +69,7 @@ void main() {
         ),
 
         // ==========================================
-        // 4. PROVIDERS SIMPLES (Estado Local)
+        // 4. PROVIDERS DE ESTADO LOCAL
         // ==========================================
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AjustesProvider()),
