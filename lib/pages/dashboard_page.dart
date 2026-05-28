@@ -32,13 +32,11 @@ class _DashboardView extends StatelessWidget {
         fontSize: 11,
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6));
 
-    // CORREGIDO: Determinamos el límite estricto de puntos en el eje horizontal
     final double maxTicks = provider.currentLabels.isNotEmpty 
         ? (provider.currentLabels.length - 1).toDouble() 
         : 0.0;
 
     return LineChartData(
-      // CORREGIDO: Forzamos el mapeo uno a uno de los índices del arreglo actual
       minX: 0,
       maxX: maxTicks,
       gridData: FlGridData(
@@ -58,11 +56,9 @@ class _DashboardView extends StatelessWidget {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 30,
-            // CORREGIDO: 'interval: 1' detiene la duplicación y encimamiento de textos del eje horizontal
             interval: 1,
             getTitlesWidget: (value, meta) {
               final int index = value.toInt();
-              // Desplegamos el texto sólo si el índice cae estrictamente en el tamaño de la lista calculada
               if (index >= 0 && index < provider.currentLabels.length) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
@@ -246,15 +242,16 @@ class _DashboardView extends StatelessWidget {
                             change: 'En cocina',
                             icon: Icons.restaurant,
                             isPositive: true),
+                        // CORREGIDO: Título e importe mutan dinámicamente según el Dropdown activo (Semanal/Mensual/Anual)
                         _buildMetricCard(context,
-                            title: 'Ingreso Semanal',
-                            value: '\$${provider.ingresoSemanalTotal.toStringAsFixed(2)}',
+                            title: 'Ingreso ${provider.labelFiltro}',
+                            value: '\$${provider.ingresoFiltroTotal.toStringAsFixed(2)}',
                             change: '+8.2%',
                             icon: Icons.trending_up,
                             isPositive: true),
                         _buildMetricCard(context,
-                            title: 'Utilidad Semanal',
-                            value: '\$${provider.utilidadSemanalTotal.toStringAsFixed(2)}',
+                            title: 'Utilidad ${provider.labelFiltro}',
+                            value: '\$${provider.utilidadFiltroTotal.toStringAsFixed(2)}',
                             change: '+15.3%',
                             icon: Icons.account_balance_wallet,
                             isPositive: true),

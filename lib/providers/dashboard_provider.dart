@@ -26,11 +26,11 @@ class DashboardProvider extends ChangeNotifier {
   List<dynamic> _allExpenses = [];
   List<ProviderPayment> _allSupplierPayments = [];
 
-  // Variables para las tarjetas de métricas superiores
+  // Variables dinámicas para las tarjetas superiores
   double _ventasHoy = 0.0;
   int _ordenesActivas = 0;
-  double _ingresoSemanalTotal = 0.0;
-  double _utilidadSemanalTotal = 0.0;
+  double _ingresoFiltroTotal = 0.0;
+  double _utilidadFiltroTotal = 0.0;
 
   // Listas estructuradas que alimentan las gráficas
   List<String> _currentLabels = [];
@@ -38,11 +38,11 @@ class DashboardProvider extends ChangeNotifier {
   List<double> _currentGastos = [];
   List<double> _currentUtilidad = [];
 
-  // --- GETTERS PARA LOS RECUADROS SUPERIORES ---
+  // --- GETTERS PARA LOS RECUADROS SUPERIORES (DINÁMICOS) ---
   double get ventasHoy => _ventasHoy;
   int get ordenesActivas => _ordenesActivas;
-  double get ingresoSemanalTotal => _ingresoSemanalTotal;
-  double get utilidadSemanalTotal => _utilidadSemanalTotal;
+  double get ingresoFiltroTotal => _ingresoFiltroTotal;
+  double get utilidadFiltroTotal => _utilidadFiltroTotal;
 
   // --- GETTERS GENERALES Y DE GRÁFICAS ---
   bool get isLoading => _isLoading;
@@ -54,15 +54,18 @@ class DashboardProvider extends ChangeNotifier {
   List<double> get currentGastos => _currentGastos;
   List<double> get currentUtilidad => _currentUtilidad;
 
+  // Getter auxiliar para cambiar el texto de los títulos en la UI
+  String get labelFiltro {
+    if (_filterType == 'mes') return 'Mensual';
+    if (_filterType == 'año') return 'Anual';
+    return 'Semanal';
+  }
+
   // --- SELECTOR DE FILTRO ---
   void setFilterType(String type) {
     if (_filterType == type) return; 
     _filterType = type;
-    
-    // Recalcula los rangos basándose en la nueva opción seleccionada
     _procesarOperacionesFinancieras();
-    
-    // Alerta a la UI para redibujar los gráficos de inmediato
     notifyListeners();
   }
 
@@ -121,16 +124,11 @@ class DashboardProvider extends ChangeNotifier {
     final ahora = DateTime.now();
     final hoyStr = ahora.toIso8601String().substring(0, 10); 
 
-    // Reinicio de las métricas de las tarjetas
+    // Reinicio de las métricas fijas del día
     _ventasHoy = 0.0;
     _ordenesActivas = 0;
-    _ingresoSemanalTotal = 0.0;
-    _utilidadSemanalTotal = 0.0;
 
-    final lunesDeEstaSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
-    final inicioSemana = DateTime(lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
-
-    // 1. CÁLCULO DE VENTAS DE HOY Y ÓRDENES ACTIVAS (Independiente del Dropdown)
+    // 1. CÁLCULO DE VENTAS DE HOY Y ÓRDENES ACTIVAS
     for (var orden in _allOrders) {
       try {
         final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
@@ -148,12 +146,14 @@ class DashboardProvider extends ChangeNotifier {
       } catch (_) {}
     }
 
-    // 2. AGRUPAMIENTO ESPECÍFICO PARA LAS GRÁFICAS SEGÚN LA TEMPORALIDAD
+    // 2. AGRUPAMIENTO Y CARGA DE VECTORES DE GRÁFICAS
     if (_filterType == 'semana') {
       _currentLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
       _currentIngresos = List.generate(7, (_) => 0.0);
       _currentGastos = List.generate(7, (_) => 0.0);
-      _currentUtilidad = List.generate(7, (_) => 0.0);
+
+      final lunesDeEstaSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
+      final inicioSemana = DateTime(lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
 
       for (var orden in _allOrders) {
         try {
@@ -199,16 +199,10 @@ class DashboardProvider extends ChangeNotifier {
         } catch (_) {}
       }
 
-      _ingresoSemanalTotal = _currentIngresos.fold(0, (sum, item) => sum + item);
-      double gastosSemanales = _currentGastos.fold(0, (sum, item) => sum + item);
-      _utilidadSemanalTotal = _ingresoSemanalTotal - gastosSemanales;
-
     } else if (_filterType == 'mes') {
-      // CORREGIDO: Etiquetas numéricas de dos dígitos estrictas (01, 02, 03, 04)
       _currentLabels = ['01', '02', '03', '04'];
       _currentIngresos = List.generate(4, (_) => 0.0);
       _currentGastos = List.generate(4, (_) => 0.0);
-      _currentUtilidad = List.generate(4, (_) => 0.0);
 
       final mesActualStr = ahora.toIso8601String().substring(0, 7);
 
@@ -248,13 +242,10 @@ class DashboardProvider extends ChangeNotifier {
         }
       }
 
-      _calcularTotalesSemanalesFijos(inicioSemana);
-
     } else {
       _currentLabels = ['Trim 1', 'Trim 2', 'Trim 3', 'Trim 4'];
       _currentIngresos = List.generate(4, (_) => 0.0);
       _currentGastos = List.generate(4, (_) => 0.0);
-      _currentUtilidad = List.generate(4, (_) => 0.0);
 
       final anioActualStr = ahora.year.toString(); 
 
@@ -293,50 +284,20 @@ class DashboardProvider extends ChangeNotifier {
           _currentGastos[indiceTrimestre] += pagoProv.amount;
         }
       }
-
-      _calcularTotalesSemanalesFijos(inicioSemana);
     }
 
-    // Calcular las barras de utilidad final
+    // 3. GENERACIÓN DE VECTORES DE UTILIDAD Y TOTALES ACUMULADOS POR FILTRO
+    _currentUtilidad = List.generate(_currentIngresos.length, (_) => 0.0);
+    _ingresoFiltroTotal = 0.0;
+    double totalGastosFiltro = 0.0;
+
     for (int i = 0; i < _currentIngresos.length; i++) {
       _currentUtilidad[i] = _currentIngresos[i] - _currentGastos[i];
-    }
-  }
-
-  void _calcularTotalesSemanalesFijos(DateTime inicioSemana) {
-    double ingSem = 0.0;
-    double gstSem = 0.0;
-
-    for (var o in _allOrders) {
-      try {
-        final raw = (o.runtimeType.toString().contains('Map')) ? o : o.toJson();
-        final f = DateTime.parse(raw['date'] ?? raw['fecha'] ?? '');
-        if (f.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-          if (f.difference(inicioSemana).inDays < 7) ingSem += (raw['total'] as num).toDouble();
-        }
-      } catch (_) {}
+      _ingresoFiltroTotal += _currentIngresos[i];
+      totalGastosFiltro += _currentGastos[i];
     }
 
-    for (var g in _allExpenses) {
-      try {
-        final raw = (g.runtimeType.toString().contains('Map')) ? g : g.toJson();
-        final f = DateTime.parse(raw['date'] ?? raw['fecha'] ?? '');
-        if (f.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-          if (f.difference(inicioSemana).inDays < 7) {
-            gstSem += (raw['amount'] as num?)?.toDouble() ?? (raw['monto'] as num?)?.toDouble() ?? 0.0;
-          }
-        }
-      } catch (_) {}
-    }
-
-    for (var p in _allSupplierPayments) {
-      final f = DateTime.parse(p.date);
-      if (f.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-        if (f.difference(inicioSemana).inDays < 7) gstSem += p.amount;
-      }
-    }
-
-    _ingresoSemanalTotal = ingSem;
-    _utilidadSemanalTotal = ingSem - gstSem;
+    // El resultado final de los recuadros se acopla dinámicamente al acumulado total de la gráfica activa
+    _utilidadFiltroTotal = _ingresoFiltroTotal - totalGastosFiltro;
   }
 }
