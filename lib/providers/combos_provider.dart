@@ -6,16 +6,23 @@ class CombosProvider extends ChangeNotifier {
   final ComboRepository _repository;
 
   CombosProvider(this._repository) {
-    cargarCombos();
+    cargarCombos(); // Carga inicial
   }
 
   List<ComboItem> _combos = [];
   bool _isLoading = false;
   String _searchTerm = '';
 
+  // --- NUEVO ESTADO DE RED CENTRALIZADO ---
+  String? _errorMessage;
+
+  // --- GETTERS COMPATIBLES AL 100% CON TU UI ORIGINAL ---
   List<ComboItem> get combos => _combos;
   bool get isLoading => _isLoading;
   String get searchTerm => _searchTerm;
+  
+  String? get errorMessage => _errorMessage;
+  bool get hasError => _errorMessage != null;
 
   List<ComboItem> get combosFiltrados {
     return _combos.where((c) {
@@ -27,16 +34,17 @@ class CombosProvider extends ChangeNotifier {
     }).toList();
   }
 
+  // --- LÓGICA DE DATOS SEGURA ---
   Future<void> cargarCombos() async {
-    _isLoading = true;
-    notifyListeners();
+    _setLoading(true);
+    _clearError();
     try {
       _combos = await _repository.getAll();
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error cargando combos: $e');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _setLoading(false);
     }
   }
 
@@ -45,30 +53,68 @@ class CombosProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> agregarCombo(ComboItem combo) async {
+  // --- ACCIONES C.R.U.D CON RETORNO DE CONTROL ---
+  Future<bool> agregarCombo(ComboItem combo) async {
+    _setLoading(true);
+    _clearError();
     try {
       await _repository.create(combo);
       await cargarCombos();
+      return true;
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error agregando combo: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<void> actualizarCombo(String id, ComboItem combo) async {
+  // Acepta dynamic en el identificador para evitar conflictos con la pantalla
+  Future<bool> actualizarCombo(dynamic id, ComboItem combo) async {
+    _setLoading(true);
+    _clearError();
     try {
-      await _repository.update(id, combo);
+      final String convertedId = id.toString();
+      await _repository.update(convertedId, combo);
       await cargarCombos();
+      return true;
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error actualizando combo: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<void> eliminarCombo(String id) async {
+  Future<bool> eliminarCombo(dynamic id) async {
+    _setLoading(true);
+    _clearError();
     try {
-      await _repository.delete(id);
+      final String convertedId = id.toString();
+      await _repository.delete(convertedId);
       await cargarCombos();
+      return true;
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error eliminando combo: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
     }
+  }
+
+  // --- MÉTODOS AUXILIARES ---
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
   }
 }

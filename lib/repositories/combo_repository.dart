@@ -1,36 +1,55 @@
-import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/combo_item.dart';
 
 class ComboRepository {
-  final _client = SupabaseService.client;
-  final String _table = 'combos';
+  final SupabaseClient _client;
 
+  // Inyección del cliente de datos mediante el constructor
+  ComboRepository(this._client);
+
+  // READ: Obtener todos los combos activos
   Future<List<ComboItem>> getAll() async {
-    final response = await _client.from(_table).select().order('title');
-    return (response as List).map((json) => ComboItem.fromJson(json)).toList();
-  }
-
-  Future<void> create(ComboItem combo) async {
-    await _client.from(_table).insert(combo.toJson());
-  }
-
-  Future<void> update(String id, ComboItem combo) async {
-    final data = combo.toJson();
-    data.remove('id');
-    await _client.from(_table).update(data).eq('id', id);
-  }
-
-  Future<void> delete(String id) async {
-    await _client.from(_table).delete().eq('id', id);
-  }
-
-  Future<ComboItem?> getById(String id) async {
     try {
-      final response =
-          await _client.from(_table).select().eq('id', id).single();
-      return ComboItem.fromJson(response);
+      final response = await _client
+          .from('combos') // Asegúrate de que coincida con tu tabla en Supabase
+          .select('*');
+
+      return (response as List).map((json) => ComboItem.fromJson(json)).toList();
     } catch (e) {
-      return null;
+      throw Exception('Error al obtener los combos de Supabase: $e');
+    }
+  }
+
+  // CREATE: Registrar un nuevo combo promocional
+  Future<void> create(ComboItem combo) async {
+    try {
+      final data = combo.toJson();
+      if (combo.id.isEmpty) {
+        data.remove('id'); // Supabase generará automáticamente la llave primaria
+      }
+      await _client.from('combos').insert(data);
+    } catch (e) {
+      throw Exception('Error al guardar el combo en Supabase: $e');
+    }
+  }
+
+  // UPDATE: Modificar la información de un combo existente
+  Future<void> update(String id, ComboItem combo) async {
+    try {
+      final data = combo.toJson();
+      data.remove('id'); // Protegemos el ID para evitar mutaciones de llave primaria
+      await _client.from('combos').update(data).eq('id', id);
+    } catch (e) {
+      throw Exception('Error al actualizar el combo $id: $e');
+    }
+  }
+
+  // DELETE: Eliminar definitivamente un combo
+  Future<void> delete(String id) async {
+    try {
+      await _client.from('combos').delete().eq('id', id);
+    } catch (e) {
+      throw Exception('Error al eliminar el combo $id de Supabase: $e');
     }
   }
 }
