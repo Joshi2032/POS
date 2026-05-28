@@ -455,7 +455,8 @@ class _DashboardView extends StatelessWidget {
 
   Widget _buildPremiumProductTable(BuildContext context, DashboardProvider provider) {
     final theme = Theme.of(context);
-    final textStyleHeader = TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface);
+    final textStyleHeader = TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface, fontSize: 14);
+    final textStyleRow = TextStyle(color: theme.colorScheme.onSurface, fontSize: 13);
     
     return AppCard(
       padding: EdgeInsets.zero, 
@@ -480,44 +481,67 @@ class _DashboardView extends StatelessWidget {
               ],
             ),
           ),
+
+          Container(
+            color: theme.primaryColor.withValues(alpha: 0.06),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            child: Row(
+              children: [
+                Expanded(flex: 3, child: Text('Producto', style: textStyleHeader)),
+                Expanded(flex: 2, child: Text('Categoría', style: textStyleHeader)),
+                Expanded(flex: 2, child: Text('Unidades', style: textStyleHeader, textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text('Monto Total', style: textStyleHeader, textAlign: TextAlign.right)),
+              ],
+            ),
+          ),
+
           ClipRRect(
             borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(12), bottomRight: Radius.circular(12)),
-            // CORREGIDO DEFINITIVO: Removido el contenedor con la propiedad 'overflow' oculta que causaba el error de compilación.
-            // En su lugar, el SingleChildScrollView maneja el desbordamiento de forma nativa.
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                horizontalMargin: 20,
-                columnSpacing: 40,
-                headingRowColor: WidgetStateProperty.all(theme.primaryColor.withValues(alpha: 0.06)),
-                dataRowMinHeight: 48,
-                dataRowMaxHeight: 52,
-                columns: [
-                  DataColumn(label: Text('Producto', style: textStyleHeader)),
-                  DataColumn(label: Text('Categoría', style: textStyleHeader)),
-                  DataColumn(label: Center(child: Text('Unidades Vendidas', style: textStyleHeader))),
-                  DataColumn(label: Container(alignment: Alignment.centerRight, child: Text('Monto Total', style: textStyleHeader)), numeric: true),
-                ],
-                rows: provider.currentProductos.asMap().entries.map((entry) {
+            child: SizedBox(
+              width: double.infinity,
+              child: Column(
+                children: provider.currentProductos.asMap().entries.map((entry) {
                   final int index = entry.key;
                   final prod = entry.value;
-                  final rowColor = index % 2 == 0 ? Colors.transparent : theme.primaryColor.withValues(alpha: 0.02);
+                  final rowColor = index % 2 == 0 ? Colors.transparent : theme.primaryColor.withValues(alpha: 0.015);
                   
-                  return DataRow(
-                    color: WidgetStateProperty.all(rowColor),
-                    cells: [
-                      DataCell(Text(prod.nombre, style: const TextStyle(fontWeight: FontWeight.w600))),
-                      DataCell(Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: theme.primaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
+                  return Container(
+                    // CORREGIDO: El color ahora se pasa de forma legal estrictamente dentro de la decoración para evitar la aserción
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: rowColor,
+                      border: Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.2), width: 0.5))
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3, 
+                          child: Text(prod.nombre, style: textStyleRow.copyWith(fontWeight: FontWeight.w600))
                         ),
-                        child: Text(prod.categoria, style: TextStyle(fontSize: 11, color: theme.primaryColor, fontWeight: FontWeight.bold)),
-                      )),
-                      DataCell(Center(child: Text('${prod.unidadesVendidas}', style: const TextStyle(fontWeight: FontWeight.w500)))),
-                      DataCell(Text('\$${prod.montoTotal.toStringAsFixed(2)}', style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold))),
-                    ],
+                        Expanded(
+                          flex: 2, 
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: theme.primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(prod.categoria, style: TextStyle(fontSize: 11, color: theme.primaryColor, fontWeight: FontWeight.bold)),
+                            ),
+                          )
+                        ),
+                        Expanded(
+                          flex: 2, 
+                          child: Text('${prod.unidadesVendidas}', style: textStyleRow.copyWith(fontWeight: FontWeight.w500), textAlign: TextAlign.center)
+                        ),
+                        Expanded(
+                          flex: 2, 
+                          child: Text('\$${prod.montoTotal.toStringAsFixed(2)}', style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.right)
+                        ),
+                      ],
+                    ),
                   );
                 }).toList(),
               ),

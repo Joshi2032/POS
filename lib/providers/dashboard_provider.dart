@@ -4,7 +4,7 @@ import '../repositories/gasto_repository.dart';
 import '../repositories/payment_repository.dart';
 import '../models/provider_payment.dart';
 
-// Modelo para estructurar el rendimiento de productos
+// Modelo relacional para estructurar el rendimiento de productos vendidos
 class ProductoRendimiento {
   final String nombre;
   final String categoria;
@@ -47,22 +47,21 @@ class DashboardProvider extends ChangeNotifier {
   double _ingresoFiltroTotal = 0.0;
   double _utilidadFiltroTotal = 0.0;
 
-  // Listas estructuradas para gráficas
+  // Listas estructuradas para las gráficas de líneas y barras
   List<String> _currentLabels = [];
   List<double> _currentIngresos = [];
   List<double> _currentGastos = [];
   List<double> _currentUtilidad = [];
 
-  // Lista para la tabla de rendimiento de productos
+  // Lista vinculada de rendimiento de productos extraídos de Supabase
   List<ProductoRendimiento> _currentProductos = [];
 
-  // --- GETTERS PARA LOS RECUADROS SUPERIORES ---
+  // --- GETTERS COMPATIBLES CON LA INTERFAZ ---
   double get ventasHoy => _ventasHoy;
   int get ordenesActivas => _ordenesActivas;
   double get ingresoFiltroTotal => _ingresoFiltroTotal;
   double get utilidadFiltroTotal => _utilidadFiltroTotal;
 
-  // --- GETTERS GENERALES Y DE GRÁFICAS ---
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get filterType => _filterType;
@@ -138,7 +137,7 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
-  // --- MOTOR ANALÍTICO ---
+  // --- MOTOR ANALÍTICO Y CRUCE DE TABLAS ---
   void _procesarOperacionesFinancieras() {
     final ahora = DateTime.now();
     final hoyStr = ahora.toIso8601String().substring(0, 10); 
@@ -146,7 +145,6 @@ class DashboardProvider extends ChangeNotifier {
     _ventasHoy = 0.0;
     _ordenesActivas = 0;
 
-    // CORREGIDO AQUÍ: Nombre limpio unificado en una sola palabra continua
     final Map<String, ProductoRendimiento> mapaProductosFiltro = {};
 
     bool cumpleFiltroFecha(DateTime fechaOrd, DateTime inicioSemana, String mesStr, String anioStr) {
@@ -183,7 +181,7 @@ class DashboardProvider extends ChangeNotifier {
     final mesActualStr = ahora.toIso8601String().substring(0, 7);
     final anioActualStr = ahora.year.toString();
 
-    // 2. AGRUPAMIENTO DE VECTOR DE GRÁFICAS
+    // 2. AGRUPAMIENTO TEMPORAL DE VECTOR DE GRÁFICAS
     if (_filterType == 'semana') {
       _currentLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
       _currentIngresos = List.generate(7, (_) => 0.0);
@@ -316,7 +314,7 @@ class DashboardProvider extends ChangeNotifier {
       }
     }
 
-    // 3. PROCESAMIENTO DE RENDIMIENTO DE PRODUCTOS VENDIDOS
+    // 3. EXTRACCIÓN Y CONSOLIDACIÓN DE SUB-TABLAS DE DETALLES DESDE SUPABASE
     for (var orden in _allOrders) {
       try {
         final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
@@ -324,13 +322,13 @@ class DashboardProvider extends ChangeNotifier {
         final fechaOrd = DateTime.parse(dateStr);
 
         if (cumpleFiltroFecha(fechaOrd, inicioSemana, mesActualStr, anioActualStr)) {
-          final items = rawJson['items'] ?? rawJson['detalles'] ?? [];
+          final items = rawJson['items'] ?? rawJson['detalles'] ?? rawJson['orden_detalles'] ?? [];
           if (items is List) {
             for (var item in items) {
-              final nombreProd = (item['product_name'] ?? item['nombre'] ?? 'Producto General').toString();
+              final nombreProd = (item['product_name'] ?? item['nombre'] ?? item['producto_nombre'] ?? 'Producto General').toString();
               final categoriaProd = (item['category'] ?? item['categoria'] ?? 'Varios').toString();
-              final int cantidad = (item['quantity'] ?? item['cantidad'] ?? 1) as int;
-              final double precioSubtotal = ((item['price'] ?? item['subtotal'] ?? 0.0) as num).toDouble() * cantidad;
+              final int cantidad = ((item['quantity'] ?? item['cantidad'] ?? 1) as num).toInt();
+              final double precioSubtotal = ((item['price'] ?? item['subtotal'] ?? item['precio'] ?? 0.0) as num).toDouble() * cantidad;
 
               if (mapaProductosFiltro.containsKey(nombreProd)) {
                 mapaProductosFiltro[nombreProd]!.unidadesVendidas += cantidad;
@@ -352,6 +350,7 @@ class DashboardProvider extends ChangeNotifier {
     _currentProductos = mapaProductosFiltro.values.toList();
     _currentProductos.sort((a, b) => b.montoTotal.compareTo(a.montoTotal));
 
+    // Resguardo MOCK proporcional en caso de que la BD relacional esté en ceros
     if (_currentProductos.isEmpty) {
       double factor = _filterType == 'semana' ? 1.0 : _filterType == 'mes' ? 4.0 : 48.0;
       _currentProductos = [
