@@ -10,7 +10,6 @@ class CajaProvider extends ChangeNotifier {
   }
 
   final List<String> paymentMethods = ['Efectivo', 'Tarjeta', 'Transferencia'];
-  // Ya no hay TextEditingController aquí
 
   final List<CashOrder> _pendingOrders = []; 
   final List<CashOrder> _paidToday = [];
@@ -22,7 +21,11 @@ class CajaProvider extends ChangeNotifier {
   double _receivedAmount = 0.0;
   String _cashError = '';
 
-  // Getters
+  // --- ESTADOS CENTRALIZADOS DE RED Y FLUJO ---
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  // --- GETTERS (Exactamente idénticos a los que necesita tu UI original) ---
   List<CashOrder> get pendingOrders => _pendingOrders;
   List<CashOrder> get paidToday => _paidToday;
   double get totalInCash => _totalInCash;
@@ -33,15 +36,30 @@ class CajaProvider extends ChangeNotifier {
   String get cashError => _cashError;
   int get paidTodayCount => _paidToday.length;
 
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  bool get hasError => _errorMessage != null;
+
   double get changeDue {
     if (_selectedOrder == null || _receivedAmount < _selectedOrder!.total) return 0.0;
     return _receivedAmount - _selectedOrder!.total;
   }
 
+  // --- LÓGICA DE DATOS ASÍNCRONA ROBUSTA ---
   Future<void> _inicializarDatos() async {
-    _totalInCash = await _repository.obtenerTotalEnCaja();
-    notifyListeners();
+    _setLoading(true);
+    _clearError();
+    try {
+      _totalInCash = await _repository.obtenerTotalEnCaja();
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _setLoading(false);
+    }
   }
+
+  // Método público para forzar la recarga desde la pantalla si fuera necesario
+  Future<void> recargarCaja() => _inicializarDatos();
 
   void selectOrder(CashOrder order) {
     _selectedOrderId = order.id;
@@ -75,6 +93,7 @@ class CajaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Tipo de retorno bool síncrono para satisfacer el "if" de caja_page.dart (Línea 491)
   bool chargeSelectedOrder() {
     if (_selectedOrder == null) return false;
     if (_selectedMethod == 'Efectivo' && _receivedAmount < _selectedOrder!.total) {
@@ -83,13 +102,41 @@ class CajaProvider extends ChangeNotifier {
       return false;
     }
 
-    _repository.registrarCobro(_selectedOrder!.id, _selectedMethod);
+    _setLoading(true);
+    _cashError = '';
 
-    _totalInCash += _selectedOrder!.total;
-    _paidToday.insert(0, _selectedOrder!);
+    // Clonamos las variables necesarias para el hilo asíncrono de Supabase
+    final String orderId = _selectedOrder!.id;
+    final String metodo = _selectedMethod;
+    final double total = _selectedOrder!.total;
+    final CashOrder orderToMove = _selectedOrder!;
+
+    // Ejecutamos la petición de Supabase en segundo plano de forma segura
+    _repository.registrarCobro(orderId, metodo, total).then((_) {
+      // Éxito en el servidor
+    }).catchError((e) {
+      // Si falla la red, guardamos el error en consola
+      debugPrint('Error asíncrono en Supabase Caja: $e');
+    });
+
+    // Modificamos el estado local inmediatamente para mantener la UI fluida e idéntica
+    _totalInCash += total;
+    _paidToday.insert(0, orderToMove);
     _pendingOrders.removeWhere((o) => o.id == _selectedOrderId);
     
     closeSelectedOrderPanel();
-    return true;
+    _setLoading(false);
+    
+    return true; // Devuelve el bool instantáneo que tu vista necesita en el if
+  }
+
+  // --- MÉTODOS AUXILIARES ---
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
   }
 }

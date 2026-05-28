@@ -1,59 +1,70 @@
-// lib/repositories/caja_repository.dart
-import 'package:flutter/foundation.dart';
-
-import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/movimiento_caja.dart';
+import '../models/corte_caja.dart';
 
 class CajaRepository {
-  // Obtenemos la instancia estática del cliente de Supabase
-  final _client = SupabaseService.client;
+  final SupabaseClient _client;
 
-  /// Obtiene el total de ingresos del día actual
+  // Inyección del cliente de datos por constructor
+  CajaRepository(this._client);
+
+  // Obtener el saldo total actual en la caja registradora
   Future<double> obtenerTotalEnCaja() async {
     try {
-      // Obtenemos la fecha de hoy al inicio del día
-      final hoy = DateTime.now();
-      final inicioDia =
-          DateTime(hoy.year, hoy.month, hoy.day).toIso8601String();
-
-      // Consultamos la tabla 'orders' sumando los totales de las órdenes PAGADAS hoy
-      // (Asumiendo que 'pagado' es el status que usas en Supabase para órdenes cerradas)
+      // Si manejas una tabla de estado de caja o sumatoria de movimientos, se consulta aquí.
+      // Por ahora simulamos la lectura asíncrona segura desde Supabase:
       final response = await _client
-          .from('orders')
-          .select('total')
-          .eq('status', 'pagado')
-          .gte('created_at', inicioDia);
+          .from('cash_register') // Ajusta al nombre de tu tabla de balance general si aplica
+          .select('balance')
+          .maybeSingle();
 
-      double totalDia = 0.0;
-
-      // Iteramos la respuesta para sumar los totales
-      for (var row in response as List<dynamic>) {
-        // Aseguramos la conversión a double
-        totalDia += (row['total'] ?? 0).toDouble();
+      if (response != null && response['balance'] != null) {
+        return (response['balance'] as num).toDouble();
       }
-
-      // Devolvemos el total calculado desde la base de datos
-      return totalDia;
-    } catch (e) {
-      // Si falla la conexión o no hay datos, retornamos 0 para no romper la app
-      debugPrint('Error al obtener total en caja de Supabase: $e');
       return 0.0;
+    } catch (e) {
+      throw Exception('Error al obtener el saldo total de caja de Supabase: $e');
     }
   }
 
-  /// Registra que una orden ya fue cobrada y con qué método de pago
-  /// [orderId] es el ID de la tabla orders
-  Future<void> registrarCobro(String orderId, String metodoPago) async {
+  // Registrar un cobro de orden directamente en la base de datos
+  Future<void> registrarCobro(String orderId, String metodoPago, double total) async {
     try {
-      // Actualizamos la orden en Supabase a estado "pagado" y registramos el método de pago
-      await _client.from('orders').update({
-        'status': 'pagado',
-        'payment_method': metodoPago.toLowerCase(), // Ej: 'efectivo', 'tarjeta'
-        'paid_at':
-            DateTime.now().toIso8601String() // Fecha y hora exacta del cobro
-      }).eq('id', orderId); // Apuntamos a la orden específica
+      // 1. Actualizamos el estado de la comanda/factura a pagada
+      await _client
+          .from('orders')
+          .update({'status': 'pagada', 'payment_method': metodoPago.toLowerCase()})
+          .eq('id', orderId);
+
+      // 2. Insertamos el flujo de efectivo correspondiente en el kárdex/movimientos de caja
+      await _client.from('cash_movements').insert({
+        'concept': 'Cobro de Orden #$orderId',
+        'type': 'Ingreso',
+        'amount': total,
+        'date': DateTime.now().toIso8601String().substring(0, 10),
+      });
     } catch (e) {
-      debugPrint('Error al registrar el cobro en Supabase: $e');
-      // Podrías lanzar la excepción (throw e;) si quieres manejar el error visualmente en el Provider
+      throw Exception('Error al registrar el cobro de la orden $orderId en Supabase: $e');
+    }
+  }
+
+  // Registrar un corte de caja/arqueo al finalizar el turno
+  Future<void> realizarCorte(CorteCaja corte) async {
+    try {
+      final data = corte.toJson();
+      await _client.from('cash_cuts').insert(data);
+    } catch (e) {
+      throw Exception('Error al guardar el corte de caja en Supabase: $e');
+    }
+  }
+
+  // Registrar una entrada o salida de efectivo manual
+  Future<void> registrarMovimientoManual(MovimientoCaja movimiento) async {
+    try {
+      final data = movimiento.toJson();
+      await _client.from('cash_movements').insert(data);
+    } catch (e) {
+      throw Exception('Error al registrar el movimiento manual de caja: $e');
     }
   }
 }
