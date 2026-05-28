@@ -1,105 +1,186 @@
-// lib/providers/payments_provider.dart
 import 'package:flutter/material.dart';
 import '../models/provider_payment.dart';
 import '../repositories/payment_repository.dart';
-import '../providers/inventario_provider.dart';
 
 class PaymentsProvider extends ChangeNotifier {
   final PaymentRepository _repository;
+  final int pageSize = 10;
+
+  PaymentsProvider(this._repository) {
+    cargarPagos(); // Carga inicial
+  }
 
   List<ProviderPayment> _payments = [];
   String _searchTerm = '';
   int _currentPage = 1;
-  final int _pageSize = 10;
+
+  // --- ESTADOS CENTRALIZADOS DE FLUJO Y RED ---
   bool _isLoading = false;
+  String? _errorMessage;
 
-  PaymentsProvider(this._repository) {
-    cargarPagos();
-  }
-
-  // --- Getters ---
+  // --- GETTERS COMPATIBLES CON TU INTERFAZ (proveedores_page.dart) ---
   List<ProviderPayment> get payments => _payments;
   bool get isLoading => _isLoading;
+  String get searchTerm => _searchTerm;
   int get currentPage => _currentPage;
+  
+  String? get errorMessage => _errorMessage;
+  bool get hasError => _errorMessage != null;
 
+  // --- FILTRADO Y BÚSQUEDA ---
   List<ProviderPayment> get filteredPayments {
-    return _payments
-        .where((p) =>
-            p.provider.toLowerCase().contains(_searchTerm.toLowerCase()) ||
-            p.category.toLowerCase().contains(_searchTerm.toLowerCase()))
-        .toList();
+    if (_searchTerm.isEmpty) return _payments;
+    return _payments.where((p) {
+      final matchProvider = p.provider.toLowerCase().contains(_searchTerm.toLowerCase());
+      final matchCategory = p.category.toLowerCase().contains(_searchTerm.toLowerCase());
+      return matchProvider || matchCategory;
+    }).toList();
   }
 
+  // --- PAGINACIÓN REQUERIDA POR TU UI ---
   List<ProviderPayment> get paginatedPayments {
-    final filtered = filteredPayments;
-    final startIndex = (_currentPage - 1) * _pageSize;
-    if (startIndex >= filtered.length) return [];
-    return filtered.skip(startIndex).take(_pageSize).toList();
+    final list = filteredPayments;
+    final start = (_currentPage - 1) * pageSize;
+    if (start >= list.length) return [];
+    return list.skip(start).take(pageSize).toList();
   }
 
-  int get totalPages =>
-      (filteredPayments.length / _pageSize).ceil().clamp(1, 999999);
+  int get totalPages => (filteredPayments.length / pageSize).ceil().clamp(1, 999999);
 
-  // --- Estadísticas ---
-  String get _todayString => DateTime.now().toString().substring(0, 10);
+  void goToPage(int page) {
+    _currentPage = page.clamp(1, totalPages);
+    notifyListeners();
+  }
 
-  double get todayTotal => _payments
-      .where((p) => p.date == _todayString)
-      .fold(0.0, (sum, p) => sum + p.amount);
-
-  int get todayPaymentsCount =>
-      _payments.where((p) => p.date == _todayString).length;
-
-  // Nota: Si necesitas weekTotal/monthTotal, implementa aquí la lógica de fechas
-  double get weekTotal => 0.0;
-  double get monthTotal => 0.0;
-
-  int get uniqueProvidersCount =>
-      _payments.map((p) => p.provider).toSet().length;
-
-  // --- Métodos de Acción ---
-
-  void setSearch(String value) {
-    _searchTerm = value;
+  void setSearch(String val) {
+    _searchTerm = val;
     _currentPage = 1;
     notifyListeners();
   }
 
-  void goToPage(int page) {
-    if (page >= 1 && page <= totalPages) {
-      _currentPage = page;
-      notifyListeners();
-    }
+  // --- ESTADÍSTICAS MÉTRICAS (KPI Cards de tu pantalla) ---
+  
+  double get todayTotal {
+    final String hoy = DateTime.now().toIso8601String().substring(0, 10);
+    return _payments
+        .where((p) => p.date == hoy)
+        .fold(0.0, (sum, item) => sum + item.amount);
   }
 
+  int get todayPaymentsCount {
+    final String hoy = DateTime.now().toIso8601String().substring(0, 10);
+    return _payments.where((p) => p.date == hoy).length;
+  }
+
+  double get weekTotal {
+    final ahora = DateTime.now();
+    final sieteDiasAntes = ahora.subtract(const Duration(days: 7));
+    return _payments.where((p) {
+      try {
+        final fechaPago = DateTime.parse(p.date);
+        return fechaPago.isAfter(sieteDiasAntes) && fechaPago.isBefore(ahora.add(const Duration(days: 1)));
+      } catch (_) {
+        return false;
+      }
+    }).fold(0.0, (sum, item) => sum + item.amount);
+  }
+
+  double get monthTotal {
+    final String mesActual = DateTime.now().toIso8601String().substring(0, 7); // "YYYY-MM"
+    return _payments
+        .where((p) => p.date.startsWith(mesActual))
+        .fold(0.0, (sum, item) => sum + item.amount);
+  }
+
+  int get uniqueProvidersCount {
+    return _payments.map((p) => p.provider.trim().toLowerCase()).toSet().length;
+  }
+
+  // --- LÓGICA DE DATOS SEGURA ---
   Future<void> cargarPagos() async {
-    _isLoading = true;
-    notifyListeners();
+    _setLoading(true);
+    _clearError();
     try {
       _payments = await _repository.getAll();
     } catch (e) {
-      debugPrint('Error al cargar pagos: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      _errorMessage = e.toString();
+      debugPrint('Error cargando pagos a proveedores: $e');
+    } finally { // <--- CORREGIDO AQUÍ: Ahora sí está escrito 'finally' de forma correcta
+      _setLoading(false);
     }
   }
 
-  // --- Métodos CRUD (Firmas ajustadas a tu UI) ---
+  // --- ACCIONES C.R.U.D ADAPTADAS AL DISEÑO ORIGINAL ---
+  
+  // Ultra-flexible (dynamic) para interceptar el 'InventarioProvider' intruso sin romper la compilación
+  Future<bool> addPayment(dynamic arg1, [dynamic arg2]) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      ProviderPayment payment;
 
-  Future<void> addPayment(
-      ProviderPayment payment, InventarioProvider inventario) async {
-    await _repository.create(payment);
-    await cargarPagos();
+      if (arg2 is ProviderPayment) {
+        payment = arg2;
+      } else if (arg1 is ProviderPayment) {
+        payment = arg1;
+      } else {
+        throw Exception('No se detectó un objeto ProviderPayment válido en los argumentos.');
+      }
+
+      await _repository.create(payment);
+      await cargarPagos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('Error en addPayment: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  Future<void> updatePayment(String id, ProviderPayment payment) async {
-    await _repository.update(id, payment);
-    await cargarPagos();
+  Future<bool> updatePayment(dynamic id, ProviderPayment payment) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final String convertedId = id.toString();
+      await _repository.update(convertedId, payment);
+      await cargarPagos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  Future<void> removePayment(String id) async {
-    await _repository.delete(id);
-    await cargarPagos();
+  Future<bool> removePayment(dynamic id) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final String convertedId = id.toString();
+      await _repository.delete(convertedId);
+      await cargarPagos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // --- MÉTODOS AUXILIARES ---
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
   }
 }
