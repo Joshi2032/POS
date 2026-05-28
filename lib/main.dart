@@ -75,7 +75,8 @@ Future<void> main() async {
         Provider(create: (_) => InventarioRepository(SupabaseService.client)),
         Provider(create: (_) => PaymentRepository(SupabaseService.client)),
         Provider(create: (_) => ComboRepository(SupabaseService.client)),
-        Provider(create: (_) => MovimientoCajaRepository(SupabaseService.client)),
+        Provider(
+            create: (_) => MovimientoCajaRepository(SupabaseService.client)),
         Provider(create: (_) => CorteCajaRepository(SupabaseService.client)),
         Provider(create: (_) => EmpleadoRepository(SupabaseService.client)),
         Provider(create: (_) => NominaPagoRepository(SupabaseService.client)),
@@ -132,13 +133,19 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (context) => RecipeProvider(context.read<RecipeRepository>()),
         ),
+        ChangeNotifierProvider(
+          create: (context) => DashboardProvider(
+            context.read<OrdenRepository>(),
+            context.read<GastoRepository>(),
+            context.read<PaymentRepository>(),
+          ),
+        ),
 
         // ==========================================
         // 4. PROVIDERS SIMPLES (Estado Local)
         // ==========================================
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AjustesProvider()),
-        ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => ReportesProvider()),
         ChangeNotifierProvider(create: (_) => TomarOrdenProvider()),
       ],

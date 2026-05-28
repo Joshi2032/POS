@@ -190,6 +190,12 @@ class _DashboardView extends StatelessWidget {
       backgroundColor: Colors.transparent,
       body: LayoutBuilder(
         builder: (context, constraints) {
+          if (provider.isLoading && provider.currentLabels.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -216,25 +222,25 @@ class _DashboardView extends StatelessWidget {
                       children: [
                         _buildMetricCard(context,
                             title: 'Ventas Hoy',
-                            value: '\$12,700.00',
+                            value: '\$${provider.ventasHoy.toStringAsFixed(2)}',
                             change: '+12.5%',
                             icon: Icons.attach_money,
                             isPositive: true),
                         _buildMetricCard(context,
                             title: 'Órdenes Activas',
-                            value: '4',
+                            value: '${provider.ordenesActivas}',
                             change: 'En cocina',
                             icon: Icons.restaurant,
                             isPositive: true),
                         _buildMetricCard(context,
                             title: 'Ingreso Semanal',
-                            value: '\$161,600.00',
+                            value: '\$${provider.ingresoSemanalTotal.toStringAsFixed(2)}',
                             change: '+8.2%',
                             icon: Icons.trending_up,
                             isPositive: true),
                         _buildMetricCard(context,
                             title: 'Utilidad Semanal',
-                            value: '\$107,800.00',
+                            value: '\$${provider.utilidadSemanalTotal.toStringAsFixed(2)}',
                             change: '+15.3%',
                             icon: Icons.account_balance_wallet,
                             isPositive: true),
@@ -280,6 +286,8 @@ class _DashboardView extends StatelessWidget {
                         ? constraints.maxWidth * 0.38
                         : constraints.maxWidth;
 
+                    // CORREGIDO: Se agregaron ValueKeys únicas vinculadas a filterType
+                    // Esto fuerza a FL Chart a refrescar las proporciones del lienzo al filtrar.
                     return isWide
                         ? Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,6 +295,7 @@ class _DashboardView extends StatelessWidget {
                               SizedBox(
                                   width: lineW,
                                   child: AppCard(
+                                      key: ValueKey('line_${provider.filterType}'),
                                       child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -306,6 +315,7 @@ class _DashboardView extends StatelessWidget {
                               SizedBox(
                                   width: barW,
                                   child: AppCard(
+                                      key: ValueKey('bar_${provider.filterType}'),
                                       child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
@@ -325,6 +335,7 @@ class _DashboardView extends StatelessWidget {
                         : Column(
                             children: [
                               AppCard(
+                                  key: ValueKey('line_mobile_${provider.filterType}'),
                                   child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -341,6 +352,7 @@ class _DashboardView extends StatelessWidget {
                                   ])),
                               const SizedBox(height: 16),
                               AppCard(
+                                  key: ValueKey('bar_mobile_${provider.filterType}'),
                                   child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
