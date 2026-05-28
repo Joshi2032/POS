@@ -1,45 +1,55 @@
-import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/nomina_pago.dart';
 
 class NominaPagoRepository {
-  final _client = SupabaseService.client;
-  final String _table = 'payroll';
+  final SupabaseClient _client;
 
+  // Inyección del cliente de datos por constructor
+  NominaPagoRepository(this._client);
+
+  // READ: Obtener todos los registros de nómina
   Future<List<NominaPago>> getAll() async {
-    final response =
-        await _client.from(_table).select().order('date', ascending: false);
-    return (response as List).map((json) => NominaPago.fromJson(json)).toList();
+    try {
+      final response = await _client
+          .from('payroll') // Asegúrate de que coincida con el nombre de tu tabla en Supabase
+          .select('*');
+
+      return (response as List).map((json) => NominaPago.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception('Error al obtener el historial de nóminas de Supabase: $e');
+    }
   }
 
+  // CREATE: Registrar una nueva transacción de nómina
   Future<void> create(NominaPago nomina) async {
-    await _client.from(_table).insert(nomina.toJson());
+    try {
+      final data = nomina.toJson();
+      if (nomina.id.isEmpty) {
+        data.remove('id'); // Dejamos que Supabase asigne el UUID correspondiente
+      }
+      await _client.from('payroll').insert(data);
+    } catch (e) {
+      throw Exception('Error al registrar el pago de nómina en Supabase: $e');
+    }
   }
 
+  // UPDATE: Modificar un registro de nómina existente
   Future<void> update(String id, NominaPago nomina) async {
-    final data = nomina.toJson();
-    data.remove('id');
-    await _client.from(_table).update(data).eq('id', id);
+    try {
+      final data = nomina.toJson();
+      data.remove('id'); // Protegemos la llave primaria de modificaciones accidentales
+      await _client.from('payroll').update(data).eq('id', id);
+    } catch (e) {
+      throw Exception('Error al actualizar el registro de nómina $id: $e');
+    }
   }
 
+  // DELETE: Remover un registro de nómina
   Future<void> delete(String id) async {
-    await _client.from(_table).delete().eq('id', id);
-  }
-
-  Future<List<NominaPago>> getNominasPorEmpleado(String empleadoId) async {
-    final response = await _client
-        .from(_table)
-        .select()
-        .eq('employee_id', empleadoId)
-        .order('date', ascending: false);
-    return (response as List).map((json) => NominaPago.fromJson(json)).toList();
-  }
-
-  Future<List<NominaPago>> getNominasPorPeriodo(String periodo) async {
-    final response = await _client
-        .from(_table)
-        .select()
-        .eq('period', periodo)
-        .order('date', ascending: false);
-    return (response as List).map((json) => NominaPago.fromJson(json)).toList();
+    try {
+      await _client.from('payroll').delete().eq('id', id);
+    } catch (e) {
+      throw Exception('Error al eliminar el registro de nómina $id de Supabase: $e');
+    }
   }
 }

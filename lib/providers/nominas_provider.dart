@@ -6,11 +6,14 @@ class NominasProvider extends ChangeNotifier {
   final NominaPagoRepository _repository;
 
   NominasProvider(this._repository) {
-    cargarNominas();
+    cargarNominas(); // Carga inicial al levantar el módulo
   }
 
   List<NominaPago> _nominas = [];
+  
+  // --- ESTADOS CENTRALIZADOS DE FLUJO Y ERRORES ---
   bool _isLoading = false;
+  String? _errorMessage;
 
   final int pageSize = 10;
   final List<String> tipos = ['Todos', 'Salario', 'Adelanto', 'Bono', 'Deducción'];
@@ -19,10 +22,14 @@ class NominasProvider extends ChangeNotifier {
   String _selectedType = 'Todos';
   int _currentPage = 1;
 
+  // --- GETTERS COMPATIBLES AL 100% CON TU INTERFAZ ORIGINAL ---
   String get search => _search;
   String get selectedType => _selectedType;
   int get currentPage => _currentPage;
   bool get isLoading => _isLoading;
+  
+  String? get errorMessage => _errorMessage;
+  bool get hasError => _errorMessage != null;
 
   List<NominaPago> get nominasFiltradas {
     return _nominas.where((n) {
@@ -46,19 +53,21 @@ class NominasProvider extends ChangeNotifier {
     return _nominas.fold(0.0, (sum, item) => sum + item.monto);
   }
 
+  // --- LÓGICA DE DATOS SEGURA ---
   Future<void> cargarNominas() async {
-    _isLoading = true;
-    notifyListeners();
+    _setLoading(true);
+    _clearError();
     try {
       _nominas = await _repository.getAll();
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error cargando nóminas: $e');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _setLoading(false);
     }
   }
 
+  // --- SETTERS Y CONTROLES DE INTERFAZ ---
   void setSearch(String val) {
     _search = val;
     _currentPage = 1;
@@ -76,30 +85,68 @@ class NominasProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> agregarNomina(NominaPago nomina) async {
+  // --- ACCIONES C.R.U.D CON RETORNO DE CONTROL COMPATIBLE ---
+  Future<bool> agregarNomina(NominaPago nomina) async {
+    _setLoading(true);
+    _clearError();
     try {
       await _repository.create(nomina);
       await cargarNominas();
+      return true;
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error agregando nómina: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<void> actualizarNomina(String id, NominaPago nomina) async {
+  // Soporta id dynamic en caso de que la UI envíe llaves numéricas o strings de forma indistinta
+  Future<bool> actualizarNomina(dynamic id, NominaPago nomina) async {
+    _setLoading(true);
+    _clearError();
     try {
-      await _repository.update(id, nomina);
+      final String convertedId = id.toString();
+      await _repository.update(convertedId, nomina);
       await cargarNominas();
+      return true;
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error actualizando nómina: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<void> eliminarNomina(String id) async {
+  Future<bool> eliminarNomina(dynamic id) async {
+    _setLoading(true);
+    _clearError();
     try {
-      await _repository.delete(id);
+      final String convertedId = id.toString();
+      await _repository.delete(convertedId);
       await cargarNominas();
+      return true;
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error eliminando nómina: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
     }
+  }
+
+  // --- MÉTODOS AUXILIARES ---
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
   }
 }
