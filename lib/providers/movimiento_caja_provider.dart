@@ -6,77 +6,121 @@ class MovimientoCajaProvider extends ChangeNotifier {
   final MovimientoCajaRepository _repository;
 
   MovimientoCajaProvider(this._repository) {
-    cargarMovimientos();
+    cargarMovimientos(); // Carga inicial automorfa
   }
 
   List<MovimientoCaja> _movimientos = [];
   bool _isLoading = false;
 
+  // --- NUEVO ESTADO DE ERROR CENTRALIZADO ---
+  String? _errorMessage;
+
+  // --- GETTERS COMPATIBLES AL 100% CON TU DISEÑO ORIGINAL ---
   List<MovimientoCaja> get movimientos => _movimientos;
   bool get isLoading => _isLoading;
+  
+  String? get errorMessage => _errorMessage;
+  bool get hasError => _errorMessage != null;
 
-  // Resumen de totales
+  // Resumen de totales reactivos para tus tarjetas visuales KPI
   double get totalIngresos => _movimientos
       .where((m) => m.tipo == 'Ingreso')
-      .fold(0, (sum, m) => sum + m.monto);
+      .fold(0.0, (sum, m) => sum + m.monto);
 
   double get totalEgresos => _movimientos
       .where((m) => m.tipo == 'Egreso')
-      .fold(0, (sum, m) => sum + m.monto);
+      .fold(0.0, (sum, m) => sum + m.monto);
 
   double get saldoNeto => totalIngresos - totalEgresos;
 
+  // --- LÓGICA DE DATOS CAPTURADA ---
   Future<void> cargarMovimientos() async {
-    _isLoading = true;
-    notifyListeners();
+    _setLoading(true);
+    _clearError();
     try {
       _movimientos = await _repository.getAll();
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error cargando movimientos: $e');
     } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> agregarMovimiento(MovimientoCaja movimiento) async {
-    try {
-      await _repository.create(movimiento);
-      await cargarMovimientos();
-    } catch (e) {
-      debugPrint('Error agregando movimiento: $e');
-    }
-  }
-
-  Future<void> actualizarMovimiento(
-      String id, MovimientoCaja movimiento) async {
-    try {
-      await _repository.update(id, movimiento);
-      await cargarMovimientos();
-    } catch (e) {
-      debugPrint('Error actualizando movimiento: $e');
-    }
-  }
-
-  Future<void> eliminarMovimiento(String id) async {
-    try {
-      await _repository.delete(id);
-      await cargarMovimientos();
-    } catch (e) {
-      debugPrint('Error eliminando movimiento: $e');
+      _setLoading(false);
     }
   }
 
   Future<void> cargarMovimientosPorFecha(String fecha) async {
-    _isLoading = true;
-    notifyListeners();
+    _setLoading(true);
+    _clearError();
     try {
       _movimientos = await _repository.getMovimientosPorFecha(fecha);
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error cargando movimientos por fecha: $e');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _setLoading(false);
     }
+  }
+
+  // --- ACCIONES C.R.U.D CON SOPORTE COMPATIBLE ---
+  Future<bool> agregarMovimiento(MovimientoCaja movimiento) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _repository.create(movimiento);
+      await cargarMovimientos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('Error agregando movimiento: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> actualizarMovimiento(dynamic id, MovimientoCaja movimiento) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final String convertedId = id.toString();
+      await _repository.update(convertedId, movimiento);
+      await cargarMovimientos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('Error actualizando movimiento: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> eliminarMovimiento(dynamic id) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      final String convertedId = id.toString();
+      await _repository.delete(convertedId);
+      await cargarMovimientos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('Error eliminando movimiento: $e');
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // --- MÉTODOS AUXILIARES ---
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
   }
 }
