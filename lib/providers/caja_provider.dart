@@ -83,7 +83,7 @@ class CajaProvider extends ChangeNotifier {
       return false;
     }
 
-    _repository.registrarCobro(_selectedOrder!.total, _selectedMethod);
+    _repository.registrarCobro(_selectedOrder!.id, _selectedMethod);
 
     _totalInCash += _selectedOrder!.total;
     _paidToday.insert(0, _selectedOrder!);
