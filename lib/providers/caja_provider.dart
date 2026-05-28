@@ -5,17 +5,16 @@ import '../repositories/caja_repository.dart';
 class CajaProvider extends ChangeNotifier {
   final CajaRepository _repository;
 
-  // Constructor que recibe el repositorio e inicializa los datos
   CajaProvider(this._repository) {
     _inicializarDatos();
   }
 
   final List<String> paymentMethods = ['Efectivo', 'Tarjeta', 'Transferencia'];
-  final TextEditingAmountController receivedAmountController = TextEditingAmountController();
+  // Ya no hay TextEditingController aquí
 
-  final List<CashOrder> _pendingOrders = []; // Vacía para recibir datos vivos de Tomar Orden
+  final List<CashOrder> _pendingOrders = []; 
   final List<CashOrder> _paidToday = [];
-  double _totalInCash = 0.0; // Se inicializa en 0 y se llena desde el repositorio
+  double _totalInCash = 0.0;
 
   String? _selectedOrderId;
   CashOrder? _selectedOrder;
@@ -39,7 +38,6 @@ class CajaProvider extends ChangeNotifier {
     return _receivedAmount - _selectedOrder!.total;
   }
 
-  // Método para cargar los datos asíncronos desde Supabase/Repositorio
   Future<void> _inicializarDatos() async {
     _totalInCash = await _repository.obtenerTotalEnCaja();
     notifyListeners();
@@ -49,7 +47,6 @@ class CajaProvider extends ChangeNotifier {
     _selectedOrderId = order.id;
     _selectedOrder = order;
     _receivedAmount = 0.0;
-    receivedAmountController.clear();
     _cashError = '';
     notifyListeners();
   }
@@ -61,7 +58,6 @@ class CajaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // METODO DE INTERCONEXIÓN: Recibe la cuenta por cobrar desde Tomar Orden
   void agregarCuentaPorCobrar(CashOrder nuevaCuenta) {
     _pendingOrders.insert(0, nuevaCuenta);
     notifyListeners();
@@ -87,7 +83,6 @@ class CajaProvider extends ChangeNotifier {
       return false;
     }
 
-    // Guardamos el cobro en la base de datos a través del repositorio
     _repository.registrarCobro(_selectedOrder!.total, _selectedMethod);
 
     _totalInCash += _selectedOrder!.total;
@@ -98,5 +93,3 @@ class CajaProvider extends ChangeNotifier {
     return true;
   }
 }
-
-class TextEditingAmountController extends TextEditingController {}

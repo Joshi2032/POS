@@ -261,7 +261,7 @@ class _CajaView extends StatelessWidget {
                         left:
                             BorderSide(color: Colors.grey.shade300, width: 1))),
                 child: order != null
-                    ? _buildPaymentPanel(context, provider, order)
+                    ? _PaymentPanel(key: ValueKey(order.id), order: order)
                     : _buildEmptyPanel(),
               )
           ],
@@ -275,15 +275,63 @@ class _CajaView extends StatelessWidget {
                 shape: const RoundedRectangleBorder(
                     borderRadius:
                         BorderRadius.vertical(top: Radius.circular(16))),
-                child: _buildPaymentPanel(context, provider, order),
+                child: _PaymentPanel(key: ValueKey(order.id), order: order),
               ),
             )
           : null,
     );
   }
 
-  Widget _buildPaymentPanel(
-      BuildContext context, CajaProvider provider, CashOrder order) {
+  Widget _buildEmptyPanel() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('💳', style: TextStyle(fontSize: 48)),
+            SizedBox(height: 10),
+            Text('Selecciona una orden para cobrar',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text('Cuando elijas una orden, aquí aparecerá el detalle de cobro.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// NUEVO STATEFUL WIDGET: Encapsula el controlador de forma segura en la UI
+class _PaymentPanel extends StatefulWidget {
+  final CashOrder order;
+  const _PaymentPanel({super.key, required this.order});
+
+  @override
+  State<_PaymentPanel> createState() => _PaymentPanelState();
+}
+
+class _PaymentPanelState extends State<_PaymentPanel> {
+  late final TextEditingController _amountController;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<CajaProvider>();
+    final order = widget.order;
+
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -370,7 +418,7 @@ class _CajaView extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             TextField(
-              controller: provider.receivedAmountController,
+              controller: _amountController,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
@@ -450,26 +498,6 @@ class _CajaView extends StatelessWidget {
             ),
           )
         ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyPanel() {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('💳', style: TextStyle(fontSize: 48)),
-            SizedBox(height: 10),
-            Text('Selecciona una orden para cobrar',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            Text('Cuando elijas una orden, aquí aparecerá el detalle de cobro.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey)),
-          ],
-        ),
       ),
     );
   }
