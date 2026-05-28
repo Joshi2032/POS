@@ -32,7 +32,15 @@ class _DashboardView extends StatelessWidget {
         fontSize: 11,
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6));
 
+    // CORREGIDO: Determinamos el límite estricto de puntos en el eje horizontal
+    final double maxTicks = provider.currentLabels.isNotEmpty 
+        ? (provider.currentLabels.length - 1).toDouble() 
+        : 0.0;
+
     return LineChartData(
+      // CORREGIDO: Forzamos el mapeo uno a uno de los índices del arreglo actual
+      minX: 0,
+      maxX: maxTicks,
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
@@ -50,13 +58,18 @@ class _DashboardView extends StatelessWidget {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 30,
+            // CORREGIDO: 'interval: 1' detiene la duplicación y encimamiento de textos del eje horizontal
+            interval: 1,
             getTitlesWidget: (value, meta) {
-              if (value.toInt() >= 0 &&
-                  value.toInt() < provider.currentLabels.length) {
+              final int index = value.toInt();
+              // Desplegamos el texto sólo si el índice cae estrictamente en el tamaño de la lista calculada
+              if (index >= 0 && index < provider.currentLabels.length) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(provider.currentLabels[value.toInt()],
-                      style: textStyle),
+                  child: Text(
+                    provider.currentLabels[index],
+                    style: textStyle,
+                  ),
                 );
               }
               return const SizedBox();
@@ -143,6 +156,7 @@ class _DashboardView extends StatelessWidget {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 30,
+            interval: 1,
             getTitlesWidget: (value, meta) {
               if (value.toInt() >= 0 &&
                   value.toInt() < provider.currentLabels.length) {
@@ -286,8 +300,6 @@ class _DashboardView extends StatelessWidget {
                         ? constraints.maxWidth * 0.38
                         : constraints.maxWidth;
 
-                    // CORREGIDO: Se agregaron ValueKeys únicas vinculadas a filterType
-                    // Esto fuerza a FL Chart a refrescar las proporciones del lienzo al filtrar.
                     return isWide
                         ? Row(
                             crossAxisAlignment: CrossAxisAlignment.start,

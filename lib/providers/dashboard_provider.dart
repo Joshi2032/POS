@@ -26,13 +26,13 @@ class DashboardProvider extends ChangeNotifier {
   List<dynamic> _allExpenses = [];
   List<ProviderPayment> _allSupplierPayments = [];
 
-  // Variables de control para los recuadros métricos superiores
+  // Variables para las tarjetas de métricas superiores
   double _ventasHoy = 0.0;
   int _ordenesActivas = 0;
   double _ingresoSemanalTotal = 0.0;
   double _utilidadSemanalTotal = 0.0;
 
-  // Listas de datos estructuradas para las gráficas
+  // Listas estructuradas que alimentan las gráficas
   List<String> _currentLabels = [];
   List<double> _currentIngresos = [];
   List<double> _currentGastos = [];
@@ -44,7 +44,7 @@ class DashboardProvider extends ChangeNotifier {
   double get ingresoSemanalTotal => _ingresoSemanalTotal;
   double get utilidadSemanalTotal => _utilidadSemanalTotal;
 
-  // --- GETTERS GENERALES Y GRÁFICAS ---
+  // --- GETTERS GENERALES Y DE GRÁFICAS ---
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get filterType => _filterType;
@@ -54,20 +54,19 @@ class DashboardProvider extends ChangeNotifier {
   List<double> get currentGastos => _currentGastos;
   List<double> get currentUtilidad => _currentUtilidad;
 
-  // --- LÓGICA DE ACTUALIZACIÓN DE FILTRO DESDE EL DROPDOWN ---
+  // --- SELECTOR DE FILTRO ---
   void setFilterType(String type) {
     if (_filterType == type) return; 
-    
     _filterType = type;
     
-    // Volvemos a procesar los datos con los nuevos rangos seleccionados
+    // Recalcula los rangos basándose en la nueva opción seleccionada
     _procesarOperacionesFinancieras();
     
-    // CORREGIDO: Notificación explícita obligatoria para obligar a la UI a redibujarse
+    // Alerta a la UI para redibujar los gráficos de inmediato
     notifyListeners();
   }
 
-  // --- OBTENCIÓN ASÍNCRONA DESDE REPOSITORIOS ---
+  // --- CONSULTA ASÍNCRONA DESDE SUPABASE ---
   Future<void> cargarMetricasGlobales() async {
     _isLoading = true;
     _errorMessage = null;
@@ -117,12 +116,12 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
-  // --- MOTOR ANALÍTICO Y AGRUPACIÓN FINANCIERA EN MEMORIA ---
+  // --- MOTOR MATEMÁTICO ANALÍTICO DE INTERFACES ---
   void _procesarOperacionesFinancieras() {
     final ahora = DateTime.now();
     final hoyStr = ahora.toIso8601String().substring(0, 10); 
 
-    // Limpieza de métricas de recuadros superiores
+    // Reinicio de las métricas de las tarjetas
     _ventasHoy = 0.0;
     _ordenesActivas = 0;
     _ingresoSemanalTotal = 0.0;
@@ -131,7 +130,7 @@ class DashboardProvider extends ChangeNotifier {
     final lunesDeEstaSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
     final inicioSemana = DateTime(lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
 
-    // Calcular Ventas de Hoy y Conteo de Órdenes en Cocina
+    // 1. CÁLCULO DE VENTAS DE HOY Y ÓRDENES ACTIVAS (Independiente del Dropdown)
     for (var orden in _allOrders) {
       try {
         final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
@@ -149,7 +148,7 @@ class DashboardProvider extends ChangeNotifier {
       } catch (_) {}
     }
 
-    // Clasificar y empaquetar flujos dependiendo de la temporalidad del Dropdown
+    // 2. AGRUPAMIENTO ESPECÍFICO PARA LAS GRÁFICAS SEGÚN LA TEMPORALIDAD
     if (_filterType == 'semana') {
       _currentLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
       _currentIngresos = List.generate(7, (_) => 0.0);
@@ -205,7 +204,8 @@ class DashboardProvider extends ChangeNotifier {
       _utilidadSemanalTotal = _ingresoSemanalTotal - gastosSemanales;
 
     } else if (_filterType == 'mes') {
-      _currentLabels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+      // CORREGIDO: Etiquetas numéricas de dos dígitos estrictas (01, 02, 03, 04)
+      _currentLabels = ['01', '02', '03', '04'];
       _currentIngresos = List.generate(4, (_) => 0.0);
       _currentGastos = List.generate(4, (_) => 0.0);
       _currentUtilidad = List.generate(4, (_) => 0.0);
@@ -297,6 +297,7 @@ class DashboardProvider extends ChangeNotifier {
       _calcularTotalesSemanalesFijos(inicioSemana);
     }
 
+    // Calcular las barras de utilidad final
     for (int i = 0; i < _currentIngresos.length; i++) {
       _currentUtilidad[i] = _currentIngresos[i] - _currentGastos[i];
     }
