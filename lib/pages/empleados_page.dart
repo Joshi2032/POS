@@ -128,7 +128,6 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                         rol: _formRol,
                         correo:
                             _correoCtrl.text, // Asegúrate de incluir el correo
-                        telefono: _telefonoCtrl.text,
                         activo: _formActivo,
                       );
 
@@ -210,7 +209,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                       actionLabel: 'Restablecer',
                       onAction: () {
                         provider.setSearchTerm('');
-                        provider.setRol('Todos');
+                        provider.setSelectedRol('Todos');
                       },
                     )
                   : GridView.builder(
