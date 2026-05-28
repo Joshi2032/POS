@@ -1,52 +1,64 @@
-// lib/repositories/reservacion_repository.dart
-import 'package:flutter/material.dart';
-
-import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/reservacion.dart';
 
 class ReservacionRepository {
-  final _client = SupabaseService.client;
+  final SupabaseClient _client;
 
-  // Obtiene las reservaciones de un día en específico
+  // Inyección del cliente de datos mediante el constructor
+  ReservacionRepository(this._client);
+
+  // Obtener reservaciones filtradas por una fecha específica
   Future<List<Reservacion>> getReservacionesPorFecha(String fecha) async {
     try {
       final response = await _client
-          .from('reservations')
-          .select()
-          .eq('reservation_date', fecha)
-          .order('reservation_time', ascending: true);
+          .from('reservations') // Asegúrate de que coincida con el nombre exacto de tu tabla
+          .select('*')
+          .eq('reservation_date', fecha);
 
-      return (response as List)
-          .map((json) => Reservacion.fromJson(json))
-          .toList();
+      return (response as List).map((json) => Reservacion.fromJson(json)).toList();
     } catch (e) {
-      // Cambio de print a debugPrint
-      debugPrint('Error al cargar reservaciones: $e'); 
-      return [];
+      throw Exception('Error al obtener reservaciones para la fecha $fecha: $e');
     }
   }
 
-  // Agrega una nueva reservación
+  // Crear un nuevo registro de reservación
   Future<void> crearReservacion(Reservacion reservacion) async {
-    await _client.from('reservations').insert(reservacion.toJson());
+    try {
+      await _client.from('reservations').insert(reservacion.toJson());
+    } catch (e) {
+      throw Exception('Error al insertar la reservación en Supabase: $e');
+    }
   }
 
-  // Actualiza los datos de una reservación existente
+  // Actualizar los datos de una reservación existente
   Future<void> actualizarReservacion(String id, Reservacion reservacion) async {
-    final data = reservacion.toJson();
-    data.remove('id'); // No actualizar el id
-    await _client.from('reservations').update(data).eq('id', id);
+    try {
+      final data = reservacion.toJson();
+      data.remove('id'); // Protegemos la llave primaria
+      await _client.from('reservations').update(data).eq('id', id);
+    } catch (e) {
+      throw Exception('Error al actualizar la reservación $id: $e');
+    }
   }
 
-  // Cambia el estado (ej. de "Pendiente" a "Cancelada" o "Completada")
+  // Cambiar únicamente el estado (ej. de 'confirmada' a 'cancelada')
   Future<void> cambiarEstado(String id, String nuevoEstado) async {
-    await _client
-        .from('reservations')
-        .update({'status': nuevoEstado}).eq('id', id);
+    try {
+      await _client
+          .from('reservations')
+          .update({'status': nuevoEstado})
+          .eq('id', id);
+    } catch (e) {
+      throw Exception('Error al modificar el estado de la reservación $id: $e');
+    }
   }
 
-  // Elimina definitivamente la reservación
+  // Eliminar definitivamente un registro
   Future<void> eliminarReservacion(String id) async {
-    await _client.from('reservations').delete().eq('id', id);
+    try {
+      await _client.from('reservations').delete().eq('id', id);
+    } catch (e) {
+      throw Exception('Error al eliminar la reservación $id: $e');
+    }
   }
 }

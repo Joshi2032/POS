@@ -1,4 +1,3 @@
-// lib/providers/reservaciones_provider.dart
 import 'package:flutter/material.dart';
 import '../models/reservacion.dart';
 import '../repositories/reservacion_repository.dart';
@@ -9,10 +8,9 @@ class ReservacionesProvider extends ChangeNotifier {
   final int pageSize = 10;
   final String todayIso = DateTime.now().toIso8601String().substring(0, 10);
 
-  // Listas que vendrán desde Supabase
+  // Listas de datos desde Supabase
   List<Reservacion> _reservations = [];
-  List<Reservacion> _todayReservations =
-      []; // Mantiene las estadísticas de hoy exactas
+  List<Reservacion> _todayReservations = []; 
 
   String _searchTerm = '';
   int _currentPage = 1;
@@ -23,14 +21,18 @@ class ReservacionesProvider extends ChangeNotifier {
 
   Map<String, dynamic> _formValues = {};
 
+  // --- NUEVOS ESTADOS DE CONTROL DE RED Y ERRORES ---
+  bool _isLoading = false;
+  String? _errorMessage;
+
   // Constructor inyectado
   ReservacionesProvider(this._repository) {
     _selectedDate = todayIso;
     _resetForm();
-    _cargarDatos();
+    cargarReservaciones(); // Reemplazamos la llamada directa por la pública segura
   }
 
-  // ==== GETTERS ====
+  // ==== GETTERS COMPATIBLES AL 100% CON TU DISEÑO ORIGINAL ====
   String get searchTerm => _searchTerm;
   int get currentPage => _currentPage;
   String get selectedDate => _selectedDate;
@@ -38,6 +40,11 @@ class ReservacionesProvider extends ChangeNotifier {
   bool get showModal => _showModal;
   String get modalError => _modalError;
   Map<String, dynamic> get formValues => _formValues;
+
+  // Getters para consultar los nuevos estados en la UI si lo necesitas
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  bool get hasError => _errorMessage != null;
 
   List<Reservacion> get filteredReservations {
     final search = _searchTerm.toLowerCase();
@@ -58,29 +65,36 @@ class ReservacionesProvider extends ChangeNotifier {
   int get totalPages =>
       (filteredReservations.length / pageSize).ceil().clamp(1, 999999);
 
-  // Las métricas usan la lista estricta de hoy para que no se borren si cambias de fecha en el calendario
   int get totalToday => _todayReservations.length;
+  
   int get confirmedToday => _todayReservations
       .where((r) => r.estado.toLowerCase() == 'confirmada')
       .length;
+      
   int get guestsTodayCount => _todayReservations
       .where((r) => r.estado.toLowerCase() == 'confirmada')
       .fold(0, (sum, r) => sum + r.personas);
 
-  // ==== MÉTODOS DE BASE DE DATOS (SUPABASE) ====
+  // ==== MÉTODOS DE BASE DE DATOS (SUPABASE CON ROBUSTEZ DE ERRORES) ====
 
-  Future<void> _cargarDatos() async {
-    // 1. Cargamos las reservaciones de la fecha seleccionada en el calendario
-    _reservations = await _repository.getReservacionesPorFecha(_selectedDate);
+  Future<void> cargarReservaciones() async {
+    _setLoading(true);
+    _clearError();
+    try {
+      // 1. Cargamos las reservaciones de la fecha seleccionada en el calendario
+      _reservations = await _repository.getReservacionesPorFecha(_selectedDate);
 
-    // 2. Cargamos/Actualizamos las estadísticas exactas del día de hoy
-    if (_selectedDate == todayIso) {
-      _todayReservations = _reservations;
-    } else {
-      _todayReservations = await _repository.getReservacionesPorFecha(todayIso);
+      // 2. Cargamos/Actualizamos las estadísticas exactas del día de hoy
+      if (_selectedDate == todayIso) {
+        _todayReservations = _reservations;
+      } else {
+        _todayReservations = await _repository.getReservacionesPorFecha(todayIso);
+      }
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _setLoading(false);
     }
-
-    notifyListeners();
   }
 
   // ==== INTERFAZ Y MODALES ====
@@ -94,7 +108,7 @@ class ReservacionesProvider extends ChangeNotifier {
   void setSelectedDate(String val) {
     _selectedDate = val;
     _currentPage = 1;
-    _cargarDatos(); // Recargamos Supabase al cambiar de fecha
+    cargarReservaciones(); // Recargamos Supabase de forma segura al cambiar de fecha
   }
 
   void goToPage(int page) {
@@ -150,7 +164,7 @@ class ReservacionesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ==== ACCIONES C.R.U.D ====
+  // ==== ACCIONES C.R.U.D CON CAPTURA INTEGRAL ====
 
   Future<bool> guardarReservacion() async {
     final cliente = (_formValues['cliente'] as String).trim();
@@ -163,9 +177,10 @@ class ReservacionesProvider extends ChangeNotifier {
       return false;
     }
 
+    _setLoading(true);
+    _modalError = '';
     try {
       if (_editingId != null) {
-        // Encontrar la reservación original para mantener su estado
         final estadoActual =
             _reservations.firstWhere((r) => r.id == _editingId).estado;
 
@@ -182,7 +197,7 @@ class ReservacionesProvider extends ChangeNotifier {
         await _repository.actualizarReservacion(_editingId!, resActualizada);
       } else {
         final nuevaRes = Reservacion(
-          id: '', // Supabase generará el UUID
+          id: '', 
           cliente: cliente,
           telefono: telefono,
           personas: personas,
@@ -195,22 +210,56 @@ class ReservacionesProvider extends ChangeNotifier {
       }
 
       cerrarModal();
-      await _cargarDatos(); // Refrescamos la lista
+      await cargarReservaciones(); // Refrescamos la lista de forma segura
       return true;
     } catch (e) {
       _modalError = 'Error al guardar la reservación: $e';
       notifyListeners();
       return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<void> cancelarReservacion(String id) async {
-    await _repository.cambiarEstado(id, 'cancelada');
-    await _cargarDatos();
+  Future<bool> cancelarReservacion(String id) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _repository.cambiarEstado(id, 'cancelada');
+      await cargarReservaciones();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  Future<void> eliminarReservacion(String id) async {
-    await _repository.eliminarReservacion(id);
-    await _cargarDatos();
+  Future<bool> eliminarReservacion(String id) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _repository.eliminarReservacion(id);
+      await cargarReservaciones();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // --- MÉTODOS AUXILIARES ---
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
   }
 }

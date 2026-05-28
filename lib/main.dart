@@ -70,7 +70,7 @@ Future<void> main() async {
         Provider(create: (_) => GastoRepository(SupabaseService.client)),
         Provider(create: (_) => OrdenRepository()),
         Provider(create: (_) => CajaRepository()),
-        Provider(create: (_) => ReservacionRepository()),
+        Provider(create: (_) => ReservacionRepository(SupabaseService.client)),
         Provider(create: (_) => MesaRepository(SupabaseService.client)),
         Provider(create: (_) => InventarioRepository()),
         Provider(create: (_) => PaymentRepository()),
