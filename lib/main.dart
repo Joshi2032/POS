@@ -10,6 +10,7 @@ import 'repositories/gasto_repository.dart';
 import 'repositories/orden_repository.dart';
 import 'repositories/caja_repository.dart'; // Repositorio de caja integrado
 import 'repositories/reservacion_repository.dart';
+import 'repositories/mesa_repository.dart';
 
 // --- Providers ---
 import 'providers/ajustes_provider.dart';
@@ -57,6 +58,7 @@ Future<void> main() async {
         Provider(create: (_) => OrdenRepository()),
         Provider(create: (_) => CajaRepository()),
         Provider(create: (_) => ReservacionRepository()),
+        Provider(create: (_) => MesaRepository()),
 
         // ==========================================
         // 3. PROVIDERS REFACTORIZADOS (Conexión a BD)
@@ -75,6 +77,7 @@ Future<void> main() async {
           create: (context) => CajaProvider(context.read<CajaRepository>()),
         ),
         ChangeNotifierProvider(create: (context) => ReservacionesProvider(context.read<ReservacionRepository>())),
+        ChangeNotifierProvider(create: (context) => MesasProvider(context.read<MesaRepository>())),
 
         // ==========================================
         // 4. PROVIDERS SIMPLES (Estado Local)
@@ -85,7 +88,6 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => EmpleadosProvider()),
         ChangeNotifierProvider(create: (_) => HistorialCortesProvider()),
-        ChangeNotifierProvider(create: (_) => MesasProvider()),
         ChangeNotifierProvider(create: (_) => NominasProvider()),
         ChangeNotifierProvider(create: (_) => ProveedoresProvider()),
         ChangeNotifierProvider(create: (_) => ReportesProvider()),

@@ -1,31 +1,17 @@
+// lib/providers/mesas_provider.dart
 import 'package:flutter/material.dart';
-
-class Mesa {
-  String nombre;
-  int capacidad;
-  String area;
-  String estado; // 'Libre' | 'Ocupada'
-
-  Mesa({
-    required this.nombre,
-    required this.capacidad,
-    required this.area,
-    required this.estado,
-  });
-}
+import '../models/mesa.dart'; // Usamos tu modelo real
+import '../repositories/mesa_repository.dart'; // Importamos el repo
 
 class MesasProvider extends ChangeNotifier {
-  final List<Mesa> _mesas = [
-    Mesa(nombre: 'Mesa A1', capacidad: 4, area: 'Área A', estado: 'Libre'),
-    Mesa(nombre: 'Mesa A2', capacidad: 4, area: 'Área A', estado: 'Ocupada'),
-    Mesa(nombre: 'Mesa A3', capacidad: 6, area: 'Área A', estado: 'Libre'),
-    Mesa(nombre: 'Mesa A4', capacidad: 4, area: 'Área A', estado: 'Libre'),
-    Mesa(nombre: 'Mesa B1', capacidad: 4, area: 'Área B', estado: 'Libre'),
-    Mesa(nombre: 'Mesa B2', capacidad: 6, area: 'Área B', estado: 'Ocupada'),
-    Mesa(nombre: 'Mesa B3', capacidad: 4, area: 'Área B', estado: 'Libre'),
-  ];
+  final MesaRepository _repository;
 
+  List<Mesa> _mesas = [];
   String _filtroSeleccionado = 'Todas';
+
+  MesasProvider(this._repository) {
+    cargarMesas();
+  }
 
   // Getters simples
   List<Mesa> get mesas => _mesas;
@@ -44,26 +30,31 @@ class MesasProvider extends ChangeNotifier {
   int get ocupadas => mesasFiltradas.where((m) => m.estado == 'Ocupada').length;
   int get porCobrar => ocupadas;
 
-  // Acciones
+  // Acciones (Convertidas a asíncronas para Supabase)
+  Future<void> cargarMesas() async {
+    _mesas = await _repository.getAll();
+    notifyListeners();
+  }
+
   void setFiltro(String filtro) {
     _filtroSeleccionado = filtro;
     notifyListeners();
   }
 
-  void addMesa(Mesa mesa) {
-    _mesas.add(mesa);
-    notifyListeners();
+  Future<void> addMesa(Mesa mesa) async {
+    await _repository.create(mesa);
+    await cargarMesas(); // Recarga la lista desde internet
   }
 
-  void updateMesa(int index, Mesa mesaEditada) {
-    _mesas[index].nombre = mesaEditada.nombre;
-    _mesas[index].capacidad = mesaEditada.capacidad;
-    _mesas[index].area = mesaEditada.area;
-    notifyListeners();
+  Future<void> updateMesa(int index, Mesa mesaEditada) async {
+    // Tomamos el ID de la mesa original usando el index para actualizarla
+    final idMesa = _mesas[index].id;
+    await _repository.update(idMesa, mesaEditada);
+    await cargarMesas();
   }
 
-  void removeMesa(Mesa mesa) {
-    _mesas.remove(mesa);
-    notifyListeners();
+  Future<void> removeMesa(Mesa mesa) async {
+    await _repository.delete(mesa.id);
+    await cargarMesas();
   }
 }

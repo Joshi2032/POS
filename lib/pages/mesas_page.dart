@@ -1,7 +1,9 @@
+// lib/pages/mesas_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/mesas_provider.dart';
 import '../widgets/app_widgets.dart';
+import '../models/mesa.dart'; // Aseguramos importar el modelo correcto
 
 class MesasPage extends StatelessWidget {
   const MesasPage({super.key});
@@ -119,26 +121,33 @@ class _MesasViewState extends State<_MesasView> {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancelar')),
             ElevatedButton(
-              onPressed: () {
+              // Convertimos el botón en asíncrono para esperar a Supabase
+              onPressed: () async {
                 if (_formKey.currentState!.validate()) {
                   if (mesa != null && index != null) {
-                    provider.updateMesa(
+                    await provider.updateMesa(
                         index,
                         Mesa(
+                          id: mesa.id, // Mantenemos el ID original
                           nombre: _nombreCtrl.text.trim(),
                           capacidad: int.parse(_capacidadCtrl.text),
                           area: _areaCtrl.text.trim(),
                           estado: mesa.estado,
                         ));
                   } else {
-                    provider.addMesa(Mesa(
+                    await provider.addMesa(Mesa(
+                      id: '', // ID vacío, Supabase lo generará
                       nombre: _nombreCtrl.text.trim(),
                       capacidad: int.parse(_capacidadCtrl.text),
                       area: _areaCtrl.text.trim(),
                       estado: 'Libre',
                     ));
                   }
-                  Navigator.pop(context);
+                  
+                  // Verifica si el widget sigue en pantalla antes de cerrarlo
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -174,9 +183,12 @@ class _MesasViewState extends State<_MesasView> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancelar')),
           TextButton(
-            onPressed: () {
-              provider.removeMesa(mesa);
-              Navigator.pop(context);
+            // Convertimos la confirmación en asíncrona
+            onPressed: () async {
+              await provider.removeMesa(mesa);
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
             },
             child: const Text('Confirmar', style: TextStyle(color: Colors.red)),
           ),
@@ -191,7 +203,7 @@ class _MesasViewState extends State<_MesasView> {
     final primaryColor = Theme.of(context).primaryColor;
 
     // Conectamos la interfaz al cerebro del módulo
-    final provider = context.watch<MesasProvider>();
+    final provider = Provider.of<MesasProvider>(context, listen: true);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -203,7 +215,6 @@ class _MesasViewState extends State<_MesasView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // AQUÍ ESTÁ LA CORRECCIÓN: Envolver SectionHeader en Expanded
                 Expanded(
                   child: SectionHeader(
                     title: 'Configuración de Mesas',
