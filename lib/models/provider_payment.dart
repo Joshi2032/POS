@@ -46,6 +46,7 @@ class ProviderPayment {
   }
 
   ProviderPayment copyWith({
+    String? id,
     String? provider,
     String? category,
     String? method,
@@ -55,7 +56,7 @@ class ProviderPayment {
     String? cashier,
   }) {
     return ProviderPayment(
-      id: id,
+      id: id ?? this.id,
       provider: provider ?? this.provider,
       category: category ?? this.category,
       method: method ?? this.method,

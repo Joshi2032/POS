@@ -12,6 +12,7 @@ import 'repositories/caja_repository.dart'; // Repositorio de caja integrado
 import 'repositories/reservacion_repository.dart';
 import 'repositories/mesa_repository.dart';
 import 'repositories/inventario_repository.dart'; // Repositorio de inventario integrado
+import 'repositories/payment_repository.dart'; // Repositorio de pagos integrado
 
 // --- Providers ---
 import 'providers/ajustes_provider.dart';
@@ -31,6 +32,7 @@ import 'providers/reservaciones_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/tomar_orden_provider.dart';
 import 'providers/inventario_provider.dart';
+import 'providers/proveedores_provider.dart';
 
 Future<void> main() async {
   // Asegura que los canales de la plataforma nativa estén listos antes de inicializar servicios externos
@@ -61,6 +63,7 @@ Future<void> main() async {
         Provider(create: (_) => ReservacionRepository()),
         Provider(create: (_) => MesaRepository()),
         Provider(create: (_) => InventarioRepository()),
+        Provider(create: (_) => PaymentRepository()),
         // ==========================================
         // 3. PROVIDERS REFACTORIZADOS (Conexión a BD)
         // ==========================================
@@ -86,6 +89,10 @@ Future<void> main() async {
           create: (context) =>
               InventarioProvider(context.read<InventarioRepository>()),
         ),
+        ChangeNotifierProvider(
+          create: (context) =>
+              ProveedoresProvider(context.read<PaymentRepository>()),
+        ),
 
         // ==========================================
         // 4. PROVIDERS SIMPLES (Estado Local)
@@ -97,7 +104,6 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => EmpleadosProvider()),
         ChangeNotifierProvider(create: (_) => HistorialCortesProvider()),
         ChangeNotifierProvider(create: (_) => NominasProvider()),
-        ChangeNotifierProvider(create: (_) => ProveedoresProvider()),
         ChangeNotifierProvider(create: (_) => ReportesProvider()),
         ChangeNotifierProvider(create: (_) => TomarOrdenProvider()),
       ],

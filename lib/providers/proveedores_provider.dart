@@ -1,101 +1,45 @@
+// lib/providers/payments_provider.dart
 import 'package:flutter/material.dart';
-
 import '../models/provider_payment.dart';
-import 'inventario_provider.dart';
+import '../repositories/payment_repository.dart';
 
-class ProveedoresProvider extends ChangeNotifier {
-  final int pageSize = 10;
-  final List<ProviderPayment> _payments = [];
-  String _searchTerm = '';
-  int _currentPage = 1;
+class PaymentsProvider extends ChangeNotifier {
+  final PaymentRepository _repository;
+  List<ProviderPayment> _payments = [];
+  bool _isLoading = false;
 
-  String get searchTerm => _searchTerm;
-  int get currentPage => _currentPage;
-  List<ProviderPayment> get payments => List.unmodifiable(_payments);
-
-  List<ProviderPayment> get filteredPayments {
-    if (_searchTerm.isEmpty) return List.unmodifiable(_payments);
-    final q = _searchTerm.toLowerCase();
-    return _payments.where((payment) {
-      return [
-        payment.provider,
-        payment.category,
-        payment.method,
-        payment.cashier,
-      ].any((value) => value.toLowerCase().contains(q));
-    }).toList();
+  PaymentsProvider(this._repository) {
+    cargarPagos();
   }
 
-  int get totalPages =>
-      (filteredPayments.length / pageSize).ceil().clamp(1, 999999);
+  List<ProviderPayment> get payments => _payments;
+  bool get isLoading => _isLoading;
 
-  List<ProviderPayment> get paginatedPayments {
-    final start = (_currentPage - 1) * pageSize;
-    return filteredPayments.skip(start).take(pageSize).toList();
-  }
-
-  // Corrección en los folds garantizando que la lectura trate al valor como num
-  double get todayTotal {
-    final today = DateTime.now().toIso8601String().split('T').first;
-    return _payments
-        .where((payment) => payment.date == today)
-        .fold(0.0, (sum, payment) => sum + payment.amount);
-  }
-
-  int get todayPaymentsCount {
-    final today = DateTime.now().toIso8601String().split('T').first;
-    return _payments.where((payment) => payment.date == today).length;
-  }
-
-  double get weekTotal {
-    final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
-    return _payments.where((payment) {
-      final date = DateTime.tryParse(payment.date);
-      return date != null && date.isAfter(weekAgo);
-    }).fold(0.0, (sum, payment) => sum + payment.amount);
-  }
-
-  double get monthTotal {
-    final now = DateTime.now();
-    return _payments.where((payment) {
-      final date = DateTime.tryParse(payment.date);
-      return date != null && date.month == now.month && date.year == now.year;
-    }).fold(0.0, (sum, payment) => sum + payment.amount);
-  }
-
-  int get uniqueProvidersCount {
-    return _payments.map((payment) => payment.provider).toSet().length;
-  }
-
-  void setSearch(String val) {
-    _searchTerm = val;
-    _currentPage = 1;
+  Future<void> cargarPagos() async {
+    _isLoading = true;
     notifyListeners();
-  }
-
-  void goToPage(int page) {
-    _currentPage = page.clamp(1, totalPages);
-    notifyListeners();
-  }
-
-  // Inyección limpia pasándole un incremento double estándar (ej. 10.0 unidades)
-  void addPayment(ProviderPayment payment, InventarioProvider inventario) {
-    _payments.insert(0, payment);
-    inventario.aumentarStockPorCompra(payment.category, 10.0);
-    notifyListeners();
-  }
-
-  void updatePayment(String id, ProviderPayment payment) {
-    final idx = _payments.indexWhere((p) => p.id == id);
-    if (idx != -1) {
-      _payments[idx] = payment;
+    try {
+      _payments = await _repository.getAll();
+    } catch (e) {
+      debugPrint('Error al cargar pagos: $e');
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
 
-  void removePayment(String id) {
-    _payments.removeWhere((p) => p.id == id);
-    notifyListeners();
+  Future<void> addPayment(ProviderPayment payment) async {
+    await _repository.create(payment);
+    await cargarPagos();
+  }
+
+  Future<void> updatePayment(String id, ProviderPayment payment) async {
+    await _repository.update(payment.copyWith(id: id));
+    await cargarPagos();
+  }
+
+  Future<void> removePayment(String id) async {
+    await _repository.delete(id);
+    await cargarPagos();
   }
 }
