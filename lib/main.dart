@@ -76,11 +76,11 @@ Future<void> main() async {
         Provider(create: (_) => PaymentRepository(SupabaseService.client)),
         Provider(create: (_) => ComboRepository(SupabaseService.client)),
         Provider(create: (_) => MovimientoCajaRepository(SupabaseService.client)),
-        Provider(create: (_) => CorteCajaRepository()),
+        Provider(create: (_) => CorteCajaRepository(SupabaseService.client)),
         Provider(create: (_) => EmpleadoRepository(SupabaseService.client)),
         Provider(create: (_) => NominaPagoRepository(SupabaseService.client)),
-        Provider(create: (_) => RecipeRepository()),
-        
+        Provider(create: (_) => RecipeRepository(SupabaseService.client)),
+
         // ==========================================
         // 3. PROVIDERS REFACTORIZADOS (Conexión a BD)
         // ==========================================
