@@ -77,7 +77,7 @@ Future<void> main() async {
         Provider(create: (_) => ComboRepository()),
         Provider(create: (_) => MovimientoCajaRepository()),
         Provider(create: (_) => CorteCajaRepository()),
-        Provider(create: (_) => EmpleadoRepository()),
+        Provider(create: (_) => EmpleadoRepository(SupabaseService.client)),
         Provider(create: (_) => NominaPagoRepository()),
         Provider(create: (_) => RecipeRepository()),
         

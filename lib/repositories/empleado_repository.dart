@@ -1,46 +1,51 @@
-import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/empleado.dart';
 
 class EmpleadoRepository {
-  final _client = SupabaseService.client;
-  final String _table = 'employees';
+  final SupabaseClient _client;
 
+  // Inyección del cliente de base de datos por constructor
+  EmpleadoRepository(this._client);
+
+  // READ: Obtener todos los empleados
   Future<List<Empleado>> getAll() async {
-    final response = await _client.from(_table).select().order('name');
-    return (response as List).map((json) => Empleado.fromJson(json)).toList();
-  }
-
-  Future<List<Empleado>> getActivos() async {
-    final response =
-        await _client.from(_table).select().eq('active', true).order('name');
-    return (response as List).map((json) => Empleado.fromJson(json)).toList();
-  }
-
-  Future<void> create(Empleado empleado) async {
-    await _client.from(_table).insert(empleado.toJson());
-  }
-
-  Future<void> update(String id, Empleado empleado) async {
-    final data = empleado.toJson();
-    data.remove('id');
-    await _client.from(_table).update(data).eq('id', id);
-  }
-
-  Future<void> delete(String id) async {
-    await _client.from(_table).delete().eq('id', id);
-  }
-
-  Future<Empleado?> getById(String id) async {
     try {
-      final response =
-          await _client.from(_table).select().eq('id', id).single();
-      return Empleado.fromJson(response);
+      final response = await _client
+          .from('employees') // Asegúrate de que coincida con el nombre de tu tabla en Supabase
+          .select('*');
+
+      return (response as List).map((json) => Empleado.fromJson(json)).toList();
     } catch (e) {
-      return null;
+      throw Exception('Error al obtener los empleados de Supabase: $e');
     }
   }
 
-  Future<void> toggleActivo(String id, bool activo) async {
-    await _client.from(_table).update({'active': activo}).eq('id', id);
+  // CREATE: Registrar un nuevo empleado
+  Future<void> create(Empleado empleado) async {
+    try {
+      await _client.from('employees').insert(empleado.toJson());
+    } catch (e) {
+      throw Exception('Error al registrar al empleado: $e');
+    }
+  }
+
+  // UPDATE: Actualizar datos de un empleado existente
+  Future<void> update(String id, Empleado empleado) async {
+    try {
+      final data = empleado.toJson();
+      data.remove('id'); // Protegemos la llave primaria de modificaciones por error
+      await _client.from('employees').update(data).eq('id', id);
+    } catch (e) {
+      throw Exception('Error al actualizar el empleado $id: $e');
+    }
+  }
+
+  // DELETE: Eliminar un empleado
+  Future<void> delete(String id) async {
+    try {
+      await _client.from('employees').delete().eq('id', id);
+    } catch (e) {
+      throw Exception('Error al eliminar al empleado $id: $e');
+    }
   }
 }
