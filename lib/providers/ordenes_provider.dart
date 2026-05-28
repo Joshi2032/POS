@@ -15,11 +15,11 @@ class OrdenesProvider extends BaseProvider {
   bool _showModal = false;
   RestaurantOrder? _selectedOrderForModal;
 
-  OrdenesProvider(this._repository) {
+  OrdenesProvider(this._repository) : super() {
     cargarOrdenes();
   }
 
-  // --- GETTERS (Exactamente como los necesita tu UI) ---
+  // --- GETTERS (Exactamente como los necesita tu UI original) ---
   List<RestaurantOrder> get orders => _orders;
   String get searchQuery => _searchQuery;
   String get selectedFilterStatus => _selectedFilterStatus;
@@ -32,7 +32,7 @@ class OrdenesProvider extends BaseProvider {
     return _orders.where((order) {
       final matchesSearch =
           order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              order.tableOrCustomer.toLowerCase().contains(_searchQuery.toLowerCase());
+          order.tableOrCustomer.toLowerCase().contains(_searchQuery.toLowerCase());
 
       final matchesStatus = _selectedFilterStatus == 'Todos' ||
           order.status.toLowerCase() == _selectedFilterStatus.toLowerCase();
@@ -52,6 +52,8 @@ class OrdenesProvider extends BaseProvider {
   }
 
   int get totalPages => (filteredOrders.length / pageSize).ceil().clamp(1, 999999);
+  
+  // Condicionales basadas estrictamente en las propiedades de tus modelos
   int get activeOrdersCount => _orders.where((o) => o.status == 'pendiente' || o.status == 'preparando').length;
   int get readyOrdersCount => _orders.where((o) => o.status == 'lista').length;
 
@@ -61,25 +63,32 @@ class OrdenesProvider extends BaseProvider {
     _currentPage = 1;
     notifyListeners();
   }
+  
   void onStatusFilterChange(String val) {
     _selectedFilterStatus = val;
     _currentPage = 1;
     notifyListeners();
   }
+  
   void onServiceFilterChange(String val) {
     _selectedFilterService = val;
     _currentPage = 1;
     notifyListeners();
   }
+  
   void goToPage(int page) {
-    _currentPage = page;
-    notifyListeners();
+    if (page >= 1 && page <= totalPages) {
+      _currentPage = page;
+      notifyListeners();
+    }
   }
+  
   void abrirDetalleModal(RestaurantOrder order) {
     _selectedOrderForModal = order;
     _showModal = true;
     notifyListeners();
   }
+  
   void cerrarModal() {
     _showModal = false;
     _selectedOrderForModal = null;
@@ -87,7 +96,7 @@ class OrdenesProvider extends BaseProvider {
   }
 
   // ==========================================
-  // CONEXIÓN A SUPABASE (Reemplazando listas locales)
+  // CONEXIÓN A SUPABASE MEDIANTE BASE_PROVIDER
   // ==========================================
 
   Future<void> cargarOrdenes() async {
@@ -96,7 +105,6 @@ class OrdenesProvider extends BaseProvider {
     });
   }
 
-  // Este es el método que tu tomar_orden_page estaba buscando
   Future<void> insertarNuevaComanda(RestaurantOrder nuevaOrden) async {
     await ejecutarOperacion(() async {
       final itemsMap = nuevaOrden.items.map((i) => {
@@ -106,18 +114,17 @@ class OrdenesProvider extends BaseProvider {
       }).toList();
 
       await _repository.crearOrden(nuevaOrden, itemsMap);
-      await cargarOrdenes(); // Sincroniza desde la BD al crear
+      await cargarOrdenes(); // Re-sincroniza el listado activo
     });
   }
 
-  // Actualizado para devolver bool y tener manejo asíncrono
-  Future<bool> cambiarEstadoOrden(String id, OrderStatus nuevoEstado) async {
+  Future<bool> cambiarEstadoOrden(String id, String nuevoEstado) async {
     bool exito = false;
     await ejecutarOperacion(() async {
       await _repository.actualizarEstado(id, nuevoEstado);
       await cargarOrdenes();
       
-      // Actualiza el modal en vivo si está abierto
+      // Mantiene la actualización reactiva del modal si el usuario lo tiene abierto
       if (_selectedOrderForModal?.id == id) {
         final idx = _orders.indexWhere((o) => o.id == id);
         if (idx != -1) _selectedOrderForModal = _orders[idx];
