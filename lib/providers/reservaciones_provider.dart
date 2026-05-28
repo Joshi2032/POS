@@ -11,7 +11,8 @@ class ReservacionesProvider extends ChangeNotifier {
 
   // Listas que vendrán desde Supabase
   List<Reservacion> _reservations = [];
-  List<Reservacion> _todayReservations = []; // Mantiene las estadísticas de hoy exactas
+  List<Reservacion> _todayReservations =
+      []; // Mantiene las estadísticas de hoy exactas
 
   String _searchTerm = '';
   int _currentPage = 1;
@@ -41,7 +42,8 @@ class ReservacionesProvider extends ChangeNotifier {
   List<Reservacion> get filteredReservations {
     final search = _searchTerm.toLowerCase();
     return _reservations.where((res) {
-      final matchesSearch = search.isEmpty || res.cliente.toLowerCase().contains(search);
+      final matchesSearch =
+          search.isEmpty || res.cliente.toLowerCase().contains(search);
       return matchesSearch;
     }).toList();
   }
@@ -53,11 +55,14 @@ class ReservacionesProvider extends ChangeNotifier {
     return filtered.skip(start).take(pageSize).toList();
   }
 
-  int get totalPages => (filteredReservations.length / pageSize).ceil().clamp(1, 999999);
-  
+  int get totalPages =>
+      (filteredReservations.length / pageSize).ceil().clamp(1, 999999);
+
   // Las métricas usan la lista estricta de hoy para que no se borren si cambias de fecha en el calendario
   int get totalToday => _todayReservations.length;
-  int get confirmedToday => _todayReservations.where((r) => r.estado.toLowerCase() == 'confirmada').length;
+  int get confirmedToday => _todayReservations
+      .where((r) => r.estado.toLowerCase() == 'confirmada')
+      .length;
   int get guestsTodayCount => _todayReservations
       .where((r) => r.estado.toLowerCase() == 'confirmada')
       .fold(0, (sum, r) => sum + r.personas);
@@ -74,7 +79,7 @@ class ReservacionesProvider extends ChangeNotifier {
     } else {
       _todayReservations = await _repository.getReservacionesPorFecha(todayIso);
     }
-    
+
     notifyListeners();
   }
 
@@ -161,8 +166,9 @@ class ReservacionesProvider extends ChangeNotifier {
     try {
       if (_editingId != null) {
         // Encontrar la reservación original para mantener su estado
-        final estadoActual = _reservations.firstWhere((r) => r.id == _editingId).estado;
-        
+        final estadoActual =
+            _reservations.firstWhere((r) => r.id == _editingId).estado;
+
         final resActualizada = Reservacion(
           id: _editingId!,
           cliente: cliente,
@@ -173,7 +179,7 @@ class ReservacionesProvider extends ChangeNotifier {
           estado: estadoActual,
           mesa: _formValues['mesa'],
         );
-        await _repository.actualizarReservacion(resActualizada);
+        await _repository.actualizarReservacion(_editingId!, resActualizada);
       } else {
         final nuevaRes = Reservacion(
           id: '', // Supabase generará el UUID

@@ -17,11 +17,10 @@ class ProductoRepository {
   }
 
   // UPDATE: Actualizar existente
-  Future<void> update(Producto product) async {
-    await SupabaseService.client
-        .from('products')
-        .update(product.toJson())
-        .eq('id', product.id);
+  Future<void> update(String id, Producto product) async {
+    final data = product.toJson();
+    data.remove('id'); // No actualizar el id
+    await SupabaseService.client.from('products').update(data).eq('id', id);
   }
 
   // DELETE: Eliminar

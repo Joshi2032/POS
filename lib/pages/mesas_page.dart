@@ -71,10 +71,12 @@ class _MesasViewState extends State<_MesasView> {
                     decoration:
                         const InputDecoration(border: OutlineInputBorder()),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty)
+                      if (v == null || v.trim().isEmpty) {
                         return 'El nombre es obligatorio.';
-                      if (v.length < 2 || v.length > 30)
+                      }
+                      if (v.length < 2 || v.length > 30) {
                         return 'El nombre debe tener entre 2 y 30 caracteres.';
+                      }
                       return null;
                     },
                   ),
@@ -89,10 +91,12 @@ class _MesasViewState extends State<_MesasView> {
                         const InputDecoration(border: OutlineInputBorder()),
                     validator: (v) {
                       final num = int.tryParse(v ?? '');
-                      if (num == null)
+                      if (num == null) {
                         return 'La capacidad debe ser un número entero.';
-                      if (num < 1 || num > 20)
+                      }
+                      if (num < 1 || num > 20) {
                         return 'La capacidad debe estar entre 1 y 20.';
+                      }
                       return null;
                     },
                   ),
@@ -105,10 +109,12 @@ class _MesasViewState extends State<_MesasView> {
                     decoration:
                         const InputDecoration(border: OutlineInputBorder()),
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty)
+                      if (v == null || v.trim().isEmpty) {
                         return 'El área es obligatoria.';
-                      if (v.length < 2 || v.length > 30)
+                      }
+                      if (v.length < 2 || v.length > 30) {
                         return 'El área debe tener entre 2 y 30 caracteres.';
+                      }
                       return null;
                     },
                   ),
@@ -143,7 +149,7 @@ class _MesasViewState extends State<_MesasView> {
                       estado: 'Libre',
                     ));
                   }
-                  
+
                   // Verifica si el widget sigue en pantalla antes de cerrarlo
                   if (context.mounted) {
                     Navigator.pop(context);

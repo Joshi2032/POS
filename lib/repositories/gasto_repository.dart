@@ -6,7 +6,10 @@ class GastoRepository {
 
   Future<List<Gasto>> getAll() async {
     // Ordenamos por fecha descendente (los más recientes primero)
-    final response = await _client.from('expenses').select().order('expense_date', ascending: false);
+    final response = await _client
+        .from('expenses')
+        .select()
+        .order('expense_date', ascending: false);
     return (response as List).map((json) => Gasto.fromJson(json)).toList();
   }
 
@@ -15,7 +18,9 @@ class GastoRepository {
   }
 
   Future<void> update(String id, Gasto gasto) async {
-    await _client.from('expenses').update(gasto.toJson()).eq('id', id);
+    final data = gasto.toJson();
+    data.remove('id'); // Asegurar que no se intente actualizar el id
+    await _client.from('expenses').update(data).eq('id', id);
   }
 
   Future<void> delete(String id) async {

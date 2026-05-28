@@ -14,7 +14,13 @@ class ProductosProvider extends ChangeNotifier {
   String _selectedCategory = 'Todas';
 
   // ¡AQUÍ ESTÁ LA LISTA QUE LE FALTABA A LA PÁGINA!
-  final List<String> categorias = ['Todas', 'Parrilla', 'Entradas', 'Bebidas', 'Postres'];
+  final List<String> categorias = [
+    'Todas',
+    'Parrilla',
+    'Entradas',
+    'Bebidas',
+    'Postres'
+  ];
 
   List<Producto> get productos => _productos;
   String get searchTerm => _searchTerm;
@@ -31,8 +37,8 @@ class ProductosProvider extends ChangeNotifier {
     await cargarProductos();
   }
 
-  Future<void> updateProducto(Producto producto) async {
-    await _repository.update(producto);
+  Future<void> updateProducto(String id, Producto producto) async {
+    await _repository.update(id, producto);
     await cargarProductos();
   }
 
@@ -44,8 +50,10 @@ class ProductosProvider extends ChangeNotifier {
   // --- FILTROS ---
   List<Producto> get productosFiltrados {
     return _productos.where((p) {
-      final matchesSearch = p.nombre.toLowerCase().contains(_searchTerm.toLowerCase());
-      final matchesCategory = _selectedCategory == 'Todas' || p.categoria == _selectedCategory;
+      final matchesSearch =
+          p.nombre.toLowerCase().contains(_searchTerm.toLowerCase());
+      final matchesCategory =
+          _selectedCategory == 'Todas' || p.categoria == _selectedCategory;
       return matchesSearch && matchesCategory;
     }).toList();
   }

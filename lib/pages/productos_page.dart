@@ -23,7 +23,8 @@ class ProductosPage extends StatelessWidget {
               decoration: InputDecoration(
                 labelText: 'Buscar producto...',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onChanged: provider.setSearchTerm,
             ),
@@ -57,20 +58,28 @@ class ProductosPage extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final producto = provider.productosFiltrados[index];
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16.0, vertical: 8.0),
                         child: ListTile(
-                          title: Text(producto.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('${producto.categoria} | Stock: ${producto.stock} ${producto.unidad}'),
+                          title: Text(producto.nombre,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(
+                              '${producto.categoria} | Stock: ${producto.stock} ${producto.unidad}'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('\$${producto.precio.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16)),
+                              Text('\$${producto.precio.toStringAsFixed(2)}',
+                                  style: const TextStyle(fontSize: 16)),
                               IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _mostrarDialogoFormulario(context, producto),
+                                icon:
+                                    const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _mostrarDialogoFormulario(
+                                    context, producto),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
+                                icon:
+                                    const Icon(Icons.delete, color: Colors.red),
                                 onPressed: () {
                                   if (producto.id != null) {
                                     provider.deleteProducto(producto.id!);
@@ -94,98 +103,110 @@ class ProductosPage extends StatelessWidget {
     );
   }
 
-  void _mostrarDialogoFormulario(BuildContext context, Producto? productoExistente) {
+  void _mostrarDialogoFormulario(
+      BuildContext context, Producto? productoExistente) {
     final provider = context.read<ProductosProvider>();
     final isEditing = productoExistente != null;
 
-    final nombreCtrl = TextEditingController(text: isEditing ? productoExistente.nombre : '');
-    final precioCtrl = TextEditingController(text: isEditing ? productoExistente.precio.toString() : '');
-    final stockCtrl = TextEditingController(text: isEditing ? productoExistente.stock.toString() : '');
-    
-    String categoriaSeleccionada = isEditing 
-        ? productoExistente.categoria 
+    final nombreCtrl =
+        TextEditingController(text: isEditing ? productoExistente.nombre : '');
+    final precioCtrl = TextEditingController(
+        text: isEditing ? productoExistente.precio.toString() : '');
+    final stockCtrl = TextEditingController(
+        text: isEditing ? productoExistente.stock.toString() : '');
+
+    String categoriaSeleccionada = isEditing
+        ? productoExistente.categoria
         : provider.categorias.firstWhere((c) => c != 'Todas');
 
     showDialog(
       context: context,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text(isEditing ? 'Editar Producto' : 'Añadir Producto'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: nombreCtrl,
-                      decoration: const InputDecoration(labelText: 'Nombre del producto'),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: precioCtrl,
-                            decoration: const InputDecoration(labelText: 'Precio (\$)', prefixText: '\$'),
-                            keyboardType: TextInputType.number,
-                          ),
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: Text(isEditing ? 'Editar Producto' : 'Añadir Producto'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nombreCtrl,
+                    decoration:
+                        const InputDecoration(labelText: 'Nombre del producto'),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: precioCtrl,
+                          decoration: const InputDecoration(
+                              labelText: 'Precio (\$)', prefixText: '\$'),
+                          keyboardType: TextInputType.number,
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextField(
-                            controller: stockCtrl,
-                            decoration: const InputDecoration(labelText: 'Stock actual'),
-                            keyboardType: TextInputType.number,
-                          ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: stockCtrl,
+                          decoration:
+                              const InputDecoration(labelText: 'Stock actual'),
+                          keyboardType: TextInputType.number,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      // CORRECCIÓN: initialValue en lugar de value
-                      initialValue: provider.categorias.contains(categoriaSeleccionada) ? categoriaSeleccionada : null,
-                      decoration: const InputDecoration(labelText: 'Categoría'),
-                      items: provider.categorias
-                          .where((c) => c != 'Todas')
-                          .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
-                          .toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => categoriaSeleccionada = val);
-                      },
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    // CORRECCIÓN: initialValue en lugar de value
+                    initialValue:
+                        provider.categorias.contains(categoriaSeleccionada)
+                            ? categoriaSeleccionada
+                            : null,
+                    decoration: const InputDecoration(labelText: 'Categoría'),
+                    items: provider.categorias
+                        .where((c) => c != 'Todas')
+                        .map((cat) =>
+                            DropdownMenuItem(value: cat, child: Text(cat)))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() => categoriaSeleccionada = val);
+                      }
+                    },
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancelar'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    final nuevoProducto = Producto(
-                      id: productoExistente?.id,
-                      nombre: nombreCtrl.text,
-                      precio: double.tryParse(precioCtrl.text) ?? 0.0,
-                      stock: int.tryParse(stockCtrl.text) ?? 0,
-                      categoria: categoriaSeleccionada,
-                      unidad: productoExistente?.unidad ?? 'unidad',
-                    );
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancelar'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final nuevoProducto = Producto(
+                    id: productoExistente?.id,
+                    nombre: nombreCtrl.text,
+                    precio: double.tryParse(precioCtrl.text) ?? 0.0,
+                    stock: int.tryParse(stockCtrl.text) ?? 0,
+                    categoria: categoriaSeleccionada,
+                    unidad: productoExistente?.unidad ?? 'unidad',
+                  );
 
-                    if (isEditing) {
-                      provider.updateProducto(nuevoProducto);
-                    } else {
-                      provider.addProducto(nuevoProducto);
-                    }
-                    Navigator.pop(dialogContext);
-                  },
-                  child: Text(isEditing ? 'Guardar Cambios' : 'Añadir'),
-                ),
-              ],
-            );
-          }
-        );
+                  if (isEditing) {
+                    provider.updateProducto(
+                        productoExistente!.id!, nuevoProducto);
+                  } else {
+                    provider.addProducto(nuevoProducto);
+                  }
+                  Navigator.pop(dialogContext);
+                },
+                child: Text(isEditing ? 'Guardar Cambios' : 'Añadir'),
+              ),
+            ],
+          );
+        });
       },
     );
   }

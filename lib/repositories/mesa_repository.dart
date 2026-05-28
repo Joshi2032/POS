@@ -11,7 +11,7 @@ class MesaRepository {
         .select()
         .order('area') // Ordena por área
         .order('name'); // Y luego alfabéticamente por nombre
-        
+
     return (response as List).map((json) => Mesa.fromJson(json)).toList();
   }
 
@@ -20,7 +20,9 @@ class MesaRepository {
   }
 
   Future<void> update(String id, Mesa mesa) async {
-    await _client.from('restaurant_tables').update(mesa.toJson()).eq('id', id);
+    final data = mesa.toJson();
+    data.remove('id'); // No actualizar el id
+    await _client.from('restaurant_tables').update(data).eq('id', id);
   }
 
   Future<void> delete(String id) async {

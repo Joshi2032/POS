@@ -6,7 +6,7 @@ import '../providers/inventario_provider.dart';
 
 class PaymentsProvider extends ChangeNotifier {
   final PaymentRepository _repository;
-  
+
   List<ProviderPayment> _payments = [];
   String _searchTerm = '';
   int _currentPage = 1;
@@ -21,12 +21,13 @@ class PaymentsProvider extends ChangeNotifier {
   List<ProviderPayment> get payments => _payments;
   bool get isLoading => _isLoading;
   int get currentPage => _currentPage;
-  
+
   List<ProviderPayment> get filteredPayments {
-    return _payments.where((p) => 
-      p.provider.toLowerCase().contains(_searchTerm.toLowerCase()) || 
-      p.category.toLowerCase().contains(_searchTerm.toLowerCase())
-    ).toList();
+    return _payments
+        .where((p) =>
+            p.provider.toLowerCase().contains(_searchTerm.toLowerCase()) ||
+            p.category.toLowerCase().contains(_searchTerm.toLowerCase()))
+        .toList();
   }
 
   List<ProviderPayment> get paginatedPayments {
@@ -36,7 +37,8 @@ class PaymentsProvider extends ChangeNotifier {
     return filtered.skip(startIndex).take(_pageSize).toList();
   }
 
-  int get totalPages => (filteredPayments.length / _pageSize).ceil().clamp(1, 999999);
+  int get totalPages =>
+      (filteredPayments.length / _pageSize).ceil().clamp(1, 999999);
 
   // --- Estadísticas ---
   String get _todayString => DateTime.now().toString().substring(0, 10);
@@ -45,13 +47,15 @@ class PaymentsProvider extends ChangeNotifier {
       .where((p) => p.date == _todayString)
       .fold(0.0, (sum, p) => sum + p.amount);
 
-  int get todayPaymentsCount => _payments.where((p) => p.date == _todayString).length;
+  int get todayPaymentsCount =>
+      _payments.where((p) => p.date == _todayString).length;
 
   // Nota: Si necesitas weekTotal/monthTotal, implementa aquí la lógica de fechas
-  double get weekTotal => 0.0; 
+  double get weekTotal => 0.0;
   double get monthTotal => 0.0;
 
-  int get uniqueProvidersCount => _payments.map((p) => p.provider).toSet().length;
+  int get uniqueProvidersCount =>
+      _payments.map((p) => p.provider).toSet().length;
 
   // --- Métodos de Acción ---
 
@@ -83,13 +87,14 @@ class PaymentsProvider extends ChangeNotifier {
 
   // --- Métodos CRUD (Firmas ajustadas a tu UI) ---
 
-  Future<void> addPayment(ProviderPayment payment, InventarioProvider inventario) async {
+  Future<void> addPayment(
+      ProviderPayment payment, InventarioProvider inventario) async {
     await _repository.create(payment);
     await cargarPagos();
   }
 
   Future<void> updatePayment(String id, ProviderPayment payment) async {
-    await _repository.update(payment.copyWith(id: id));
+    await _repository.update(id, payment);
     await cargarPagos();
   }
 

@@ -13,8 +13,10 @@ class ReservacionRepository {
           .select()
           .eq('reservation_date', fecha)
           .order('reservation_time', ascending: true); // Ordenadas por hora
-          
-      return (response as List).map((json) => Reservacion.fromJson(json)).toList();
+
+      return (response as List)
+          .map((json) => Reservacion.fromJson(json))
+          .toList();
     } catch (e) {
       print('Error al cargar reservaciones: $e');
       return [];
@@ -27,19 +29,17 @@ class ReservacionRepository {
   }
 
   // Actualiza los datos de una reservación existente
-  Future<void> actualizarReservacion(Reservacion reservacion) async {
-    await _client
-        .from('reservations')
-        .update(reservacion.toJson())
-        .eq('id', reservacion.id);
+  Future<void> actualizarReservacion(String id, Reservacion reservacion) async {
+    final data = reservacion.toJson();
+    data.remove('id'); // No actualizar el id
+    await _client.from('reservations').update(data).eq('id', id);
   }
 
   // Cambia el estado (ej. de "Pendiente" a "Cancelada" o "Completada")
   Future<void> cambiarEstado(String id, String nuevoEstado) async {
     await _client
         .from('reservations')
-        .update({'status': nuevoEstado})
-        .eq('id', id);
+        .update({'status': nuevoEstado}).eq('id', id);
   }
 
   // Elimina definitivamente la reservación

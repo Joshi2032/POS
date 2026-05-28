@@ -48,7 +48,7 @@ class InventarioProvider extends ChangeNotifier {
   }
 
   // --- Métodos CRUD requeridos por inventario_page.dart ---
-  
+
   Future<void> addInventoryItem(InventoryItem item) async {
     await _repository.create(item);
     await cargarInventario();
@@ -57,7 +57,7 @@ class InventarioProvider extends ChangeNotifier {
   Future<void> updateInventoryItem(String id, InventoryItem item) async {
     // Usamos copyWith para asegurar que el ID coincida con el que viene de la UI
     final itemActualizado = item.copyWith(id: id);
-    await _repository.update(itemActualizado);
+    await _repository.update(id, itemActualizado);
     await cargarInventario();
   }
 
@@ -68,13 +68,14 @@ class InventarioProvider extends ChangeNotifier {
 
   // --- Lógica de Stock ---
 
-  Future<void> ajustarStock(InventoryItem item, double nuevaCantidad, String razon) async {
+  Future<void> ajustarStock(
+      InventoryItem item, double nuevaCantidad, String razon) async {
     try {
       await _repository.actualizarStock(item.id, nuevaCantidad);
-      
+
       // La diferencia es double, igual que tu modelo
       final diferencia = nuevaCantidad - item.stock;
-      
+
       await _repository.registrarMovimiento(item.id, diferencia, razon);
       await cargarInventario();
     } catch (e) {
