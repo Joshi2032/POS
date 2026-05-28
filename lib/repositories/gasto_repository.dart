@@ -1,29 +1,51 @@
-import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/gasto.dart';
 
 class GastoRepository {
-  final _client = SupabaseService.client;
+  final SupabaseClient _client;
 
+  // Inyección del cliente de datos por constructor
+  GastoRepository(this._client);
+
+  // READ: Obtener todos los gastos
   Future<List<Gasto>> getAll() async {
-    // Ordenamos por fecha descendente (los más recientes primero)
-    final response = await _client
-        .from('expenses')
-        .select()
-        .order('expense_date', ascending: false);
-    return (response as List).map((json) => Gasto.fromJson(json)).toList();
+    try {
+      final response = await _client
+          .from('expenses')
+          .select('*'); // Asegúrate de que coincida con el nombre de tu tabla
+
+      return (response as List).map((json) => Gasto.fromJson(json)).toList();
+    } catch (e) {
+      throw Exception('Error al obtener los gastos de Supabase: $e');
+    }
   }
 
+  // CREATE: Registrar un nuevo gasto
   Future<void> create(Gasto gasto) async {
-    await _client.from('expenses').insert(gasto.toJson());
+    try {
+      await _client.from('expenses').insert(gasto.toJson());
+    } catch (e) {
+      throw Exception('Error al registrar el gasto: $e');
+    }
   }
 
+  // UPDATE: Modificar un gasto existente
   Future<void> update(String id, Gasto gasto) async {
-    final data = gasto.toJson();
-    data.remove('id'); // Asegurar que no se intente actualizar el id
-    await _client.from('expenses').update(data).eq('id', id);
+    try {
+      final data = gasto.toJson();
+      data.remove('id'); // Protegemos el id para que no sea modificado
+      await _client.from('expenses').update(data).eq('id', id);
+    } catch (e) {
+      throw Exception('Error al actualizar el gasto: $e');
+    }
   }
 
+  // DELETE: Eliminar un registro de gasto
   Future<void> delete(String id) async {
-    await _client.from('expenses').delete().eq('id', id);
+    try {
+      await _client.from('expenses').delete().eq('id', id);
+    } catch (e) {
+      throw Exception('Error al eliminar el gasto: $e');
+    }
   }
 }

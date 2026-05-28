@@ -67,7 +67,7 @@ Future<void> main() async {
         // 2. REPOSITORIOS (Capa de Datos Estática)
         // ==========================================
         Provider(create: (_) => ProductoRepository(SupabaseService.client)),
-        Provider(create: (_) => GastoRepository()),
+        Provider(create: (_) => GastoRepository(SupabaseService.client)),
         Provider(create: (_) => OrdenRepository()),
         Provider(create: (_) => CajaRepository()),
         Provider(create: (_) => ReservacionRepository()),
