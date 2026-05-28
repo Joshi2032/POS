@@ -1,4 +1,3 @@
-// lib/providers/inventario_provider.dart
 import 'package:flutter/material.dart';
 import '../models/inventory_item.dart';
 import '../repositories/inventario_repository.dart';
@@ -7,18 +6,24 @@ class InventarioProvider extends ChangeNotifier {
   final InventarioRepository _repository;
   List<InventoryItem> _items = [];
   String _searchTerm = '';
+  
+  // --- NUEVOS ESTADOS CENTRALIZADOS DE RED Y FLUJO ---
   bool _isLoading = false;
+  String? _errorMessage;
 
   InventarioProvider(this._repository) {
-    cargarInventario();
+    cargarInventario(); // Carga inicial
   }
 
-  // --- Getters ---
+  // --- GETTERS COMPATIBLES AL 100% CON TU MODELO Y UI ORIGINAL ---
   List<InventoryItem> get items => _items;
   bool get isLoading => _isLoading;
   String get searchTerm => _searchTerm;
+  
+  String? get errorMessage => _errorMessage;
+  bool get hasError => _errorMessage != null;
 
-  // Getter requerido por tu UI: Listado filtrado por nombre
+  // Getter requerido por tu UI: Listado filtrado por nombre exacto
   List<InventoryItem> get filteredItems {
     if (_searchTerm.isEmpty) return _items;
     return _items
@@ -26,50 +31,85 @@ class InventarioProvider extends ChangeNotifier {
         .toList();
   }
 
-  // --- Setters ---
-  // Setter requerido por tu UI: Actualiza la búsqueda
+  // --- SETTERS ---
+  // Setter requerido por tu UI: Actualiza la búsqueda en tiempo real
   void setSearch(String value) {
     _searchTerm = value;
     notifyListeners();
   }
 
-  // --- Lógica de Datos ---
+  // --- LÓGICA DE DATOS ROBUSTA ---
   Future<void> cargarInventario() async {
-    _isLoading = true;
-    notifyListeners();
+    _setLoading(true);
+    _clearError();
     try {
       _items = await _repository.getAll();
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error al cargar inventario: $e');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _setLoading(false);
     }
   }
 
-  // --- Métodos CRUD requeridos por inventario_page.dart ---
+  // --- MÉTODOS CRUD REQUERIDOS POR INVENTARIO_PAGE.DART CON RETORNO DE CONTROL ---
 
-  Future<void> addInventoryItem(InventoryItem item) async {
-    await _repository.create(item);
-    await cargarInventario();
+  Future<bool> addInventoryItem(InventoryItem item) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _repository.create(item);
+      await cargarInventario();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  Future<void> updateInventoryItem(String id, InventoryItem item) async {
-    // Usamos copyWith para asegurar que el ID coincida con el que viene de la UI
-    final itemActualizado = item.copyWith(id: id);
-    await _repository.update(id, itemActualizado);
-    await cargarInventario();
+  Future<bool> updateInventoryItem(String id, InventoryItem item) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      // Usamos copyWith para asegurar que el ID coincida con el que viene de la UI
+      final itemActualizado = item.copyWith(id: id);
+      await _repository.update(id, itemActualizado);
+      await cargarInventario();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  Future<void> removeInventoryItem(String id) async {
-    await _repository.delete(id);
-    await cargarInventario();
+  Future<bool> removeInventoryItem(String id) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _repository.delete(id);
+      await cargarInventario();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  // --- Lógica de Stock ---
+  // --- LÓGICA DE CONTROL DE STOCK CAPTURADA ---
 
   Future<void> ajustarStock(
       InventoryItem item, double nuevaCantidad, String razon) async {
+    _setLoading(true);
+    _clearError();
     try {
       await _repository.actualizarStock(item.id, nuevaCantidad);
 
@@ -79,13 +119,31 @@ class InventarioProvider extends ChangeNotifier {
       await _repository.registrarMovimiento(item.id, diferencia, razon);
       await cargarInventario();
     } catch (e) {
+      _errorMessage = e.toString();
       debugPrint('Error al ajustar stock: $e');
-      rethrow;
+      rethrow; // Re-lanzamos para que la UI capture si maneja controladores locales
+    } finally {
+      _setLoading(false);
     }
   }
 
   Future<void> aumentarStockPorCompra(String itemId, double cantidad) async {
-    final item = _items.firstWhere((i) => i.id == itemId);
-    await ajustarStock(item, item.stock + cantidad, 'Compra a proveedor');
+    try {
+      final item = _items.firstWhere((i) => i.id == itemId);
+      await ajustarStock(item, item.stock + cantidad, 'Compra a proveedor');
+    } catch (e) {
+      _errorMessage = 'Insumo no localizado en el lote actual: $e';
+      notifyListeners();
+    }
+  }
+
+  // --- MÉTODOS AUXILIARES INTERNOS ---
+  void _setLoading(bool value) {
+    _isLoading = value;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
   }
 }
