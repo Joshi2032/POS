@@ -1,63 +1,17 @@
+// lib/providers/reservaciones_provider.dart
 import 'package:flutter/material.dart';
 import '../models/reservacion.dart';
+import '../repositories/reservacion_repository.dart';
 
 class ReservacionesProvider extends ChangeNotifier {
+  final ReservacionRepository _repository;
+
   final int pageSize = 10;
   final String todayIso = DateTime.now().toIso8601String().substring(0, 10);
 
-  // Semilla alineada al 100% con los campos exactos de tu modelo
-  final List<Reservacion> _reservations = [
-    Reservacion(
-      id: 'RES-001',
-      cliente: 'Juan García',
-      telefono: '555-1001',
-      personas: 4,
-      fecha: DateTime.now().toIso8601String().substring(0, 10),
-      hora: '19:00',
-      mesa: 'Mesa 4',
-      estado: 'confirmada',
-    ),
-    Reservacion(
-      id: 'RES-002',
-      cliente: 'María López',
-      telefono: '555-1002',
-      personas: 2,
-      fecha: DateTime.now().toIso8601String().substring(0, 10),
-      hora: '20:00',
-      mesa: 'Mesa 2',
-      estado: 'confirmada',
-    ),
-    Reservacion(
-      id: 'RES-003',
-      cliente: 'Carlos Rodríguez',
-      telefono: '555-1003',
-      personas: 6,
-      fecha: DateTime.now().add(const Duration(days: 1)).toIso8601String().substring(0, 10),
-      hora: '19:30',
-      mesa: 'Mesa 10',
-      estado: 'confirmada',
-    ),
-    Reservacion(
-      id: 'RES-004',
-      cliente: 'Ana Martínez',
-      telefono: '555-1004',
-      personas: 3,
-      fecha: DateTime.now().toIso8601String().substring(0, 10),
-      hora: '18:00',
-      mesa: 'Mesa 1',
-      estado: 'completada',
-    ),
-    Reservacion(
-      id: 'RES-005',
-      cliente: 'Pedro Sánchez',
-      telefono: '555-1005',
-      personas: 5,
-      fecha: DateTime.now().subtract(const Duration(days: 1)).toIso8601String().substring(0, 10),
-      hora: '20:00',
-      mesa: 'Mesa 5',
-      estado: 'cancelada',
-    )
-  ];
+  // Listas que vendrán desde Supabase
+  List<Reservacion> _reservations = [];
+  List<Reservacion> _todayReservations = []; // Mantiene las estadísticas de hoy exactas
 
   String _searchTerm = '';
   int _currentPage = 1;
@@ -68,11 +22,14 @@ class ReservacionesProvider extends ChangeNotifier {
 
   Map<String, dynamic> _formValues = {};
 
-  ReservacionesProvider() {
+  // Constructor inyectado
+  ReservacionesProvider(this._repository) {
     _selectedDate = todayIso;
     _resetForm();
+    _cargarDatos();
   }
 
+  // ==== GETTERS ====
   String get searchTerm => _searchTerm;
   int get currentPage => _currentPage;
   String get selectedDate => _selectedDate;
@@ -84,9 +41,8 @@ class ReservacionesProvider extends ChangeNotifier {
   List<Reservacion> get filteredReservations {
     final search = _searchTerm.toLowerCase();
     return _reservations.where((res) {
-      final matchesDate = res.fecha == _selectedDate;
       final matchesSearch = search.isEmpty || res.cliente.toLowerCase().contains(search);
-      return matchesDate && matchesSearch;
+      return matchesSearch;
     }).toList();
   }
 
@@ -98,11 +54,31 @@ class ReservacionesProvider extends ChangeNotifier {
   }
 
   int get totalPages => (filteredReservations.length / pageSize).ceil().clamp(1, 999999);
-  int get totalToday => _reservations.where((r) => r.fecha == todayIso).length;
-  int get confirmedToday => _reservations.where((r) => r.fecha == todayIso && r.estado == 'confirmada').length;
-  int get guestsTodayCount => _reservations
-      .where((r) => r.fecha == todayIso && r.estado == 'confirmada')
+  
+  // Las métricas usan la lista estricta de hoy para que no se borren si cambias de fecha en el calendario
+  int get totalToday => _todayReservations.length;
+  int get confirmedToday => _todayReservations.where((r) => r.estado.toLowerCase() == 'confirmada').length;
+  int get guestsTodayCount => _todayReservations
+      .where((r) => r.estado.toLowerCase() == 'confirmada')
       .fold(0, (sum, r) => sum + r.personas);
+
+  // ==== MÉTODOS DE BASE DE DATOS (SUPABASE) ====
+
+  Future<void> _cargarDatos() async {
+    // 1. Cargamos las reservaciones de la fecha seleccionada en el calendario
+    _reservations = await _repository.getReservacionesPorFecha(_selectedDate);
+
+    // 2. Cargamos/Actualizamos las estadísticas exactas del día de hoy
+    if (_selectedDate == todayIso) {
+      _todayReservations = _reservations;
+    } else {
+      _todayReservations = await _repository.getReservacionesPorFecha(todayIso);
+    }
+    
+    notifyListeners();
+  }
+
+  // ==== INTERFAZ Y MODALES ====
 
   void setSearchTerm(String val) {
     _searchTerm = val;
@@ -113,7 +89,7 @@ class ReservacionesProvider extends ChangeNotifier {
   void setSelectedDate(String val) {
     _selectedDate = val;
     _currentPage = 1;
-    notifyListeners();
+    _cargarDatos(); // Recargamos Supabase al cambiar de fecha
   }
 
   void goToPage(int page) {
@@ -133,7 +109,7 @@ class ReservacionesProvider extends ChangeNotifier {
       'cliente': '',
       'telefono': '',
       'personas': 2,
-      'fecha': todayIso,
+      'fecha': _selectedDate,
       'hora': '19:00',
       'mesa': 'General'
     };
@@ -169,7 +145,9 @@ class ReservacionesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool guardarReservacion() {
+  // ==== ACCIONES C.R.U.D ====
+
+  Future<bool> guardarReservacion() async {
     final cliente = (_formValues['cliente'] as String).trim();
     final telefono = (_formValues['telefono'] as String).trim();
     final personas = _formValues['personas'] as int;
@@ -180,25 +158,25 @@ class ReservacionesProvider extends ChangeNotifier {
       return false;
     }
 
-    if (_editingId != null) {
-      final index = _reservations.indexWhere((r) => r.id == _editingId);
-      if (index != -1) {
-        _reservations[index] = Reservacion(
+    try {
+      if (_editingId != null) {
+        // Encontrar la reservación original para mantener su estado
+        final estadoActual = _reservations.firstWhere((r) => r.id == _editingId).estado;
+        
+        final resActualizada = Reservacion(
           id: _editingId!,
           cliente: cliente,
           telefono: telefono,
           personas: personas,
           fecha: _formValues['fecha'],
           hora: _formValues['hora'],
-          estado: _reservations[index].estado,
+          estado: estadoActual,
           mesa: _formValues['mesa'],
         );
-      }
-    } else {
-      _reservations.insert(
-        0,
-        Reservacion(
-          id: 'RES-${(_reservations.length + 1).toString().padLeft(3, '0')}',
+        await _repository.actualizarReservacion(resActualizada);
+      } else {
+        final nuevaRes = Reservacion(
+          id: '', // Supabase generará el UUID
           cliente: cliente,
           telefono: telefono,
           personas: personas,
@@ -206,34 +184,27 @@ class ReservacionesProvider extends ChangeNotifier {
           hora: _formValues['hora'],
           estado: 'confirmada',
           mesa: _formValues['mesa'],
-        ),
-      );
-    }
+        );
+        await _repository.crearReservacion(nuevaRes);
+      }
 
-    cerrarModal();
-    notifyListeners();
-    return true;
-  }
-
-  void cancelarReservacion(String id) {
-    final index = _reservations.indexWhere((r) => r.id == id);
-    if (index != -1) {
-      _reservations[index] = Reservacion(
-        id: _reservations[index].id,
-        cliente: _reservations[index].cliente,
-        telefono: _reservations[index].telefono,
-        personas: _reservations[index].personas,
-        fecha: _reservations[index].fecha,
-        hora: _reservations[index].hora,
-        estado: 'cancelada',
-        mesa: _reservations[index].mesa,
-      );
+      cerrarModal();
+      await _cargarDatos(); // Refrescamos la lista
+      return true;
+    } catch (e) {
+      _modalError = 'Error al guardar la reservación: $e';
       notifyListeners();
+      return false;
     }
   }
 
-  void eliminarReservacion(String id) {
-    _reservations.removeWhere((r) => r.id == id);
-    notifyListeners();
+  Future<void> cancelarReservacion(String id) async {
+    await _repository.cambiarEstado(id, 'cancelada');
+    await _cargarDatos();
+  }
+
+  Future<void> eliminarReservacion(String id) async {
+    await _repository.eliminarReservacion(id);
+    await _cargarDatos();
   }
 }

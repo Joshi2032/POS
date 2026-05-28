@@ -345,8 +345,9 @@ class ReservacionesPage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                onPressed: () {
-                  if (provider.guardarReservacion()) {
+                onPressed: () async {
+                  final success = await provider.guardarReservacion();
+                 if (success) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Reservación procesada exitosamente'), backgroundColor: Colors.green),
                     );
