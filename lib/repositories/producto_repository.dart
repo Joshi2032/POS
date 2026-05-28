@@ -1,11 +1,18 @@
-import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // Importamos el tipo oficial de Supabase
 import '../models/product.dart';
 
 class ProductoRepository {
-  // READ: Obtener todos con manejo de excepciones
+  // 1. Declaramos el cliente como una propiedad final
+  final SupabaseClient _client;
+
+  // 2. Lo requerimos obligatoriamente en el constructor
+  ProductoRepository(this._client);
+
+  // READ: Obtener todos
   Future<List<Producto>> getAll() async {
     try {
-      final response = await SupabaseService.client
+      // 3. Reemplazamos la llamada estática por nuestra propiedad local '_client'
+      final response = await _client
           .from('products')
           .select('*, categories(name)');
 
@@ -18,7 +25,7 @@ class ProductoRepository {
   // CREATE: Agregar nuevo
   Future<void> create(Producto product) async {
     try {
-      await SupabaseService.client.from('products').insert(product.toJson());
+      await _client.from('products').insert(product.toJson());
     } catch (e) {
       throw Exception('Error al crear producto: $e');
     }
@@ -28,8 +35,8 @@ class ProductoRepository {
   Future<void> update(String id, Producto product) async {
     try {
       final data = product.toJson();
-      data.remove('id'); // No actualizar el id
-      await SupabaseService.client.from('products').update(data).eq('id', id);
+      data.remove('id'); 
+      await _client.from('products').update(data).eq('id', id);
     } catch (e) {
       throw Exception('Error al actualizar producto: $e');
     }
@@ -38,7 +45,7 @@ class ProductoRepository {
   // DELETE: Eliminar
   Future<void> delete(String id) async {
     try {
-      await SupabaseService.client.from('products').delete().eq('id', id);
+      await _client.from('products').delete().eq('id', id);
     } catch (e) {
       throw Exception('Error al eliminar producto: $e');
     }

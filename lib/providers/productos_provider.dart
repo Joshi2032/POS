@@ -13,17 +13,12 @@ class ProductosProvider extends ChangeNotifier {
   String _searchTerm = '';
   String _selectedCategory = 'Todas';
 
-  // --- NUEVOS ESTADOS DE CONTROL ---
+  // --- ESTADOS DE CONTROL ---
   bool _isLoading = false;
   String? _errorMessage;
 
-  final List<String> categorias = [
-    'Todas',
-    'Parrilla',
-    'Entradas',
-    'Bebidas',
-    'Postres'
-  ];
+  // 1. Convertimos la lista de categorías en una variable interna dinámica
+  List<String> _categorias = ['Todas'];
 
   // Getters para consultar los estados en la UI
   List<Producto> get productos => _productos;
@@ -32,17 +27,44 @@ class ProductosProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
+  
+  // Getter público para que la UI siga leyendo 'categorias' exactamente igual que antes
+  List<String> get categorias => _categorias;
 
-  // --- MÉTODOS CRUD REFACTORIZADOS ---
+  // --- MÉTODOS CRUD ---
   Future<void> cargarProductos() async {
     _setLoading(true);
     _clearError();
     try {
       _productos = await _repository.getAll();
+      
+      // 2. Extraemos las categorías reales de los productos obtenidos
+      _actualizarCategoriasDinamicas();
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
       _setLoading(false);
+    }
+  }
+
+  // 3. Función auxiliar para leer las categorías del JSON/Modelo y armar la lista sin duplicados
+  void _actualizarCategoriasDinamicas() {
+    // Usamos un Set para evitar elementos duplicados
+    final deBaseDeDatos = _productos
+        .map((p) => p.categoria)
+        .where((cat) => cat.isNotEmpty)
+        .toSet()
+        .toList();
+
+    // Ordenamos alfabéticamente para que el menú sea consistente
+    deBaseDeDatos.sort();
+
+    // Reconstruimos la lista manteniendo siempre 'Todas' al inicio
+    _categorias = ['Todas', ...deBaseDeDatos];
+    
+    // Si la categoría que el usuario tenía seleccionada desaparece de la BD, lo regresamos a 'Todas'
+    if (!_categorias.contains(_selectedCategory)) {
+      _selectedCategory = 'Todas';
     }
   }
 
@@ -52,11 +74,11 @@ class ProductosProvider extends ChangeNotifier {
     try {
       await _repository.create(producto);
       await cargarProductos();
-      return true; // Éxito
+      return true;
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();
-      return false; // Falló
+      return false;
     } finally {
       _setLoading(false);
     }
