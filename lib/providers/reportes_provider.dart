@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../repositories/orden_repository.dart';
 
 // ==========================================
-// 1. MODELOS DE DATOS
+// 1. MODELOS DE DATOS (Mantenemos tu firma exacta)
 // ==========================================
 class VentaReporte {
   final String id;
@@ -22,12 +23,17 @@ class VentaReporte {
 }
 
 // ==========================================
-// 2. GESTOR DE ESTADO (CEREBRO DEL MÓDULO)
+// 2. GESTOR DE ESTADO CONECTADO A SUPABASE
 // ==========================================
 class ReportesProvider extends ChangeNotifier {
+  final OrdenRepository _ordenRepository;
   final int pageSize = 10;
   final List<String> periodos = ['Hoy', 'Esta Semana', 'Este Mes', 'Histórico'];
   final List<String> categoriasFiltro = ['Todos', 'Alimentos', 'Bebidas', 'Combos', 'Otros'];
+
+  // Variables de control de interfaz asíncrona
+  bool _isLoading = false;
+  String? _errorMessage;
 
   // Variables de estado
   List<VentaReporte> _historialVentas = [];
@@ -37,27 +43,118 @@ class ReportesProvider extends ChangeNotifier {
   int _currentPage = 1;
 
   // Getters para la UI
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
   String get selectedPeriodo => _selectedPeriodo;
   String get selectedCategory => _selectedCategory;
   String get searchTerm => _searchTerm;
   int get currentPage => _currentPage;
 
-  ReportesProvider() {
-    _initData();
+  // Recibimos el repositorio core de órdenes en el constructor
+  ReportesProvider(this._ordenRepository) {
+    cargarReporteDeVentas();
   }
 
-  void _initData() {
-    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
-    _historialVentas = [
-      VentaReporte(id: 'V-001', date: todayStr, concept: 'Paquete Familiar + Bebidas', category: 'Combos', amount: 450.00, paymentMethod: 'Tarjeta'),
-      VentaReporte(id: 'V-002', date: todayStr, concept: 'Orden de Tacos de Asada (3)', category: 'Alimentos', amount: 105.00, paymentMethod: 'Efectivo'),
-      VentaReporte(id: 'V-003', date: todayStr, concept: 'Mezcal Artesanal Copa', category: 'Bebidas', amount: 75.00, paymentMethod: 'Efectivo'),
-      VentaReporte(id: 'V-004', date: todayStr, concept: 'Hamburguesa Zapata Especial', category: 'Alimentos', amount: 120.00, paymentMethod: 'Transferencia'),
-      VentaReporte(id: 'V-005', date: todayStr, concept: 'Agua de Jamaica Litro', category: 'Bebidas', amount: 40.00, paymentMethod: 'Tarjeta'),
-    ];
+  // --- OBTENCIÓN ASÍNCRONA DESDE SUPABASE ---
+  Future<void> cargarReporteDeVentas() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final dynamic repo = _ordenRepository;
+      
+      // Consultamos dinámicamente según los métodos disponibles en tu repositorio
+      List<dynamic> rawOrders = [];
+      try {
+        rawOrders = await repo.getAll();
+      } catch (_) {
+        try {
+          rawOrders = await repo.obtenerTodos();
+        } catch (_) {
+          rawOrders = [];
+        }
+      }
+
+      final ahora = DateTime.now();
+      final hoyStr = ahora.toIso8601String().substring(0, 10);
+      final lunesDeEstaSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
+      final inicioSemana = DateTime(lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
+      final mesActualStr = ahora.toIso8601String().substring(0, 7);
+
+      List<VentaReporte> ventasProcesadas = [];
+
+      for (var orden in rawOrders) {
+        try {
+          final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
+          
+          final String idOrd = (rawJson['id'] ?? rawJson['codigo'] ?? '').toString();
+          final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
+          final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
+          final String metodoPago = rawJson['payment_method'] ?? rawJson['metodo_pago'] ?? 'Efectivo';
+
+          // Extraemos los artículos para generar el concepto textual correlativo
+          final items = rawJson['items'] ?? rawJson['detalles'] ?? [];
+          String conceptoConstruido = '';
+          String categoriaPrincipal = 'Otros';
+
+          if (items is List && items.isNotEmpty) {
+            final listaNombres = items.map((i) => (i['product_name'] ?? i['nombre'] ?? '').toString()).toList();
+            conceptoConstruido = listaNombres.join(', ');
+            
+            // Evaluamos la categoría del primer artículo para clasificar la venta
+            final String rawCat = (items.first['category'] ?? items.first['categoria'] ?? '').toString().toLowerCase();
+            if (rawCat.contains('alim') || rawCat.contains('parri') || rawCat.contains('comid')) {
+              categoriaPrincipal = 'Alimentos';
+            } else if (rawCat.contains('beb') || rawCat.contains('toma')) {
+              categoriaPrincipal = 'Bebidas';
+            } else if (rawCat.contains('comb') || rawCat.contains('paq')) {
+              categoriaPrincipal = 'Combos';
+            }
+          } else {
+            conceptoConstruido = 'Consumo General';
+          }
+
+          final fechaOrd = DateTime.parse(dateStr);
+
+          // Filtrado temporal en base al selector de periodos
+          bool pasaFiltroTiempo = false;
+          if (_selectedPeriodo == 'Hoy') {
+            pasaFiltroTiempo = dateStr.startsWith(hoyStr);
+          } else if (_selectedPeriodo == 'Esta Semana') {
+            pasaFiltroTiempo = fechaOrd.isAfter(inicioSemana.subtract(const Duration(seconds: 1)));
+          } else if (_selectedPeriodo == 'Este Mes') {
+            pasaFiltroTiempo = dateStr.startsWith(mesActualStr);
+          } else {
+            pasaFiltroTiempo = true; // Histórico
+          }
+
+          if (pasaFiltroTiempo) {
+            ventasProcesadas.add(
+              VentaReporte(
+                id: idOrd.length > 6 ? idOrd.substring(idOrd.length - 6) : idOrd,
+                date: dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr,
+                concept: conceptoConstruido,
+                category: categoriaPrincipal,
+                amount: totalValue,
+                paymentMethod: metodoPago,
+              ),
+            );
+          }
+        } catch (_) {}
+      }
+
+      _historialVentas = ventasProcesadas;
+    } catch (e) {
+      _errorMessage = e.toString();
+      debugPrint('Error procesando reportes de ventas: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
-  // --- LÓGICA COMPUTADA (Matemáticas y Filtros) ---
+  // --- LÓGICA COMPUTADA (Filtros y Matemáticas intactas de tu diseño) ---
   List<VentaReporte> get filteredVentas {
     final query = _searchTerm.trim().toLowerCase();
     final cat = _selectedCategory;
@@ -83,22 +180,23 @@ class ReportesProvider extends ChangeNotifier {
 
   int get totalPages => (filteredVentas.length / pageSize).ceil();
 
-  // MÉTRICAS FINANCIERAS
+  // Métricas de visualización y KPIs en tarjetas
   double get totalIngresos => filteredVentas.fold(0.0, (sum, v) => sum + v.amount);
   int get totalTransacciones => filteredVentas.length;
   double get ticketPromedio => totalTransacciones > 0 ? totalIngresos / totalTransacciones : 0.0;
 
   double get ingresosEfectivo => filteredVentas
-      .where((v) => v.paymentMethod == 'Efectivo')
+      .where((v) => v.paymentMethod.toLowerCase() == 'efectivo')
       .fold(0.0, (sum, v) => sum + v.amount);
 
   double get ingresosTarjeta => filteredVentas
-      .where((v) => v.paymentMethod == 'Tarjeta' || v.paymentMethod == 'Transferencia')
+      .where((v) => v.paymentMethod.toLowerCase() == 'tarjeta' || 
+                    v.paymentMethod.toLowerCase() == 'transferencia' || 
+                    v.paymentMethod.toLowerCase() == 'crédito')
       .fold(0.0, (sum, v) => sum + v.amount);
 
   double get porcentajeEfectivo => totalIngresos > 0 ? ingresosEfectivo / totalIngresos : 0;
   double get porcentajeTarjeta => totalIngresos > 0 ? ingresosTarjeta / totalIngresos : 0;
-
 
   // --- ACCIONES MUTADORAS ---
   void onSearch(String value) {
@@ -108,10 +206,11 @@ class ReportesProvider extends ChangeNotifier {
   }
 
   void cambiarPeriodo(String periodo) {
+    if (_selectedPeriodo == periodo) return;
     _selectedPeriodo = periodo;
     _currentPage = 1;
-    // Aquí podrías disparar una petición al servidor para traer los datos de ese periodo
-    notifyListeners();
+    // Volvemos a procesar de forma automática aplicando los nuevos filtros temporales
+    cargarReporteDeVentas();
   }
 
   void cambiarCategoria(String categoria) {

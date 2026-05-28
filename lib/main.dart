@@ -140,13 +140,14 @@ Future<void> main() async {
             context.read<PaymentRepository>(),
           ),
         ),
+        ChangeNotifierProvider(create: (context) => ReportesProvider(context.read<OrdenRepository>())),
+
 
         // ==========================================
         // 4. PROVIDERS SIMPLES (Estado Local)
         // ==========================================
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AjustesProvider()),
-        ChangeNotifierProvider(create: (_) => ReportesProvider()),
         ChangeNotifierProvider(create: (_) => TomarOrdenProvider()),
       ],
       child: const App(),
