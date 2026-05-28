@@ -1,94 +1,90 @@
+// lib/providers/inventario_provider.dart
 import 'package:flutter/material.dart';
-
 import '../models/inventory_item.dart';
+import '../repositories/inventario_repository.dart';
 
 class InventarioProvider extends ChangeNotifier {
-  // Estandarizamos los valores numéricos a double para evitar errores de casteo
-  final List<InventoryItem> _inventory = [
-    InventoryItem(
-      id: 'INS-01',
-      name: 'Carne Molida',
-      category: 'Carnes',
-      stock: 15.0,
-      cost: 85.0,
-      provider: 'Distribuidora Carnes SA',
-    ),
-    InventoryItem(
-      id: 'INS-02',
-      name: 'Pan de Hamburguesa',
-      category: 'Panadería',
-      stock: 120.0,
-      cost: 4.5,
-      provider: 'Panificadora Central',
-    ),
-    InventoryItem(
-      id: 'INS-03',
-      name: 'Tomate Bola',
-      category: 'Verduras',
-      stock: 8.0,
-      cost: 22.0,
-      provider: 'Frutas y Verduras del Centro',
-    ),
-  ];
+  final InventarioRepository _repository;
+  List<InventoryItem> _items = [];
+  String _searchTerm = '';
+  bool _isLoading = false;
 
-  String _search = '';
+  InventarioProvider(this._repository) {
+    cargarInventario();
+  }
 
-  List<InventoryItem> get inventory => _inventory;
-  String get search => _search;
+  // --- Getters ---
+  List<InventoryItem> get items => _items;
+  bool get isLoading => _isLoading;
+  String get searchTerm => _searchTerm;
 
+  // Getter requerido por tu UI: Listado filtrado por nombre
   List<InventoryItem> get filteredItems {
-    return _inventory.where((i) {
-      if (_search.isEmpty) return true;
-      return i.name.toLowerCase().contains(_search.toLowerCase());
-    }).toList();
+    if (_searchTerm.isEmpty) return _items;
+    return _items
+        .where((i) => i.name.toLowerCase().contains(_searchTerm.toLowerCase()))
+        .toList();
   }
 
-  void setSearch(String val) {
-    _search = val;
+  // --- Setters ---
+  // Setter requerido por tu UI: Actualiza la búsqueda
+  void setSearch(String value) {
+    _searchTerm = value;
     notifyListeners();
   }
 
-  void addInventoryItem(InventoryItem item) {
-    _inventory.add(item);
+  // --- Lógica de Datos ---
+  Future<void> cargarInventario() async {
+    _isLoading = true;
     notifyListeners();
-  }
-
-  void updateInventoryItem(String id, InventoryItem data) {
-    final index = _inventory.indexWhere((i) => i.id == id);
-    if (index != -1) {
-      _inventory[index] = data;
+    try {
+      _items = await _repository.getAll();
+    } catch (e) {
+      debugPrint('Error al cargar inventario: $e');
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
 
-  void removeInventoryItem(String id) {
-    _inventory.removeWhere((i) => i.id == id);
-    notifyListeners();
+  // --- Métodos CRUD requeridos por inventario_page.dart ---
+  
+  Future<void> addInventoryItem(InventoryItem item) async {
+    await _repository.create(item);
+    await cargarInventario();
   }
 
-  // LÓGICA DE INTERCONEXIÓN MEJORADA: Suma de forma segura usando números reales
-  void aumentarStockPorCompra(String nombreInsumo, double cantidadAumentar) {
-    final index = _inventory.indexWhere(
-      (i) => i.name.toLowerCase() == nombreInsumo.toLowerCase(),
-    );
+  Future<void> updateInventoryItem(String id, InventoryItem item) async {
+    // Usamos copyWith para asegurar que el ID coincida con el que viene de la UI
+    final itemActualizado = item.copyWith(id: id);
+    await _repository.update(itemActualizado);
+    await cargarInventario();
+  }
 
-    if (index != -1) {
-      final currentStock = _inventory[index].stock;
-      _inventory[index] =
-          _inventory[index].copyWith(stock: currentStock + cantidadAumentar);
-    } else {
-      // Si es un insumo nuevo que trajo el proveedor, lo auto-registramos limpio
-      _inventory.add(
-        InventoryItem(
-          id: 'INS-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
-          name: nombreInsumo,
-          category: 'Insumos Varios',
-          stock: cantidadAumentar,
-          cost: 0.0,
-          provider: 'Proveedor Nuevo',
-        ),
-      );
+  Future<void> removeInventoryItem(String id) async {
+    await _repository.delete(id);
+    await cargarInventario();
+  }
+
+  // --- Lógica de Stock ---
+
+  Future<void> ajustarStock(InventoryItem item, double nuevaCantidad, String razon) async {
+    try {
+      await _repository.actualizarStock(item.id, nuevaCantidad);
+      
+      // La diferencia es double, igual que tu modelo
+      final diferencia = nuevaCantidad - item.stock;
+      
+      await _repository.registrarMovimiento(item.id, diferencia, razon);
+      await cargarInventario();
+    } catch (e) {
+      debugPrint('Error al ajustar stock: $e');
+      rethrow;
     }
-    notifyListeners();
+  }
+
+  Future<void> aumentarStockPorCompra(String itemId, double cantidad) async {
+    final item = _items.firstWhere((i) => i.id == itemId);
+    await ajustarStock(item, item.stock + cantidad, 'Compra a proveedor');
   }
 }

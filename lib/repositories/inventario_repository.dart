@@ -1,29 +1,31 @@
-// lib/repositories/inventario_repository.dart
 import '../services/supabase_service.dart';
 import '../models/inventory_item.dart';
 
 class InventarioRepository {
   final _client = SupabaseService.client;
 
-  // Obtener todos los artículos del inventario
   Future<List<InventoryItem>> getAll() async {
-    final response = await _client
-        .from('inventory_items')
-        .select()
-        .order('name');
+    final response = await _client.from('inventory_items').select().order('name');
     return (response as List).map((json) => InventoryItem.fromJson(json)).toList();
   }
 
-  // Actualizar cantidad (se usa después de una compra o venta)
-  Future<void> actualizarStock(String id, int nuevaCantidad) async {
-    await _client
-        .from('inventory_items')
-        .update({'quantity': nuevaCantidad})
-        .eq('id', id);
+  Future<void> create(InventoryItem item) async {
+    await _client.from('inventory_items').insert(item.toJson());
   }
 
-  // Registrar un movimiento de inventario (auditoría)
-  Future<void> registrarMovimiento(String itemId, int cambio, String razon) async {
+  Future<void> update(InventoryItem item) async {
+    await _client.from('inventory_items').update(item.toJson()).eq('id', item.id);
+  }
+
+  Future<void> delete(String id) async {
+    await _client.from('inventory_items').delete().eq('id', id);
+  }
+
+  Future<void> actualizarStock(String id, double nuevaCantidad) async {
+    await _client.from('inventory_items').update({'stock': nuevaCantidad}).eq('id', id);
+  }
+
+  Future<void> registrarMovimiento(String itemId, double cambio, String razon) async {
     await _client.from('inventory_movements').insert({
       'inventory_item_id': itemId,
       'change_qty': cambio,

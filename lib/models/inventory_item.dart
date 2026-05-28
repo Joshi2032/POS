@@ -38,6 +38,7 @@ class InventoryItem {
   }
 
   InventoryItem copyWith({
+    String? id,
     String? name,
     String? category,
     double? stock,
@@ -45,7 +46,7 @@ class InventoryItem {
     String? provider,
   }) {
     return InventoryItem(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       category: category ?? this.category,
       stock: stock ?? this.stock,

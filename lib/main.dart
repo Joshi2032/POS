@@ -11,6 +11,7 @@ import 'repositories/orden_repository.dart';
 import 'repositories/caja_repository.dart'; // Repositorio de caja integrado
 import 'repositories/reservacion_repository.dart';
 import 'repositories/mesa_repository.dart';
+import 'repositories/inventario_repository.dart'; // Repositorio de inventario integrado
 
 // --- Providers ---
 import 'providers/ajustes_provider.dart';
@@ -59,7 +60,7 @@ Future<void> main() async {
         Provider(create: (_) => CajaRepository()),
         Provider(create: (_) => ReservacionRepository()),
         Provider(create: (_) => MesaRepository()),
-
+        Provider(create: (_) => InventarioRepository()),
         // ==========================================
         // 3. PROVIDERS REFACTORIZADOS (Conexión a BD)
         // ==========================================
@@ -76,8 +77,15 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (context) => CajaProvider(context.read<CajaRepository>()),
         ),
-        ChangeNotifierProvider(create: (context) => ReservacionesProvider(context.read<ReservacionRepository>())),
-        ChangeNotifierProvider(create: (context) => MesasProvider(context.read<MesaRepository>())),
+        ChangeNotifierProvider(
+            create: (context) =>
+                ReservacionesProvider(context.read<ReservacionRepository>())),
+        ChangeNotifierProvider(
+            create: (context) => MesasProvider(context.read<MesaRepository>())),
+        ChangeNotifierProvider(
+          create: (context) =>
+              InventarioProvider(context.read<InventarioRepository>()),
+        ),
 
         // ==========================================
         // 4. PROVIDERS SIMPLES (Estado Local)
@@ -92,7 +100,6 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ProveedoresProvider()),
         ChangeNotifierProvider(create: (_) => ReportesProvider()),
         ChangeNotifierProvider(create: (_) => TomarOrdenProvider()),
-        ChangeNotifierProvider(create: (_) => InventarioProvider()),
       ],
       child: const App(),
     ),
