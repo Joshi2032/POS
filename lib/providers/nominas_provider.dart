@@ -71,8 +71,8 @@ class NominasProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void goToPage(int page) {
-    _currentPage = page.clamp(1, totalPages);
+  void changePage(int newPage) {
+    _currentPage = newPage.clamp(1, totalPages);
     notifyListeners();
   }
 
@@ -102,19 +102,4 @@ class NominasProvider extends ChangeNotifier {
       debugPrint('Error eliminando nómina: $e');
     }
   }
-
-  Future<void> cargarNominasPorPeriodo(String periodo) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      _nominas = await _repository.getNominasPorPeriodo(periodo);
-    } catch (e) {
-      debugPrint('Error cargando nóminas por período: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
 }
-
-  

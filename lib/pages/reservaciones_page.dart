@@ -479,9 +479,12 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
                       borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () async {
-                  if (!mounted) return;
+                  // Eliminamos los 'mounted' previos y usamos la validación del context
                   final success = await provider.guardarReservacion();
-                  if (!mounted) return;
+
+                  // Validamos que el contexto siga montado antes de usarlo
+                  if (!context.mounted) return;
+
                   if (success) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

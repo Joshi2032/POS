@@ -195,8 +195,7 @@ class ProductosPage extends StatelessWidget {
                   );
 
                   if (isEditing) {
-                    provider.updateProducto(
-                        productoExistente!.id!, nuevoProducto);
+                    provider.updateProducto(productoExistente.id ?? '', nuevoProducto);
                   } else {
                     provider.addProducto(nuevoProducto);
                   }

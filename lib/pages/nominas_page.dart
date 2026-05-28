@@ -124,27 +124,29 @@ class _NominasViewState extends State<_NominasView> {
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Cancelar')),
             ElevatedButton(
-              onPressed: () {
-                final data = {
-                  'id': idController.text,
-                  'fecha': fechaController.text,
-                  'empleado': empleadoController.text.trim(),
-                  'tipo': tipo,
-                  'periodo': periodo,
-                  'monto': double.tryParse(montoController.text) ?? 0.0,
-                  'metodo': metodo,
-                  'notas': notasController.text,
-                };
-                if (nomina == null) {
-                  provider.addNomina(data);
-                } else {
-                  provider.updateNomina(nomina['id'], data);
-                }
-                Navigator.pop(context);
-              },
               style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white),
+              onPressed: () {
+                final nuevaNomina = NominaPago(
+                  id: idController.text,
+                  fecha: fechaController.text,
+                  empleado: empleadoController.text.trim(),
+                  tipo: tipo,
+                  periodo: periodo,
+                  monto: double.tryParse(montoController.text) ?? 0.0,
+                  metodo: metodo,
+                  notas: notasController.text,
+                );
+
+                if (nomina == null) {
+                  provider.agregarNomina(nuevaNomina);
+                } else {
+                  provider.actualizarNomina(
+                      nomina.id, nuevaNomina); // Usamos .id
+                }
+                Navigator.pop(context);
+              },
               child: const Text('Guardar'),
             ),
           ],
@@ -333,14 +335,12 @@ class _NominasViewState extends State<_NominasView> {
                           color: primaryTextColor,
                           fontWeight: FontWeight.w500)),
                   const SizedBox(width: 16),
+                  // En la lógica de paginación (abajo en el build):
                   OutlinedButton(
-                    onPressed: provider.currentPage < provider.totalPages
-                        ? () => provider.changePage(provider.currentPage + 1)
+                    onPressed: provider.currentPage > 1
+                        ? () => provider.changePage(provider.currentPage - 1)
                         : null,
-                    style: OutlinedButton.styleFrom(
-                        side:
-                            BorderSide(color: Theme.of(context).dividerColor)),
-                    child: const Text('Siguiente'),
+                    child: const Text('Anterior'),
                   ),
                 ],
               ),

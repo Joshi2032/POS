@@ -26,7 +26,6 @@ class _CombosViewState extends State<_CombosView> {
   final _nombreCtrl = TextEditingController();
   final _descripcionCtrl = TextEditingController();
   final _precioCtrl = TextEditingController();
-  bool _formActivo = true;
 
   @override
   void dispose() {

@@ -1,4 +1,6 @@
 // lib/repositories/reservacion_repository.dart
+import 'package:flutter/material.dart';
+
 import '../services/supabase_service.dart';
 import '../models/reservacion.dart';
 
@@ -12,13 +14,14 @@ class ReservacionRepository {
           .from('reservations')
           .select()
           .eq('reservation_date', fecha)
-          .order('reservation_time', ascending: true); // Ordenadas por hora
+          .order('reservation_time', ascending: true);
 
       return (response as List)
           .map((json) => Reservacion.fromJson(json))
           .toList();
     } catch (e) {
-      print('Error al cargar reservaciones: $e');
+      // Cambio de print a debugPrint
+      debugPrint('Error al cargar reservaciones: $e'); 
       return [];
     }
   }
