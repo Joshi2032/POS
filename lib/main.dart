@@ -26,13 +26,12 @@ import 'providers/mesas_provider.dart';
 import 'providers/nominas_provider.dart';
 import 'providers/ordenes_provider.dart';
 import 'providers/productos_provider.dart';
-import 'providers/proveedores_provider.dart';
+import 'providers/provider_payment.dart';
 import 'providers/reportes_provider.dart';
 import 'providers/reservaciones_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/tomar_orden_provider.dart';
 import 'providers/inventario_provider.dart';
-import 'providers/proveedores_provider.dart';
 
 Future<void> main() async {
   // Asegura que los canales de la plataforma nativa estén listos antes de inicializar servicios externos
@@ -41,8 +40,8 @@ Future<void> main() async {
   // Inicialización asíncrona de Supabase antes del arranque de la UI
   // Coloca aquí tu URL y Anon Key reales correspondientes a tu proyecto de Supabase
   await SupabaseService.init(
-    url: 'https://tu-proyecto.supabase.co',
-    anonKey: 'tu-anon-key-aqui',
+    url: 'https://cavapauhxtotjtlousch.supabase.co', // Reemplaza si es necesario
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdmFwYXVoeHRvdGp0bG91c2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODkxMTMsImV4cCI6MjA4Njc2NTExM30.32eAT6dH05FAy86vhXMsRZD0jwdeGoQjYUnpmdvvQCA', // REEMPLAZA CON TU CLAVE REAL
   );
 
   runApp(
@@ -91,7 +90,7 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider(
           create: (context) =>
-              ProveedoresProvider(context.read<PaymentRepository>()),
+              PaymentsProvider(context.read<PaymentRepository>()),
         ),
 
         // ==========================================

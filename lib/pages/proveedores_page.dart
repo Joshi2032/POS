@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/provider_payment.dart';
-import '../providers/proveedores_provider.dart';
+import '../providers/provider_payment.dart';
 import '../providers/inventario_provider.dart';
 import '../widgets/app_widgets.dart';
 
@@ -25,7 +25,7 @@ class _ProveedoresView extends StatefulWidget {
 class _ProveedoresViewState extends State<_ProveedoresView> {
   final _money = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
 
-  void _openEditor(ProveedoresProvider provider, {ProviderPayment? payment}) {
+  void _openEditor(PaymentsProvider provider, {ProviderPayment? payment}) {
     final todayIso = DateTime.now().toIso8601String().split('T').first;
     final idController = TextEditingController(
       text: payment?.id ?? 'PAG-${DateTime.now().millisecondsSinceEpoch}',
@@ -165,7 +165,7 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ProveedoresProvider>();
+    final provider = context.watch<PaymentsProvider>();
     final paginated = provider.paginatedPayments;
 
     final primaryTextColor = Theme.of(context).colorScheme.onSurface;
