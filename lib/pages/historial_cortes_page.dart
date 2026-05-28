@@ -90,11 +90,11 @@ class _HistorialCortesView extends StatelessWidget {
                         return ListTile(
                           leading: CircleAvatar(
                               child: Text(
-                                  (corte['id'] as String).split('-').last)),
+                                  (corte.id as String).split('-').last)),
                           title:
-                              Text('${corte['cajero']} · ${corte['metodo']}'),
-                          subtitle: Text('${corte['fecha']} ${corte['hora']}'),
-                          trailing: Text(money.format(corte['monto']),
+                              Text('${corte.cajero} · ${corte.metodo}'),
+                          subtitle: Text('${corte.fecha} ${corte.hora}'),
+                          trailing: Text(money.format(corte.monto ),
                               style:
                                   const TextStyle(fontWeight: FontWeight.w700)),
                         );

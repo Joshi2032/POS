@@ -117,26 +117,4 @@ class NominasProvider extends ChangeNotifier {
   }
 }
 
-  void changePage(int newPage) {
-    _currentPage = newPage;
-    notifyListeners();
-  }
-
-  void addNomina(Map<String, dynamic> data) {
-    _nominas.add(data);
-    notifyListeners();
-  }
-
-  void updateNomina(String id, Map<String, dynamic> data) {
-    final idx = _nominas.indexWhere((n) => n['id'] == id);
-    if (idx != -1) {
-      _nominas[idx] = data;
-      notifyListeners();
-    }
-  }
-
-  void removeNomina(String id) {
-    _nominas.removeWhere((n) => n['id'] == id);
-    notifyListeners();
-  }
-}
+  

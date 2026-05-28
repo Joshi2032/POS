@@ -99,35 +99,4 @@ class EmpleadosProvider extends ChangeNotifier {
     }
   }
 }
-      final matchesSearch = e.nombre.toLowerCase().contains(_searchTerm.toLowerCase()) ||
-          e.telefono.contains(_searchTerm);
-      final matchesRol = _selectedRol == 'Todos' || e.rol == _selectedRol;
-      return matchesSearch && matchesRol;
-    }).toList();
-  }
-
-  void setSearchTerm(String term) {
-    _searchTerm = term;
-    notifyListeners();
-  }
-
-  void setRol(String rol) {
-    _selectedRol = rol;
-    notifyListeners();
-  }
-
-  void addEmpleado(Empleado empleado) {
-    _empleados.add(empleado);
-    notifyListeners();
-  }
-
-  void updateEmpleado(int index, Empleado empleado) {
-    _empleados[index] = empleado;
-    notifyListeners();
-  }
-
-  void removeEmpleado(Empleado empleado) {
-    _empleados.remove(empleado);
-    notifyListeners();
-  }
-}
+      

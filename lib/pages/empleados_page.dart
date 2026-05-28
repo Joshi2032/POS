@@ -6,6 +6,8 @@ import '../widgets/app_widgets.dart';
 import '../widgets/layout_widgets.dart';
 import '../widgets/search_bar.dart';
 
+final _telefonoCtrl = TextEditingController();
+
 class EmpleadosPage extends StatelessWidget {
   const EmpleadosPage({super.key});
 
@@ -121,16 +123,21 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
                       final nuevo = Empleado(
+                        id: empleado?.id ?? '', // Asegúrate de manejar el ID
                         nombre: _nombreCtrl.text,
                         rol: _formRol,
+                        correo:
+                            _correoCtrl.text, // Asegúrate de incluir el correo
                         telefono: _telefonoCtrl.text,
                         activo: _formActivo,
                       );
 
-                      if (index != null) {
-                        provider.updateEmpleado(index, nuevo);
+                      if (empleado != null) {
+                        provider.actualizarEmpleado(
+                            empleado.id, nuevo); // Usa el nombre correcto
                       } else {
-                        provider.addEmpleado(nuevo);
+                        provider
+                            .agregarEmpleado(nuevo); // Usa el nombre correcto
                       }
                       Navigator.pop(context);
                     }
