@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// Importación corregida para evitar el conflicto con Provider:
-import 'package:supabase_flutter/supabase_flutter.dart' hide Provider;
-import 'package:zapata_flutter/repositories/caja_repository.dart';
 
 import 'app.dart';
 
@@ -11,6 +8,7 @@ import 'services/supabase_service.dart';
 import 'repositories/producto_repository.dart';
 import 'repositories/gasto_repository.dart';
 import 'repositories/orden_repository.dart';
+import 'repositories/caja_repository.dart'; // Repositorio de caja integrado
 
 // --- Providers ---
 import 'providers/ajustes_provider.dart';
@@ -32,13 +30,14 @@ import 'providers/tomar_orden_provider.dart';
 import 'providers/inventario_provider.dart';
 
 Future<void> main() async {
-  // 1. Asegurar que los widgets y el motor de Flutter estén listos
+  // Asegura que los canales de la plataforma nativa estén listos antes de inicializar servicios externos
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Inicialización de Supabase antes de arrancar la App
-  await Supabase.initialize(
-    url: 'https://cavapauhxtotjtlousch.supabase.co', // Reemplaza si es necesario
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhdmFwYXVoeHRvdGp0bG91c2NoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODkxMTMsImV4cCI6MjA4Njc2NTExM30.32eAT6dH05FAy86vhXMsRZD0jwdeGoQjYUnpmdvvQCA', // REEMPLAZA CON TU CLAVE REAL
+  // Inicialización asíncrona de Supabase antes del arranque de la UI
+  // Coloca aquí tu URL y Anon Key reales correspondientes a tu proyecto de Supabase
+  await SupabaseService.init(
+    url: 'https://tu-proyecto.supabase.co',
+    anonKey: 'tu-anon-key-aqui',
   );
 
   runApp(
@@ -50,7 +49,7 @@ Future<void> main() async {
         Provider(create: (_) => SupabaseService()),
 
         // ==========================================
-        // 2. REPOSITORIOS (Capa de Datos)
+        // 2. REPOSITORIOS (Capa de Datos Estática)
         // ==========================================
         Provider(create: (_) => ProductoRepository()),
         Provider(create: (_) => GastoRepository()),
@@ -58,7 +57,7 @@ Future<void> main() async {
         Provider(create: (_) => CajaRepository()),
 
         // ==========================================
-        // 3. PROVIDERS CONECTADOS A REPOSITORIOS
+        // 3. PROVIDERS REFACTORIZADOS (Conexión a BD)
         // ==========================================
         ChangeNotifierProvider(
           create: (context) => ProductosProvider(context.read<ProductoRepository>()),
@@ -70,15 +69,14 @@ Future<void> main() async {
           create: (context) => OrdenesProvider(context.read<OrdenRepository>()),
         ),
         ChangeNotifierProvider(
-          create: (context) => CajaProvider(context.read<CajaRepository>()), 
+          create: (context) => CajaProvider(context.read<CajaRepository>()),
         ),
 
         // ==========================================
-        // 4. PROVIDERS DE ESTADO LOCAL
+        // 4. PROVIDERS SIMPLES (Estado Local)
         // ==========================================
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AjustesProvider()),
-        //ChangeNotifierProvider(create: (_) => CajaProvider()),
         ChangeNotifierProvider(create: (_) => CombosProvider()),
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => EmpleadosProvider()),
