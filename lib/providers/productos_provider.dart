@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/product.dart'; 
+import '../models/product.dart';
 import '../repositories/producto_repository.dart';
 
 class ProductosProvider extends ChangeNotifier {
@@ -27,7 +27,7 @@ class ProductosProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
-  
+
   // Getter público para que la UI siga leyendo 'categorias' exactamente igual que antes
   List<String> get categorias => _categorias;
 
@@ -37,7 +37,7 @@ class ProductosProvider extends ChangeNotifier {
     _clearError();
     try {
       _productos = await _repository.getAll();
-      
+
       // 2. Extraemos las categorías reales de los productos obtenidos
       _actualizarCategoriasDinamicas();
     } catch (e) {
@@ -51,17 +51,18 @@ class ProductosProvider extends ChangeNotifier {
   void _actualizarCategoriasDinamicas() {
     // Usamos un Set para evitar elementos duplicados
     final deBaseDeDatos = _productos
-        .map((p) => p.categoria)
+        .map((p) => p.category)
         .where((cat) => cat.isNotEmpty)
         .toSet()
         .toList();
+
 
     // Ordenamos alfabéticamente para que el menú sea consistente
     deBaseDeDatos.sort();
 
     // Reconstruimos la lista manteniendo siempre 'Todas' al inicio
     _categorias = ['Todas', ...deBaseDeDatos];
-    
+
     // Si la categoría que el usuario tenía seleccionada desaparece de la BD, lo regresamos a 'Todas'
     if (!_categorias.contains(_selectedCategory)) {
       _selectedCategory = 'Todas';
@@ -127,15 +128,16 @@ class ProductosProvider extends ChangeNotifier {
   }
 
   // --- FILTROS ---
-  List<Producto> get productosFiltrados {
-    return _productos.where((p) {
-      final matchesSearch =
-          p.nombre.toLowerCase().contains(_searchTerm.toLowerCase());
-      final matchesCategory =
-          _selectedCategory == 'Todas' || p.categoria == _selectedCategory;
-      return matchesSearch && matchesCategory;
-    }).toList();
-  }
+  // En tu provider, ajusta los accesos así:
+  List<Producto> get visibleProducts { 
+  return _productos.where((product) {
+    // Usamos .name y .category (del modelo nuevo)
+    final matchesCategory = _selectedCategory == 'Todos' || product.category == _selectedCategory;
+    final matchesSearch = product.name.toLowerCase().contains(_searchTerm.toLowerCase()) ||
+                          product.description.toLowerCase().contains(_searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  }).toList();
+}
 
   void setSearchTerm(String term) {
     _searchTerm = term;
@@ -146,4 +148,14 @@ class ProductosProvider extends ChangeNotifier {
     _selectedCategory = category;
     notifyListeners();
   }
+
+  // En tu ProductosProvider
+List<Producto> get productosFiltrados {
+  return  _productos.where((product) {
+    final matchesCategory = _selectedCategory == 'Todos' || product.category == _selectedCategory;
+    final matchesSearch = product.name.toLowerCase().contains(_searchTerm.toLowerCase()) ||
+                          product.description.toLowerCase().contains(_searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  }).toList();
+}
 }

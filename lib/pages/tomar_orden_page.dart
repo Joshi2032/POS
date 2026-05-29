@@ -9,10 +9,10 @@ import '../providers/tomar_orden_provider.dart';
 // Importación de los modelos de datos centralizados
 import '../models/order_item.dart';
 import '../models/restaurant_order.dart';
-import '../models/product_item.dart';
 import '../models/cart_item.dart';
 import '../ui_models/cash_item.dart';
 import '../ui_models/cash_order.dart';
+import '../models/product.dart';
 
 // ==========================================================================
 // INTERFAZ DE USUARIO ADAPTATIVA (Tu diseño original intacto al 100%)
@@ -107,6 +107,10 @@ class _MenuSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Escuchamos la lista de Producto (modelo unificado)
+    final visibleProducts = context
+        .select<TomarOrdenProvider, List<Producto>>((p) => p.visibleProducts);
+
     final orderType =
         context.select<TomarOrdenProvider, OrderType>((p) => p.orderType);
     final areas =
@@ -121,11 +125,8 @@ class _MenuSection extends StatelessWidget {
         context.select<TomarOrdenProvider, List<String>>((p) => p.categories);
     final selectedCategory =
         context.select<TomarOrdenProvider, String>((p) => p.selectedCategory);
-    final visibleProducts =
-        context.select<TomarOrdenProvider, List<ProductItem>>(
-            (p) => p.visibleProducts);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
     final textSubColor = isDark ? Colors.white60 : Colors.grey[600];
     final searchFillColor = isDark ? const Color(0xFF1E1E2D) : Colors.grey[100];
@@ -171,7 +172,6 @@ class _MenuSection extends StatelessWidget {
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
             onChanged: (v) =>
                 context.read<TomarOrdenProvider>().setSearchTerm(v),
@@ -189,10 +189,8 @@ class _MenuSection extends StatelessWidget {
                     selected: isSelected,
                     selectedColor: Theme.of(context).primaryColor,
                     backgroundColor: cardBg,
-                    labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : textColor,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal),
+                    labelStyle:
+                        TextStyle(color: isSelected ? Colors.white : textColor),
                     onSelected: (_) =>
                         context.read<TomarOrdenProvider>().setCategory(cat),
                   ),
@@ -204,158 +202,34 @@ class _MenuSection extends StatelessWidget {
           Expanded(
             child: visibleProducts.isEmpty
                 ? Center(
-                    child: Text(
-                        'No hay productos que coincidan con la búsqueda.',
+                    child: Text('No hay productos encontrados.',
                         style: TextStyle(color: textSubColor)))
-                : isMobile
-                    ? ListView.separated(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        itemCount: visibleProducts.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final product = visibleProducts[index];
-                          return Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                                side: BorderSide(
-                                    color: isDark
-                                        ? const Color(0xFF2D2D44)
-                                        : Colors.grey[200]!),
-                                borderRadius: BorderRadius.circular(12)),
-                            color: cardBg,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () => context
-                                  .read<TomarOrdenProvider>()
-                                  .addToCart(product),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(product.category.toUpperCase(),
-                                              style: TextStyle(
-                                                  fontSize: 10,
-                                                  color: isDark
-                                                      ? Colors.white38
-                                                      : Colors.grey[400],
-                                                  fontWeight: FontWeight.bold,
-                                                  letterSpacing: 0.5)),
-                                          const SizedBox(height: 4),
-                                          Text(product.name,
-                                              style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14,
-                                                  color: textColor),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis),
-                                          const SizedBox(height: 4),
-                                          Text(product.description,
-                                              style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: isDark
-                                                      ? Colors.white60
-                                                      : Colors.grey[500],
-                                                  height: 1.2),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                              '\$${product.price.toStringAsFixed(2)}',
-                                              style: TextStyle(
-                                                  color: Theme.of(context)
-                                                      .primaryColor,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 14)),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Icon(Icons.add_shopping_cart_outlined,
-                                        color: Theme.of(context).primaryColor),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      )
-                    : GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                childAspectRatio: 1.2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12),
-                        itemCount: visibleProducts.length,
-                        itemBuilder: (context, index) {
-                          final product = visibleProducts[index];
-                          return Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                                side: BorderSide(
-                                    color: isDark
-                                        ? const Color(0xFF2D2D44)
-                                        : Colors.grey[200]!),
-                                borderRadius: BorderRadius.circular(12)),
-                            color: cardBg,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () => context
-                                  .read<TomarOrdenProvider>()
-                                  .addToCart(product),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(product.category.toUpperCase(),
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            color: isDark
-                                                ? Colors.white38
-                                                : Colors.grey[400],
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: 0.5)),
-                                    const SizedBox(height: 4),
-                                    Text(product.name,
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: textColor),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis),
-                                    const SizedBox(height: 4),
-                                    Text(product.description,
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDark
-                                                ? Colors.white60
-                                                : Colors.grey[500],
-                                            height: 1.2),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                        '\$${product.price.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                            color:
-                                                Theme.of(context).primaryColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                : ListView.builder(
+                    itemCount: visibleProducts.length,
+                    itemBuilder: (context, index) {
+                      final product =
+                          visibleProducts[index]; // Ahora es Producto
+                      return Card(
+                        color: cardBg,
+                        child: ListTile(
+                          title: Text(product.name,
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontWeight: FontWeight.bold)),
+                          subtitle: Text(product.description,
+                              style: TextStyle(color: textSubColor)),
+                          trailing: Text(
+                              '\$${product.price.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.bold)),
+                          onTap: () => context
+                              .read<TomarOrdenProvider>()
+                              .addToCart(product),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -365,27 +239,13 @@ class _MenuSection extends StatelessWidget {
   Widget _buildTypeButton(BuildContext context, String text, OrderType type) {
     final isSelected =
         context.select<TomarOrdenProvider, bool>((p) => p.orderType == type);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
-      child: SizedBox(
-        height: 40,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected
-                ? Theme.of(context).primaryColor
-                : (isDark ? const Color(0xFF1E1E2D) : Colors.grey[100]),
-            foregroundColor: isSelected
-                ? Colors.white
-                : (isDark ? Colors.white70 : Colors.black87),
-            elevation: 0,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-          onPressed: () =>
-              context.read<TomarOrdenProvider>().setOrderType(type),
-          child:
-              Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ),
+      child: ElevatedButton(
+        onPressed: () => context.read<TomarOrdenProvider>().setOrderType(type),
+        style: ElevatedButton.styleFrom(
+            backgroundColor:
+                isSelected ? Theme.of(context).primaryColor : Colors.grey[200]),
+        child: Text(text),
       ),
     );
   }
@@ -396,40 +256,20 @@ class _MenuSection extends StatelessWidget {
       List<String> options,
       String selectedValue,
       ValueChanged<String> onSelected) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
         SWidth(
             width: 50,
             child: Text(label,
-                style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white38 : Colors.grey))),
+                style: const TextStyle(fontWeight: FontWeight.bold))),
         Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: options.map((opt) {
-                final isSelected = selectedValue == opt;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6.0),
-                  child: ChoiceChip(
-                    label: Text(opt),
-                    selected: isSelected,
-                    selectedColor: Theme.of(context).primaryColor,
-                    backgroundColor:
-                        isDark ? const Color(0xFF1E1E2D) : Colors.white,
-                    labelStyle: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : (isDark ? Colors.white70 : Colors.black87)),
-                    onSelected: (_) => onSelected(opt),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        )
+            child: Wrap(
+                children: options
+                    .map((opt) => ChoiceChip(
+                        label: Text(opt),
+                        selected: selectedValue == opt,
+                        onSelected: (_) => onSelected(opt)))
+                    .toList()))
       ],
     );
   }

@@ -1,38 +1,42 @@
 class Producto {
-  final String? id;
-  final String nombre;
-  final String categoria;
-  final double precio;
+  final String id;
+  final String name;
+  final String description;
+  final String category;
+  final double price;
   final int stock;
-  final String unidad;
+  final String unit;
 
   Producto({
-    this.id,
-    required this.nombre,
-    required this.categoria,
-    required this.precio,
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.category,
+    required this.price,
     required this.stock,
-    required this.unidad,
+    required this.unit,
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
     return Producto(
-      id: json['id']?.toString(),
-      nombre: json['name'] ?? '',
-      // Extraemos el nombre de la categoría si viene anidado en la respuesta de Supabase
-      categoria: json['categories'] != null ? json['categories']['name'] : 'General',
-      precio: (json['price'] as num?)?.toDouble() ?? 0.0,
-      stock: json['stock'] as int? ?? 0,
-      unidad: json['unit'] ?? 'unidad',
+      id: (json['id'] ?? '').toString(),
+      name: json['name'] ?? json['nombre'] ?? 'Sin nombre',
+      description: json['description'] ?? json['descripcion'] ?? '',
+      category: json['categories'] != null ? json['categories']['name'] : (json['category'] ?? 'General'),
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      stock: (json['stock'] as num?)?.toInt() ?? 0,
+      unit: json['unit'] ?? 'unidad',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'name': nombre,
-      'price': precio,
+      'name': name,
+      'description': description,
+      'category': category,
+      'price': price,
       'stock': stock,
-      'unit': unidad,
+      'unit': unit,
     };
   }
 }

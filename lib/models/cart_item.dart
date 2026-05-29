@@ -1,7 +1,6 @@
-import 'product_item.dart';
-
+import 'product.dart'; // Asegúrate que esta ruta sea correcta
 class CartItem {
-  final ProductItem product;
+  final Producto product;
   int qty;
 
   CartItem({required this.product, this.qty = 1});
@@ -10,7 +9,7 @@ class CartItem {
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
     return CartItem(
-      product: ProductItem.fromJson(json['product'] as Map<String, dynamic>),
+      product: Producto.fromJson(json['product'] as Map<String, dynamic>),
       qty: json['qty'] as int? ?? 1,
     );
   }
