@@ -8,17 +8,16 @@ class MesaRepository {
   MesaRepository(this._client);
 
   // READ: Obtener todas las mesas
-  Future<List<Mesa>> getAll() async {
-    try {
-      final response = await _client
-          .from('tables') // Asegúrate de que coincida con tu tabla en Supabase
-          .select('*');
-
-      return (response as List).map((json) => Mesa.fromJson(json)).toList();
-    } catch (e) {
-      throw Exception('Error al obtener las mesas de Supabase: $e');
-    }
+  // En tu archivo mesa_repository.dart
+Future<List<Mesa>> getAll() async {
+  try {
+    // CAMBIO: Apunta a 'restaurant_tables' tal cual está en tu esquema
+    final response = await _client.from('restaurant_tables').select('*'); 
+    return (response as List).map((json) => Mesa.fromJson(json)).toList();
+  } catch (e) {
+    throw Exception('Error al obtener las mesas: $e');
   }
+}
 
   // CREATE: Agregar nueva mesa
   Future<void> create(Mesa mesa) async {

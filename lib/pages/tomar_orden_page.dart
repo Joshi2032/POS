@@ -496,19 +496,19 @@ class _CartSection extends StatelessWidget {
                               listen: false);
                           final cajaProvider =
                               Provider.of<CajaProvider>(context, listen: false);
-                          final tomarOrdenProvider = Provider.of<TomarOrdenProvider>(
-                              context,
-                              listen: false);
+                          final tomarOrdenProvider =
+                              Provider.of<TomarOrdenProvider>(context,
+                                  listen: false);
 
                           final String idComanda =
                               'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
                           final String horaActual =
                               '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
 
-                          final String identificador =
-                              orderType == OrderType.dineIn
-                                  ? 'Mesa ${tomarOrdenProvider.selectedTableName} (Área $selectedArea)'
-                                  : 'Para Llevar';
+                          final String identificador = orderType ==
+                                  OrderType.dineIn
+                              ? 'Mesa ${tomarOrdenProvider.selectedTableName} (Área $selectedArea)'
+                              : 'Para Llevar';
 
                           final String tipoDeServicio =
                               orderType == OrderType.dineIn
@@ -552,7 +552,8 @@ class _CartSection extends StatelessWidget {
                           );
 
                           // Crear y guardar la orden
-                          await ordenesProvider.insertarNuevaComanda(nuevaOrden);
+                          await ordenesProvider
+                              .insertarNuevaComanda(nuevaOrden);
 
                           // Verificar si hubo error (con mounted check)
                           if (!context.mounted) return;
@@ -587,13 +588,13 @@ class _CartSection extends StatelessWidget {
                           // Mostrar éxito y navegar a órdenes
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(
-                                  'Orden $idComanda creada exitosamente'),
+                              content:
+                                  Text('Orden $idComanda creada exitosamente'),
                               backgroundColor: Colors.green,
                               duration: const Duration(seconds: 3),
                             ),
                           );
-                          
+
                           // Navegar a la página de órdenes con pequeño delay
                           Future.delayed(const Duration(milliseconds: 500), () {
                             if (context.mounted) {

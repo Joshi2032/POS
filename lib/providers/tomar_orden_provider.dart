@@ -19,7 +19,7 @@ class TomarOrdenProvider extends ChangeNotifier {
   List<Producto> _products = [];
   List<Mesa> _mesas = [];
   final List<CartItem> _cart = [];
-  
+
   OrderType _orderType = OrderType.dineIn;
   String _selectedArea = '';
   String _selectedTableId = ''; // UUID de la mesa, no el nombre
@@ -40,24 +40,26 @@ class TomarOrdenProvider extends ChangeNotifier {
       return 'Sin mesa';
     }
   }
+
   String get selectedCategory => _selectedCategory;
   String get searchTerm => _searchTerm;
   String get notes => _notes;
-  
+
   List<String> get areas {
     final uniqueAreas = _mesas.map((m) => m.area).toSet().toList();
     uniqueAreas.sort();
     return uniqueAreas.isEmpty ? ['General'] : uniqueAreas;
   }
-  
+
   List<String> get currentTables {
     if (_selectedArea.isEmpty) return [];
     return _mesas
-        .where((m) => m.area == _selectedArea && m.estado.toLowerCase() == 'libre')
+        .where(
+            (m) => m.area == _selectedArea && m.estado.toLowerCase() == 'libre')
         .map((m) => m.nombre)
         .toList();
   }
-  
+
   String? getTableIdByName(String tableName) {
     try {
       return _mesas.firstWhere((m) => m.nombre == tableName).id;
@@ -65,9 +67,10 @@ class TomarOrdenProvider extends ChangeNotifier {
       return null;
     }
   }
-  
+
   int get itemsCount => _cart.fold(0, (sum, item) => sum + item.qty);
-  double get total => _cart.fold(0.0, (sum, item) => sum + (item.qty * item.product.price));
+  double get total =>
+      _cart.fold(0.0, (sum, item) => sum + (item.qty * item.product.price));
 
   List<String> get categories {
     final cats = _products.map((p) => p.category).toSet().toList();
@@ -80,10 +83,13 @@ class TomarOrdenProvider extends ChangeNotifier {
       final desc = product.description.toLowerCase();
       final cat = product.category.toLowerCase();
       final search = _searchTerm.toLowerCase();
-      
-      final matchesCategory = _selectedCategory == 'Todos' || product.category == _selectedCategory;
-      final matchesSearch = name.contains(search) || desc.contains(search) || cat.contains(search);
-      
+
+      final matchesCategory =
+          _selectedCategory == 'Todos' || product.category == _selectedCategory;
+      final matchesSearch = name.contains(search) ||
+          desc.contains(search) ||
+          cat.contains(search);
+
       return matchesCategory && matchesSearch;
     }).toList();
   }
@@ -114,8 +120,11 @@ class TomarOrdenProvider extends ChangeNotifier {
     }
   }
 
-  void setOrderType(OrderType type) { _orderType = type; notifyListeners(); }
-  
+  void setOrderType(OrderType type) {
+    _orderType = type;
+    notifyListeners();
+  }
+
   void setArea(String area) {
     _selectedArea = area;
     final mesasEnArea = _mesas.where((m) => m.area == area).toList();
@@ -124,7 +133,7 @@ class TomarOrdenProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
-  
+
   void setTable(String tableName) {
     final mesaId = getTableIdByName(tableName);
     if (mesaId != null) {
@@ -132,14 +141,26 @@ class TomarOrdenProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
-  
-  void setCategory(String category) { _selectedCategory = category; notifyListeners(); }
-  void setSearchTerm(String term) { _searchTerm = term; notifyListeners(); }
-  void setNotes(String notes) { _notes = notes; notifyListeners(); }
+
+  void setCategory(String category) {
+    _selectedCategory = category;
+    notifyListeners();
+  }
+
+  void setSearchTerm(String term) {
+    _searchTerm = term;
+    notifyListeners();
+  }
+
+  void setNotes(String notes) {
+    _notes = notes;
+    notifyListeners();
+  }
 
   void addToCart(Producto product) {
     // CORRECCIÓN: Comparamos IDs como strings para evitar errores de tipo int/string
-    final index = _cart.indexWhere((item) => item.product.id.toString() == product.id.toString());
+    final index = _cart.indexWhere(
+        (item) => item.product.id.toString() == product.id.toString());
     if (index == -1) {
       _cart.add(CartItem(product: product));
     } else {
@@ -148,11 +169,16 @@ class TomarOrdenProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void increment(CartItem item) { item.qty++; notifyListeners(); }
+  void increment(CartItem item) {
+    item.qty++;
+    notifyListeners();
+  }
+
   void decrement(CartItem item) {
     if (item.qty <= 1) {
       // CORRECCIÓN: Comparamos ID como String
-      _cart.removeWhere((entry) => entry.product.id.toString() == item.product.id.toString());
+      _cart.removeWhere(
+          (entry) => entry.product.id.toString() == item.product.id.toString());
     } else {
       item.qty--;
     }
@@ -160,9 +186,14 @@ class TomarOrdenProvider extends ChangeNotifier {
   }
 
   void remove(CartItem item) {
-    _cart.removeWhere((entry) => entry.product.id.toString() == item.product.id.toString());
+    _cart.removeWhere(
+        (entry) => entry.product.id.toString() == item.product.id.toString());
     notifyListeners();
   }
 
-  void sendOrder() { _cart.clear(); _notes = ''; notifyListeners(); }
+  void sendOrder() {
+    _cart.clear();
+    _notes = '';
+    notifyListeners();
+  }
 }

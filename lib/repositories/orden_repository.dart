@@ -11,11 +11,11 @@ class OrdenRepository {
   Future<List<RestaurantOrder>> getOrdenesActivas() async {
     try {
       // Usamos un select relacional si tu tabla tiene una llave foránea con order_items
-      final response = await _client
-          .from('orders')
-          .select('*, order_items(*)'); 
+      final response = await _client.from('orders').select('*, order_items(*)');
 
-      return (response as List).map((json) => RestaurantOrder.fromJson(json)).toList();
+      return (response as List)
+          .map((json) => RestaurantOrder.fromJson(json))
+          .toList();
     } catch (e) {
       throw Exception('Error al obtener las órdenes de Supabase: $e');
     }
@@ -24,44 +24,57 @@ class OrdenRepository {
   // CREATE: Insertar la comanda principal y sus productos asociados dentro de una transacción o lote
   Future<void> crearOrden(RestaurantOrder orden, List<Map<String, dynamic>> itemsMap) async {
     try {
-      // 1. Preparamos y enviamos los datos de la orden principal
-      final ordenData = orden.toJson();
-      if (orden.id.isEmpty) {
-        ordenData.remove('id'); // Dejamos que Supabase asigne el UUID
-      }
+      final Map<String, dynamic> ordenData = orden.toJson();
 
-      // Insertamos y pedimos de regreso la fila creada para obtener el ID real de la orden
+      // ==========================================
+      // LA SOLUCIÓN DEFINITIVA AL ERROR 22P02
+      // ==========================================
+      // Borramos dinámicamente CUALQUIER campo que sea nulo o un string vacío.
+      // Esto limpia 'id', 'table_id', 'waiter_id', 'discount_id', etc., si vienen vacíos.
+      // Así Supabase no intentará convertirlos a UUID y usará nulos o sus valores DEFAULT.
+      ordenData.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+
+      // Insertamos la orden y pedimos el ID generado
       final responseOrden = await _client
           .from('orders')
           .insert(ordenData)
-          .select()
+          .select('id')
           .single();
 
       final String orderIdAsignado = responseOrden['id'].toString();
 
-      // 2. Si la comanda contiene artículos, les asociamos el ID de la orden principal y los insertamos
+      // Procesamos los artículos de la comanda
       if (itemsMap.isNotEmpty) {
         final itemsConRelacion = itemsMap.map((item) {
-          return {
-            ...item,
-            'order_id': orderIdAsignado, // Llave foránea de relación
-          };
+          // Clonamos el mapa para poder modificarlo
+          final Map<String, dynamic> itemLimpio = Map<String, dynamic>.from(item);
+          
+          itemLimpio['order_id'] = orderIdAsignado; // Asignamos la llave foránea
+
+          // CORRECCIÓN DE ESQUEMA: Tu base de datos espera 'total_price', no 'total'
+          if (itemLimpio.containsKey('total')) {
+            itemLimpio['total_price'] = itemLimpio['total'];
+            itemLimpio.remove('total');
+          }
+
+          // Limpieza nuclear también para los artículos (limpia product_id, combo_id, etc. si van vacíos)
+          itemLimpio.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+
+          return itemLimpio;
         }).toList();
 
         await _client.from('order_items').insert(itemsConRelacion);
       }
     } catch (e) {
-      throw Exception('Error al procesar e insertar la nueva comanda en Supabase: $e');
+      throw Exception('Error al insertar comanda en Supabase: $e');
     }
   }
-
   // UPDATE: Cambiar el estado de la comanda (ej: de 'pendiente' a 'preparando' o 'lista')
   Future<void> actualizarEstado(String id, String nuevoEstado) async {
     try {
       await _client
           .from('orders')
-          .update({'status': nuevoEstado.toLowerCase()})
-          .eq('id', id);
+          .update({'status': nuevoEstado.toLowerCase()}).eq('id', id);
     } catch (e) {
       throw Exception('Error al modificar el estado de la orden $id: $e');
     }

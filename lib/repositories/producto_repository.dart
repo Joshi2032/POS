@@ -7,13 +7,18 @@ class ProductoRepository {
   ProductoRepository(this._client);
 
   Future<List<Producto>> getAll() async {
-    try {
-      final response = await _client.from('products').select('*, categories(name)');
-      return (response as List).map((json) => Producto.fromJson(json)).toList();
-    } catch (e) {
-      throw Exception('Error al obtener productos: $e');
-    }
+  try {
+    // CAMBIO: Select con join a 'categories'
+    // La coma después del asterisco es vital: '*, categories(name)'
+    final response = await _client
+        .from('products')
+        .select('*, categories(name)'); 
+
+    return (response as List).map((json) => Producto.fromJson(json)).toList();
+  } catch (e) {
+    throw Exception('Error al obtener productos: $e');
   }
+}
 
   Future<void> create(Producto product) async {
     try {

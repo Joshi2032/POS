@@ -68,23 +68,24 @@ class RestaurantOrder {
   }
 
   Map<String, dynamic> toJson() {
-    final data = {
-      if (id.isNotEmpty) 'id': id,
+    return {
+      // Si el id está vacío, lo enviamos como cadena vacía para que 
+      // el repositorio lo detecte y lo elimine antes del insert.
+      'id': id.isEmpty ? null : id, 
       'order_number': orderNumber,
       'order_type': serviceType,
       'status': status,
       'subtotal': totalAmount,
       'total': totalAmount,
-      'table_id': tableId,
+      'table_id': tableId, // Asegúrate de que esto coincide con la columna en Supabase
       'notes': notes,
-      'waiter_id': null, // Puede ser asignado después
+      'waiter_id': null,
       'payment_method': null,
       'paid_at': null,
       'discount_id': null,
       'discount_amount': 0,
       'tip': 0,
     };
-    return data;
   }
 
   RestaurantOrder copyWith({
