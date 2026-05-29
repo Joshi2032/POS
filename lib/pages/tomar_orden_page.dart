@@ -541,7 +541,7 @@ class _CartSection extends StatelessWidget {
                             orderNumber: idComanda,
                             tableId: orderType == OrderType.dineIn
                                 ? selectedTable
-                                : null, // null para "Para Llevar"
+                                : null,
                             tableOrCustomer: identificador,
                             time: horaActual,
                             status: 'pending',
@@ -551,15 +551,21 @@ class _CartSection extends StatelessWidget {
                             notes: notes.isNotEmpty ? notes : null,
                           );
 
-                          // Crear y guardar la orden
+                          // Guardar las referencias de navegación ANTES de operaciones asíncronas
+                          final router = GoRouter.of(context);
+                          final scaffoldMessenger =
+                              ScaffoldMessenger.of(context);
+
+                          // Crear y guardar la orden en Supabase
                           await ordenesProvider
                               .insertarNuevaComanda(nuevaOrden);
 
-                          // Verificar si hubo error (con mounted check)
+                          // Validar si la vista sigue montada después de ir a la base de datos
                           if (!context.mounted) return;
 
+                          // Manejo de errores
                           if (ordenesProvider.errorMessage != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            scaffoldMessenger.showSnackBar(
                               SnackBar(
                                 content: Text(
                                     'Error al guardar orden: ${ordenesProvider.errorMessage}'),
@@ -570,7 +576,7 @@ class _CartSection extends StatelessWidget {
                             return;
                           }
 
-                          // Agregar a caja
+                          // Agregar a caja localmente
                           cajaProvider.agregarCuentaPorCobrar(CashOrder(
                             id: idComanda,
                             label: identificador,
@@ -581,12 +587,16 @@ class _CartSection extends StatelessWidget {
                             total: total,
                           ));
 
-                          // Limpiar carrito
-                          context.read<TomarOrdenProvider>().sendOrder();
-                          if (isMobile) Navigator.pop(context);
+                          // 1. Limpiar el carrito de compras
+                          tomarOrdenProvider.sendOrder();
 
-                          // Mostrar éxito y navegar a órdenes
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          // 2. Si estamos en móvil (modal) y se puede hacer pop, lo cerramos
+                          if (isMobile && Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
+
+                          // 3. Mostrar el mensaje de éxito
+                          scaffoldMessenger.showSnackBar(
                             SnackBar(
                               content:
                                   Text('Orden $idComanda creada exitosamente'),
@@ -595,16 +605,15 @@ class _CartSection extends StatelessWidget {
                             ),
                           );
 
-                          // Navegar a la página de órdenes con pequeño delay
-                          Future.delayed(const Duration(milliseconds: 500), () {
-                            if (context.mounted) {
-                              context.go('/ordenes');
-                            }
+                          // 4. Retraso mínimo para permitir que la animación del pop inicie
+                          // y evitar el choque (Assertion: !_debugLocked) con go_router
+                          Future.delayed(const Duration(milliseconds: 150), () {
+                            router.go('/ordenes');
                           });
                         },
-                  child: const Text('Confirmar y Enviar Orden',
+                  child: const Text('Enviar a Cocina',
                       style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
