@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../repositories/orden_repository.dart';
+import '../models/restaurant_order.dart';
 
 class VentaReporte {
   final String id;
@@ -19,15 +20,36 @@ class VentaReporte {
   });
 }
 
+class ProductoRendimiento {
+  final String nombre;
+  final String categoria;
+  int unidadesVendidas;
+  double montoTotal;
+
+  ProductoRendimiento({
+    required this.nombre,
+    required this.categoria,
+    required this.unidadesVendidas,
+    required this.montoTotal,
+  });
+}
+
 class ReportesProvider extends ChangeNotifier {
   final OrdenRepository _ordenRepository;
   final int pageSize = 10;
   final List<String> periodos = ['Hoy', 'Esta Semana', 'Este Mes', 'Histórico'];
-  final List<String> categoriasFiltro = ['Todos', 'Alimentos', 'Bebidas', 'Combos', 'Otros'];
+  final List<String> categoriasFiltro = [
+    'Todos',
+    'Alimentos',
+    'Bebidas',
+    'Combos',
+    'Otros'
+  ];
 
   bool _isLoading = false;
   String? _errorMessage;
   List<VentaReporte> _historialVentas = [];
+  List<ProductoRendimiento> _productosRendimiento = [];
   String _selectedPeriodo = 'Este Mes';
   String _selectedCategory = 'Todos';
   String _searchTerm = '';
@@ -39,6 +61,7 @@ class ReportesProvider extends ChangeNotifier {
   String get selectedCategory => _selectedCategory;
   String get searchTerm => _searchTerm;
   int get currentPage => _currentPage;
+  List<ProductoRendimiento> get productosRendimiento => _productosRendimiento;
 
   ReportesProvider(this._ordenRepository) {
     cargarReporteDeVentas();
@@ -50,95 +73,146 @@ class ReportesProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final dynamic repo = _ordenRepository;
-      List<dynamic> rawOrders = [];
+      List<RestaurantOrder> ordenes = [];
+
       try {
-        rawOrders = await repo.getAll();
-      } catch (_) {
-        try {
-          rawOrders = await repo.obtenerTodos();
-        } catch (_) {
-          rawOrders = [];
-        }
+        ordenes = await _ordenRepository.getAll();
+        debugPrint('✅ REPORTES: Órdenes obtenidas: ${ordenes.length}');
+      } catch (e) {
+        debugPrint('❌ REPORTES: Error obteniendo órdenes: $e');
+        ordenes = [];
       }
 
-      final ahora = DateTime.now();
-      final hoyStr = ahora.toIso8601String().substring(0, 10);
-      final lunesDeEstaSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
-      final inicioSemana = DateTime(lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
-      final mesActualStr = ahora.toIso8601String().substring(0, 7);
+      if (ordenes.isEmpty) {
+        debugPrint('⚠️ REPORTES: No hay órdenes disponibles');
+        _historialVentas = [];
+        _productosRendimiento = [];
+      } else {
+        final ahora = DateTime.now();
+        final hoyStr = ahora.toIso8601String().substring(0, 10);
+        final lunesDeEstaSemana =
+            ahora.subtract(Duration(days: ahora.weekday - 1));
+        final inicioSemana = DateTime(lunesDeEstaSemana.year,
+            lunesDeEstaSemana.month, lunesDeEstaSemana.day);
+        final mesActualStr = ahora.toIso8601String().substring(0, 7);
 
-      List<VentaReporte> ventasProcesadas = [];
+        List<VentaReporte> ventasProcesadas = [];
+        final Map<String, ProductoRendimiento> mapaProductosFiltro = {};
 
-      for (var orden in rawOrders) {
-        try {
-          final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
-          final String idOrd = (rawJson['id'] ?? rawJson['order_number'] ?? '').toString();
-          
-          // Mapeo exacto a Supabase: created_at
-          final String dateStr = rawJson['created_at'] ?? '';
-          
-          final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
-          
-          // Traductor de BD a Interfaz
-          String metodoPagoUi = 'Efectivo';
-          final String metodoDb = (rawJson['payment_method'] ?? 'cash').toString().toLowerCase();
-          if (metodoDb == 'card') metodoPagoUi = 'Tarjeta';
-          if (metodoDb == 'transfer') metodoPagoUi = 'Transferencia';
+        debugPrint(
+            '🔍 REPORTES: Procesando órdenes para período: $_selectedPeriodo');
 
-          // Mapeo exacto a Supabase: order_items
-          final items = rawJson['order_items'] ?? rawJson['items'] ?? [];
-          String conceptoConstruido = '';
-          String categoriaPrincipal = 'Otros';
+        for (var orden in ordenes) {
+          try {
+            final String idOrd = orden.id;
+            final String dateStr = orden.time;
+            final double totalValue = orden.totalAmount;
 
-          if (items is List && items.isNotEmpty) {
-            final listaNombres = items.map((i) => (i['product_name'] ?? '').toString()).toList();
-            conceptoConstruido = listaNombres.join(', ');
-            
-            // Asignación de categoría visual por keywords (ya que category no está directamente en order_items)
-            final String rawName = conceptoConstruido.toLowerCase();
-            if (rawName.contains('arrachera') || rawName.contains('t-bone') || rawName.contains('plato')) {
-              categoriaPrincipal = 'Alimentos';
-            } else if (rawName.contains('cerveza') || rawName.contains('refresco') || rawName.contains('agua')) {
-              categoriaPrincipal = 'Bebidas';
-            } else if (rawName.contains('combo') || rawName.contains('paquete')) {
-              categoriaPrincipal = 'Combos';
-            }
-          } else {
-            conceptoConstruido = 'Consumo General';
-          }
+            debugPrint(
+                '📦 REPORTES: Orden $idOrd, items: ${orden.items.length}, total: $totalValue, fecha: $dateStr');
 
-          if (dateStr.isNotEmpty) {
-            final fechaOrd = DateTime.parse(dateStr);
-            bool pasaFiltroTiempo = false;
-            
-            if (_selectedPeriodo == 'Hoy') {
-              pasaFiltroTiempo = dateStr.startsWith(hoyStr);
-            } else if (_selectedPeriodo == 'Esta Semana') {
-              pasaFiltroTiempo = fechaOrd.isAfter(inicioSemana.subtract(const Duration(seconds: 1)));
-            } else if (_selectedPeriodo == 'Este Mes') {
-              pasaFiltroTiempo = dateStr.startsWith(mesActualStr);
+            // Construir concepto desde los nombres de productos
+            String conceptoConstruido = '';
+            String categoriaPrincipal = 'Otros';
+
+            if (orden.items.isNotEmpty) {
+              final listaNombres =
+                  orden.items.map((item) => item.productName).toList();
+              conceptoConstruido = listaNombres.join(', ');
+
+              // Asignación de categoría visual por keywords
+              final String rawName = conceptoConstruido.toLowerCase();
+              if (rawName.contains('arrachera') ||
+                  rawName.contains('t-bone') ||
+                  rawName.contains('plato')) {
+                categoriaPrincipal = 'Alimentos';
+              } else if (rawName.contains('cerveza') ||
+                  rawName.contains('refresco') ||
+                  rawName.contains('agua')) {
+                categoriaPrincipal = 'Bebidas';
+              } else if (rawName.contains('combo') ||
+                  rawName.contains('paquete')) {
+                categoriaPrincipal = 'Combos';
+              }
             } else {
-              pasaFiltroTiempo = true;
+              conceptoConstruido = 'Consumo General';
             }
 
-            if (pasaFiltroTiempo) {
-              ventasProcesadas.add(VentaReporte(
-                id: idOrd.length > 6 ? idOrd.substring(idOrd.length - 6) : idOrd,
-                date: dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr,
-                concept: conceptoConstruido,
-                category: categoriaPrincipal,
-                amount: totalValue,
-                paymentMethod: metodoPagoUi,
-              ));
+            if (dateStr.isNotEmpty) {
+              DateTime fechaOrd;
+              try {
+                fechaOrd = DateTime.parse(dateStr);
+              } catch (_) {
+                fechaOrd = DateTime.now();
+              }
+
+              bool pasaFiltroTiempo = false;
+              String datePrefix = dateStr.substring(0, 10);
+
+              if (_selectedPeriodo == 'Hoy') {
+                pasaFiltroTiempo = datePrefix == hoyStr;
+              } else if (_selectedPeriodo == 'Esta Semana') {
+                pasaFiltroTiempo = fechaOrd
+                    .isAfter(inicioSemana.subtract(const Duration(seconds: 1)));
+              } else if (_selectedPeriodo == 'Este Mes') {
+                pasaFiltroTiempo = datePrefix.startsWith(mesActualStr);
+              } else {
+                pasaFiltroTiempo = true;
+              }
+
+              if (pasaFiltroTiempo) {
+                ventasProcesadas.add(VentaReporte(
+                  id: idOrd.length > 6
+                      ? idOrd.substring(idOrd.length - 6)
+                      : idOrd,
+                  date: datePrefix,
+                  concept: conceptoConstruido,
+                  category: categoriaPrincipal,
+                  amount: totalValue,
+                  paymentMethod: 'Efectivo',
+                ));
+
+                // ✅ PROCESAR RENDIMIENTO DE PRODUCTOS
+                for (var item in orden.items) {
+                  final nombreProd = item.productName;
+                  final int cantidad = item.quantity;
+                  final double precioSubtotal = item.total;
+
+                  debugPrint(
+                      '📊 REPORTES: Producto=$nombreProd, Cant=$cantidad, Precio=$precioSubtotal');
+
+                  if (mapaProductosFiltro.containsKey(nombreProd)) {
+                    mapaProductosFiltro[nombreProd]!.unidadesVendidas +=
+                        cantidad;
+                    mapaProductosFiltro[nombreProd]!.montoTotal +=
+                        precioSubtotal;
+                  } else {
+                    mapaProductosFiltro[nombreProd] = ProductoRendimiento(
+                      nombre: nombreProd,
+                      categoria: 'General',
+                      unidadesVendidas: cantidad,
+                      montoTotal: precioSubtotal,
+                    );
+                  }
+                }
+              }
             }
+          } catch (e) {
+            debugPrint('❌ REPORTES: Error procesando orden: $e');
           }
-        } catch (_) {}
+        }
+
+        _historialVentas = ventasProcesadas;
+        _productosRendimiento = mapaProductosFiltro.values.toList();
+        _productosRendimiento
+            .sort((a, b) => b.montoTotal.compareTo(a.montoTotal));
+
+        debugPrint(
+            '✅ REPORTES: Procesadas ${ventasProcesadas.length} ventas y ${_productosRendimiento.length} productos únicos');
       }
-      _historialVentas = ventasProcesadas;
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('Error: $e');
+      debugPrint('❌ REPORTES: Error general: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -149,7 +223,9 @@ class ReportesProvider extends ChangeNotifier {
     final query = _searchTerm.trim().toLowerCase();
     final cat = _selectedCategory;
     return _historialVentas.where((v) {
-      final matchesSearch = query.isEmpty || v.concept.toLowerCase().contains(query) || v.id.toLowerCase().contains(query);
+      final matchesSearch = query.isEmpty ||
+          v.concept.toLowerCase().contains(query) ||
+          v.id.toLowerCase().contains(query);
       final matchesCategory = cat == 'Todos' || v.category == cat;
       return matchesSearch && matchesCategory;
     }).toList();
@@ -163,19 +239,44 @@ class ReportesProvider extends ChangeNotifier {
   }
 
   int get totalPages => (filteredVentas.length / pageSize).ceil();
-  double get totalIngresos => filteredVentas.fold(0.0, (sum, v) => sum + v.amount);
+  double get totalIngresos =>
+      filteredVentas.fold(0.0, (sum, v) => sum + v.amount);
   int get totalTransacciones => filteredVentas.length;
-  double get ticketPromedio => totalTransacciones > 0 ? totalIngresos / totalTransacciones : 0.0;
-  
-  // Modificado para coincidir con la traducción de UI
-  double get ingresosEfectivo => filteredVentas.where((v) => v.paymentMethod == 'Efectivo').fold(0.0, (sum, v) => sum + v.amount);
-  double get ingresosTarjeta => filteredVentas.where((v) => v.paymentMethod != 'Efectivo').fold(0.0, (sum, v) => sum + v.amount);
-  
-  double get porcentajeEfectivo => totalIngresos > 0 ? ingresosEfectivo / totalIngresos : 0;
-  double get porcentajeTarjeta => totalIngresos > 0 ? ingresosTarjeta / totalIngresos : 0;
+  double get ticketPromedio =>
+      totalTransacciones > 0 ? totalIngresos / totalTransacciones : 0.0;
 
-  void onSearch(String value) { _searchTerm = value; _currentPage = 1; notifyListeners(); }
-  void cambiarPeriodo(String periodo) { _selectedPeriodo = periodo; _currentPage = 1; cargarReporteDeVentas(); }
-  void cambiarCategoria(String categoria) { _selectedCategory = categoria; _currentPage = 1; notifyListeners(); }
-  void changePage(int newPage) { _currentPage = newPage; notifyListeners(); }
+  double get ingresosEfectivo => filteredVentas
+      .where((v) => v.paymentMethod == 'Efectivo')
+      .fold(0.0, (sum, v) => sum + v.amount);
+  double get ingresosTarjeta => filteredVentas
+      .where((v) => v.paymentMethod != 'Efectivo')
+      .fold(0.0, (sum, v) => sum + v.amount);
+
+  double get porcentajeEfectivo =>
+      totalIngresos > 0 ? ingresosEfectivo / totalIngresos : 0;
+  double get porcentajeTarjeta =>
+      totalIngresos > 0 ? ingresosTarjeta / totalIngresos : 0;
+
+  void onSearch(String value) {
+    _searchTerm = value;
+    _currentPage = 1;
+    notifyListeners();
+  }
+
+  void cambiarPeriodo(String periodo) {
+    _selectedPeriodo = periodo;
+    _currentPage = 1;
+    cargarReporteDeVentas();
+  }
+
+  void cambiarCategoria(String categoria) {
+    _selectedCategory = categoria;
+    _currentPage = 1;
+    notifyListeners();
+  }
+
+  void changePage(int newPage) {
+    _currentPage = newPage;
+    notifyListeners();
+  }
 }

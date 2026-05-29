@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/restaurant_order.dart';
 
@@ -26,11 +27,18 @@ class OrdenRepository {
       // ✅ EL SECRETO ESTÁ EN EL SELECT: '*, order_items(*)'
       // Esto le dice a Supabase: "Trae la orden Y TODOS sus artículos"
       final response = await _client.from('orders').select('*, order_items(*)');
+      final List<dynamic> ordenesData = response as List<dynamic>;
 
-      return (response as List)
-          .map((json) => RestaurantOrder.fromJson(json))
-          .toList();
+      debugPrint('✅ ORDEN_REPO: Respuesta de Supabase: $ordenesData');
+      debugPrint('✅ ORDEN_REPO: Cantidad de órdenes: ${ordenesData.length}');
+
+      return ordenesData.map((json) {
+        debugPrint(
+            '📄 ORDEN_REPO: Procesando orden: ${json['id']}, items: ${json['order_items']}');
+        return RestaurantOrder.fromJson(json);
+      }).toList();
     } catch (e) {
+      debugPrint('❌ ORDEN_REPO: Error en getAll: $e');
       throw Exception('Error al obtener órdenes: $e');
     }
   }
