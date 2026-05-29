@@ -1,43 +1,47 @@
 class ComboItem {
   final String id;
-  String title;
-  String subtitle;
-  List<String> tags;
-  double price;
-  double oldPrice;
-  String ahorro;
+  String title;     // UI: title -> BD: name
+  String subtitle;  // UI: subtitle -> BD: description
+  List<String> tags; // Solo para la UI (No se guarda en BD)
+  double price;     // BD: price
+  double oldPrice;  // Solo para la UI
+  String ahorro;    // Solo para la UI
+  bool active;      // BD: active
 
   ComboItem({
     required this.id,
     required this.title,
     required this.subtitle,
-    required this.tags,
+    this.tags = const [],
     required this.price,
-    required this.oldPrice,
-    required this.ahorro,
+    this.oldPrice = 0.0,
+    this.ahorro = '',
+    this.active = true,
   });
 
   factory ComboItem.fromJson(Map<String, dynamic> json) {
     return ComboItem(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      subtitle: json['subtitle'] as String,
-      tags: List<String>.from(json['tags'] as List? ?? []),
-      price: (json['price'] as num).toDouble(),
-      oldPrice: (json['old_price'] as num).toDouble(),
-      ahorro: json['discount'] as String? ?? '',
+      id: json['id']?.toString() ?? '',
+      title: json['name'] ?? 'Combo',
+      subtitle: json['description'] ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      active: json['active'] ?? true,
+      // Los datos visuales que no están en la BD se inicializan por defecto
+      tags: [], 
+      oldPrice: (json['price'] as num?)?.toDouble() ?? 0.0,
+      ahorro: '', 
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'title': title,
-      'subtitle': subtitle,
-      'tags': tags,
+      if (id.isNotEmpty) 'id': id,
+      // Solo enviamos a Supabase las columnas que realmente existen
+      'name': title,
+      'description': subtitle,
       'price': price,
-      'old_price': oldPrice,
-      'discount': ahorro,
+      'active': active,
+      // OMITIMOS tags, old_price y discount para evitar que Supabase rechace la petición
     };
   }
 
@@ -49,6 +53,7 @@ class ComboItem {
     double? price,
     double? oldPrice,
     String? ahorro,
+    bool? active,
   }) {
     return ComboItem(
       id: id ?? this.id,
@@ -58,6 +63,7 @@ class ComboItem {
       price: price ?? this.price,
       oldPrice: oldPrice ?? this.oldPrice,
       ahorro: ahorro ?? this.ahorro,
+      active: active ?? this.active,
     );
   }
 }
