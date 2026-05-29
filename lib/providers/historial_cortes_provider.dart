@@ -11,49 +11,33 @@ class HistorialCortesProvider extends ChangeNotifier {
 
   List<CorteCaja> _cortes = [];
   bool _isLoading = false;
-
-  // --- NUEVO ESTADO DE ERROR DE RED CENTRALIZADO ---
   String? _errorMessage;
 
-  final List<String> metodos = ['Todos', 'Efectivo', 'Tarjeta', 'Mixto'];
-
   String _filterDate = '';
-  String _filterMethod = 'Todos';
 
-  // --- GETTERS COMPATIBLES AL 100% CON TU DISEÑO ORIGINAL ---
   String get filterDate => _filterDate;
-  String get filterMethod => _filterMethod;
   bool get isLoading => _isLoading;
   List<CorteCaja> get cortes => _cortes;
-
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
 
+  // Filtramos únicamente por fecha, ya que un corte resume todo el turno
   List<CorteCaja> get cortesFiltrados {
     return _cortes.where((c) {
-      final matchDate = _filterDate.isEmpty || c.fecha == _filterDate;
-      final matchMethod = _filterMethod == 'Todos' || c.metodo == _filterMethod;
-      return matchDate && matchMethod;
+      if (_filterDate.isEmpty) return true;
+      final dateStr = c.cutAt?.split('T').first ?? '';
+      return dateStr.contains(_filterDate);
     }).toList();
   }
 
-  // Métricas reactivas para tus componentes gráficos de arqueo
-  double get totalEfectivo => cortesFiltrados
-      .where((c) => c.metodo == 'Efectivo')
-      .fold(0.0, (sum, c) => sum + c.monto);
-
-  double get totalTarjeta => cortesFiltrados
-      .where((c) => c.metodo == 'Tarjeta')
-      .fold(0.0, (sum, c) => sum + c.monto);
-
-  double get totalMixto => cortesFiltrados
-      .where((c) => c.metodo == 'Mixto')
-      .fold(0.0, (sum, c) => sum + c.monto);
-
+  // Métricas reactivas leyendo directamente las columnas de la BD
+  double get totalEfectivo => cortesFiltrados.fold(0.0, (sum, c) => sum + c.cashSales);
+  double get totalTarjeta => cortesFiltrados.fold(0.0, (sum, c) => sum + c.cardSales);
+  double get totalTransferencia => cortesFiltrados.fold(0.0, (sum, c) => sum + c.transferSales);
+  
   double get totalFiltrado =>
-      cortesFiltrados.fold(0.0, (sum, c) => sum + c.monto);
+      cortesFiltrados.fold(0.0, (sum, c) => sum + (c.cashSales + c.cardSales + c.transferSales));
 
-  // --- LÓGICA DE DATOS CAPTURADA ---
   Future<void> cargarCortes() async {
     _setLoading(true);
     _clearError();
@@ -67,18 +51,11 @@ class HistorialCortesProvider extends ChangeNotifier {
     }
   }
 
-  // --- SETTERS DE INTERFAZ ORIGINAL ---
   void setFilterDate(String date) {
     _filterDate = date;
     notifyListeners();
   }
 
-  void setFilterMethod(String method) {
-    _filterMethod = method;
-    notifyListeners();
-  }
-
-  // --- ACCIONES C.R.U.D CON RETORNO DE CONTROL COMPATIBLE ---
   Future<bool> agregarCorte(CorteCaja corte) async {
     _setLoading(true);
     _clearError();
@@ -96,7 +73,6 @@ class HistorialCortesProvider extends ChangeNotifier {
     }
   }
 
-  // Acepta dynamic en el identificador para neutralizar discrepancias con los widgets
   Future<bool> actualizarCorte(dynamic id, CorteCaja corte) async {
     _setLoading(true);
     _clearError();
@@ -133,7 +109,6 @@ class HistorialCortesProvider extends ChangeNotifier {
     }
   }
 
-  // --- MÉTODOS AUXILIARES ---
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
