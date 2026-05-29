@@ -35,6 +35,8 @@ class RestaurantOrder {
           .map((i) => OrderItem(
                 productName: i['product_name'] ?? '',
                 quantity: i['quantity'] ?? 1,
+                // AQUÍ ESTÁ LA CORRECCIÓN: Agregamos unitPrice
+                unitPrice: (i['unit_price'] as num?)?.toDouble() ?? 0.0,
                 total: (i['total_price'] as num?)?.toDouble() ?? (i['total'] as num?)?.toDouble() ?? 0.0,
               ))
           .toList();
