@@ -4,82 +4,66 @@ import '../models/inventory_item.dart';
 
 class InventarioRepository {
   final SupabaseClient _client;
-
-  // Inyección de dependencias por constructor
   InventarioRepository(this._client);
 
-  // READ: Obtener todos los artículos del inventario
   Future<List<InventoryItem>> getAll() async {
     try {
-      final response = await _client
-          .from('inventory') // Asegúrate de que coincida con el nombre de tu tabla en Supabase
-          .select('*');
-
+      // CORRECCIÓN: La tabla se llama inventory_items, no inventory
+      final response = await _client.from('inventory_items').select('*');
       return (response as List).map((json) => InventoryItem.fromJson(json)).toList();
     } catch (e) {
-      throw Exception('Error al obtener el inventario de Supabase: $e');
+      throw Exception('Error al obtener el inventario: $e');
     }
   }
 
-  // CREATE: Registrar un nuevo insumo/artículo
   Future<void> create(InventoryItem item) async {
     try {
-      // Excluimos el 'id' si tu base de datos genera UUIDs de manera automática
       final data = item.toJson();
-      if (item.id.isEmpty) {
-        data.remove('id');
-      }
-      await _client.from('inventory').insert(data);
+      // LIMPIEZA UUID
+      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+      await _client.from('inventory_items').insert(data);
     } catch (e) {
-      throw Exception('Error al agregar el artículo al inventario: $e');
+      throw Exception('Error al agregar artículo: $e');
     }
   }
 
-  // UPDATE: Modificar datos generales de un artículo
   Future<void> update(String id, InventoryItem item) async {
     try {
       final data = item.toJson();
-      data.remove('id'); // Protegemos la llave primaria de modificaciones accidentales
-      await _client.from('inventory').update(data).eq('id', id);
+      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+      await _client.from('inventory_items').update(data).eq('id', id);
     } catch (e) {
-      throw Exception('Error al actualizar el artículo $id: $e');
+      throw Exception('Error al actualizar artículo: $e');
     }
   }
 
-  // DELETE: Eliminar un artículo del inventario
   Future<void> delete(String id) async {
     try {
-      await _client.from('inventory').delete().eq('id', id);
+      await _client.from('inventory_items').delete().eq('id', id);
     } catch (e) {
-      throw Exception('Error al eliminar el artículo de inventario $id: $e');
+      throw Exception('Error al eliminar: $e');
     }
   }
 
-  // LÓGICA DE CONTROL DE STOCK ESPECÍFICA: Actualizar cantidad en Supabase
   Future<void> actualizarStock(String id, double nuevaCantidad) async {
     try {
-      await _client
-          .from('inventory')
-          .update({'stock': nuevaCantidad})
-          .eq('id', id);
+      // CORRECCIÓN: Tu esquema dice que la columna es 'quantity', no 'stock'
+      await _client.from('inventory_items').update({'quantity': nuevaCantidad}).eq('id', id);
     } catch (e) {
-      throw Exception('Error al actualizar la cantidad de stock para el artículo $id: $e');
+      throw Exception('Error al actualizar stock: $e');
     }
   }
 
-  // LÓGICA DE HISTORIAL: Registrar movimientos de inventario (Kárdex)
   Future<void> registrarMovimiento(String itemId, double diferencia, String razon) async {
     try {
       await _client.from('inventory_movements').insert({
         'inventory_item_id': itemId,
-        'quantity_changed': diferencia,
+        'change_qty': diferencia, // CORRECCIÓN: Tu esquema usa change_qty
         'reason': razon,
-        'movement_date': DateTime.now().toIso8601String(),
+        // Eliminamos movement_date porque la BD tiene DEFAULT now() en created_at
       });
     } catch (e) {
-      // Nota: Si no tienes creada la tabla 'inventory_movements', esto fallará. 
-      // Capturamos el error silenciosamente en consola para que no interrumpa el POS si es opcional.
-      debugPrint('Advertencia Historial: No se pudo insertar movimiento de auditoría: $e');
+      debugPrint('Advertencia Historial: $e');
     }
   }
 }
