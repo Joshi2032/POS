@@ -30,37 +30,39 @@ class CajaRepository {
   }
 
   // Registrar un cobro de orden directamente en la base de datos
-  Future<void> registrarCobro(
-      String orderId, String metodoPago, double total) async {
+  Future<void> registrarCobro(String orderId, String metodo, double total) async {
+    // 1. Traducción del método de pago de Español (UI) a Inglés (Base de datos)
+    String paymentMethodDb;
+    switch (metodo.toLowerCase()) {
+      case 'tarjeta':
+        paymentMethodDb = 'card';
+        break;
+      case 'transferencia':
+        paymentMethodDb = 'transfer';
+        break;
+      case 'efectivo':
+      default:
+        paymentMethodDb = 'cash';
+    }
+
     try {
-      // 1. Actualizamos el estado de la comanda/factura a pagada
-      final updateQuery = _client.from('orders').update({
-        'status': 'pagada',
-        'payment_method': metodoPago.toLowerCase(),
-      });
-
-      // Si recibimos un UUID real, actualizamos por id; de lo contrario usamos order_number.
-      final uuidRegExp = RegExp(
-          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
-      if (uuidRegExp.hasMatch(orderId)) {
-        await updateQuery.eq('id', orderId);
-      } else {
-        await updateQuery.eq('order_number', orderId);
-      }
-
-      // 2. Insertamos el flujo de efectivo correspondiente en el kárdex/movimientos de caja
-      await _client.from('cash_movements').insert({
-        'concept': 'Cobro de Orden #$orderId',
-        'type': 'Ingreso',
-        'amount': total,
-        'date': DateTime.now().toIso8601String().substring(0, 10),
-      });
+      await _client
+          .from('orders')
+          .update({
+            // 2. CORRECCIÓN: El estado también debe estar en inglés ('paid' en lugar de 'pagada')
+            'status': 'paid', 
+            'payment_method': paymentMethodDb,
+            'total': total, // Opcional, si deseas asegurar que el total coincida
+            'paid_at': DateTime.now().toUtc().toIso8601String(), // Registra la hora exacta del pago
+          })
+          // 3. OJO: Si 'orderId' es "CMD-75269", debes buscar por 'order_number', 
+          // NO por 'id', ya que 'id' es un UUID interno de Supabase.
+          .eq('order_number', orderId); 
+          
     } catch (e) {
-      throw Exception(
-          'Error al registrar el cobro de la orden $orderId en Supabase: $e');
+      throw Exception('Error al registrar el cobro en Supabase: $e');
     }
   }
-
   // Registrar un corte de caja/arqueo al finalizar el turno
   Future<void> realizarCorte(CorteCaja corte) async {
     try {
