@@ -24,7 +24,11 @@ class ReservacionRepository {
   // Crear un nuevo registro de reservación
   Future<void> crearReservacion(Reservacion reservacion) async {
     try {
-      await _client.from('reservations').insert(reservacion.toJson());
+      final data = reservacion.toJson();
+      // Limpieza de datos nulos o vacíos para evitar error de UUID (como table_id si no hay mesa asignada)
+      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+      
+      await _client.from('reservations').insert(data);
     } catch (e) {
       throw Exception('Error al insertar la reservación en Supabase: $e');
     }

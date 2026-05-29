@@ -23,11 +23,16 @@ class GastoRepository {
   // CREATE: Registrar un nuevo gasto
   Future<void> create(Gasto gasto) async {
     try {
-      await _client.from('expenses').insert(gasto.toJson());
+      final data = gasto.toJson();
+      // Limpieza de datos nulos o vacíos para evitar error de UUID
+      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+      
+      await _client.from('expenses').insert(data);
     } catch (e) {
       throw Exception('Error al registrar el gasto: $e');
     }
-  }
+}    
+
 
   // UPDATE: Modificar un gasto existente
   Future<void> update(String id, Gasto gasto) async {

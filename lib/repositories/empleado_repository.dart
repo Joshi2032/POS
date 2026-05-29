@@ -23,7 +23,11 @@ class EmpleadoRepository {
   // CREATE: Registrar un nuevo empleado
   Future<void> create(Empleado empleado) async {
     try {
-      await _client.from('employees').insert(empleado.toJson());
+      final data = empleado.toJson();
+      // Limpieza de datos nulos o vacíos para evitar error de UUID
+      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+      
+      await _client.from('employees').insert(data);
     } catch (e) {
       throw Exception('Error al registrar al empleado: $e');
     }
