@@ -11,14 +11,14 @@ class ProductosProvider extends ChangeNotifier {
 
   List<Producto> _productos = [];
   String _searchTerm = '';
-  String _selectedCategory = 'Todas';
+  String _selectedCategory = 'Todos';
 
   // --- ESTADOS DE CONTROL ---
   bool _isLoading = false;
   String? _errorMessage;
 
   // 1. Convertimos la lista de categorías en una variable interna dinámica
-  List<String> _categorias = ['Todas'];
+  List<String> _categorias = ['Todos'];
 
   // Getters para consultar los estados en la UI
   List<Producto> get productos => _productos;
@@ -56,16 +56,15 @@ class ProductosProvider extends ChangeNotifier {
         .toSet()
         .toList();
 
-
     // Ordenamos alfabéticamente para que el menú sea consistente
     deBaseDeDatos.sort();
 
-    // Reconstruimos la lista manteniendo siempre 'Todas' al inicio
-    _categorias = ['Todas', ...deBaseDeDatos];
+    // Reconstruimos la lista manteniendo siempre 'Todos' al inicio
+    _categorias = ['Todos', ...deBaseDeDatos];
 
-    // Si la categoría que el usuario tenía seleccionada desaparece de la BD, lo regresamos a 'Todas'
+    // Si la categoría que el usuario tenía seleccionada desaparece de la BD, lo regresamos a 'Todos'
     if (!_categorias.contains(_selectedCategory)) {
-      _selectedCategory = 'Todas';
+      _selectedCategory = 'Todos';
     }
   }
 
@@ -129,15 +128,18 @@ class ProductosProvider extends ChangeNotifier {
 
   // --- FILTROS ---
   // En tu provider, ajusta los accesos así:
-  List<Producto> get visibleProducts { 
-  return _productos.where((product) {
-    // Usamos .name y .category (del modelo nuevo)
-    final matchesCategory = _selectedCategory == 'Todos' || product.category == _selectedCategory;
-    final matchesSearch = product.name.toLowerCase().contains(_searchTerm.toLowerCase()) ||
-                          product.description.toLowerCase().contains(_searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  }).toList();
-}
+  List<Producto> get visibleProducts {
+    return _productos.where((product) {
+      // Usamos .name y .category (del modelo nuevo)
+      final matchesCategory =
+          _selectedCategory == 'Todos' || product.category == _selectedCategory;
+      final matchesSearch = product.name
+              .toLowerCase()
+              .contains(_searchTerm.toLowerCase()) ||
+          product.description.toLowerCase().contains(_searchTerm.toLowerCase());
+      return matchesCategory && matchesSearch;
+    }).toList();
+  }
 
   void setSearchTerm(String term) {
     _searchTerm = term;
@@ -150,12 +152,15 @@ class ProductosProvider extends ChangeNotifier {
   }
 
   // En tu ProductosProvider
-List<Producto> get productosFiltrados {
-  return  _productos.where((product) {
-    final matchesCategory = _selectedCategory == 'Todos' || product.category == _selectedCategory;
-    final matchesSearch = product.name.toLowerCase().contains(_searchTerm.toLowerCase()) ||
-                          product.description.toLowerCase().contains(_searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  }).toList();
-}
+  List<Producto> get productosFiltrados {
+    return _productos.where((product) {
+      final matchesCategory =
+          _selectedCategory == 'Todos' || product.category == _selectedCategory;
+      final matchesSearch = product.name
+              .toLowerCase()
+              .contains(_searchTerm.toLowerCase()) ||
+          product.description.toLowerCase().contains(_searchTerm.toLowerCase());
+      return matchesCategory && matchesSearch;
+    }).toList();
+  }
 }
