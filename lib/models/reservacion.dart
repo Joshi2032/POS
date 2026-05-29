@@ -36,19 +36,21 @@ class Reservacion {
 
   // Mapeo: De Flutter (Español) a Supabase (Inglés)
   Map<String, dynamic> toJson() {
+    // Traducción para evitar el error CHECK en Supabase
+    String statusDb = 'confirmada'; // Default seguro
+    if (estado.toLowerCase() == 'cancelada') statusDb = 'cancelada';
+    if (estado.toLowerCase() == 'completada') statusDb = 'completada';
+
     final Map<String, dynamic> data = {
       'client_name': cliente,
       'phone': telefono,
       'reservation_date': fecha,
       'reservation_time': hora,
       'party_size': personas,
-      'status': estado,
-      // Si la mesa dice "General", la guardamos como null en BD
+      'status': statusDb, // <-- Variable traducida
       'table_id': mesa == 'General' ? null : mesa, 
     };
 
-    // Si tiene un ID real de Supabase (UUID), lo mandamos. 
-    // Ignoramos los "RES-00X" locales temporales.
     if (id.isNotEmpty && !id.startsWith('RES-')) {
       data['id'] = id;
     }
