@@ -3,7 +3,6 @@ import '../repositories/orden_repository.dart';
 import '../repositories/gasto_repository.dart';
 import '../repositories/payment_repository.dart';
 import '../models/provider_payment.dart';
-import '../models/restaurant_order.dart';
 
 // Modelo relacional para estructurar el rendimiento de productos vendidos
 class ProductoRendimiento {
@@ -38,7 +37,7 @@ class DashboardProvider extends ChangeNotifier {
   String? _errorMessage;
   String _filterType = 'semana';
 
-  List<RestaurantOrder> _allOrders = [];
+  List<dynamic> _allOrders = [];
   List<dynamic> _allExpenses = [];
   List<ProviderPayment> _allSupplierPayments = [];
 
@@ -80,6 +79,24 @@ class DashboardProvider extends ChangeNotifier {
     return 'Semanal';
   }
 
+  // --- HELPER: convierte fecha de Supabase (UTC) a fecha local como string YYYY-MM-DD ---
+  String _toLocalDateStr(String rawDateStr) {
+    try {
+      return DateTime.parse(rawDateStr).toLocal().toIso8601String().substring(0, 10);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // --- HELPER: parsea fecha de Supabase y convierte a hora local ---
+  DateTime? _parseLocalDate(String rawDateStr) {
+    try {
+      return DateTime.parse(rawDateStr).toLocal();
+    } catch (_) {
+      return null;
+    }
+  }
+
   // --- SELECTOR DE FILTRO ---
   void setFilterType(String type) {
     if (_filterType == type) return;
@@ -95,9 +112,28 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _allOrders = await _ordenRepository.getAll();
-      _allExpenses = await _gastoRepository.getAll();
-      _allSupplierPayments = await _paymentRepository.getAll();
+      final dynamic repoOrdenes = _ordenRepository;
+      final dynamic repoGastos = _gastoRepository;
+
+      final ordersFuture =
+          (repoOrdenes.runtimeType.toString().contains('OrdenRepository'))
+              ? _clientFetch(repoOrdenes)
+              : Future.value([]);
+
+      final expensesFuture =
+          (repoGastos.runtimeType.toString().contains('GastoRepository'))
+              ? _clientFetch(repoGastos)
+              : Future.value([]);
+
+      final resultados = await Future.wait([
+        ordersFuture,
+        expensesFuture,
+        _paymentRepository.getAll(),
+      ]);
+
+      _allOrders = resultados[0];
+      _allExpenses = resultados[1];
+      _allSupplierPayments = resultados[2] as List<ProviderPayment>;
 
       _procesarOperacionesFinancieras();
     } catch (e) {
@@ -109,58 +145,76 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
+  Future<List<dynamic>> _clientFetch(dynamic repository) async {
+    try {
+      return await repository.getAll();
+    } catch (_) {
+      try {
+        return await repository.obtenerTodos();
+      } catch (_) {
+        return [];
+      }
+    }
+  }
+
   // --- MOTOR ANALÍTICO Y CRUCE DE TABLAS ---
   void _procesarOperacionesFinancieras() {
-    final ahora = DateTime.now();
-    final hoyStr = ahora.toIso8601String().substring(0, 10);
+    // Toda la lógica trabaja en HORA LOCAL para coincidir con las fechas
+    // que el usuario ve en pantalla. Supabase guarda en UTC, por eso
+    // usamos .toLocal() en cada DateTime.parse().
+    final ahora = DateTime.now(); // hora local del dispositivo
+
+    // Fecha de hoy en formato YYYY-MM-DD (hora local)
+    final hoyStr =
+        '${ahora.year}-${ahora.month.toString().padLeft(2, '0')}-${ahora.day.toString().padLeft(2, '0')}';
 
     _ventasHoy = 0.0;
     _ordenesActivas = 0;
 
     final Map<String, ProductoRendimiento> mapaProductosFiltro = {};
 
-    bool cumpleFiltroFecha(DateTime fechaOrd, DateTime inicioSemana,
-        String mesStr, String anioStr) {
+    // Inicio del lunes de la semana actual (hora local, a medianoche)
+    final lunesDeEstaSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
+    final inicioSemana = DateTime(
+        lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
+
+    // Strings de mes y año para comparar (hora local)
+    final mesActualStr =
+        '${ahora.year}-${ahora.month.toString().padLeft(2, '0')}';
+    final anioActualStr = ahora.year.toString();
+
+    bool cumpleFiltroFecha(DateTime fechaLocal) {
       if (_filterType == 'semana') {
-        return fechaOrd
-                .isAfter(inicioSemana.subtract(const Duration(seconds: 1))) &&
-            fechaOrd.difference(inicioSemana).inDays < 7;
+        final diasDiferencia = fechaLocal.difference(inicioSemana).inDays;
+        return diasDiferencia >= 0 && diasDiferencia < 7;
       } else if (_filterType == 'mes') {
-        return fechaOrd.toIso8601String().startsWith(mesStr);
+        final fechaStr =
+            '${fechaLocal.year}-${fechaLocal.month.toString().padLeft(2, '0')}';
+        return fechaStr == mesActualStr;
       } else {
-        return fechaOrd.toIso8601String().startsWith(anioStr);
+        return fechaLocal.year.toString() == anioActualStr;
       }
     }
 
     // 1. CÁLCULO DE VENTAS DE HOY Y ÓRDENES ACTIVAS
     for (var orden in _allOrders) {
       try {
-        final rawJson = (orden.runtimeType.toString().contains('Map'))
-            ? orden
-            : orden.toJson();
-        // Mapeo exacto a Supabase: created_at
-        final String dateStr =
-            rawJson['created_at']?.toString().substring(0, 10) ?? '';
+        final rawJson =
+            (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
+        final String rawCreatedAt = rawJson['created_at']?.toString() ?? '';
+        final String dateStr = _toLocalDateStr(rawCreatedAt); // ← hora local
         final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
-        final String estado =
-            (rawJson['status'] ?? '').toString().toLowerCase();
+        final String estado = (rawJson['status'] ?? '').toString().toLowerCase();
 
-        if (dateStr.startsWith(hoyStr)) {
+        if (dateStr == hoyStr && estado == 'paid') {
           _ventasHoy += totalValue;
         }
 
-        // Mapeo exacto a Supabase check constraints
         if (estado == 'pending' || estado == 'preparing' || estado == 'ready') {
           _ordenesActivas++;
         }
       } catch (_) {}
     }
-
-    final lunesDeEstaSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
-    final inicioSemana = DateTime(
-        lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
-    final mesActualStr = ahora.toIso8601String().substring(0, 7);
-    final anioActualStr = ahora.year.toString();
 
     // 2. AGRUPAMIENTO TEMPORAL DE VECTOR DE GRÁFICAS
     if (_filterType == 'semana') {
@@ -173,15 +227,17 @@ class DashboardProvider extends ChangeNotifier {
           final rawJson = (orden.runtimeType.toString().contains('Map'))
               ? orden
               : orden.toJson();
-          final String dateStr = rawJson['created_at'] ?? '';
+          final String rawCreatedAt = rawJson['created_at']?.toString() ?? '';
           final double totalValue =
               (rawJson['total'] as num?)?.toDouble() ?? 0.0;
+          final String estado =
+              (rawJson['status'] ?? '').toString().toLowerCase();
 
-          if (dateStr.isNotEmpty) {
-            final fechaOrd = DateTime.parse(dateStr);
-            if (fechaOrd
-                .isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-              final diasDiferencia = fechaOrd.difference(inicioSemana).inDays;
+          if (rawCreatedAt.isNotEmpty && estado == 'paid') {
+            final fechaLocal = _parseLocalDate(rawCreatedAt); // ← hora local
+            if (fechaLocal != null) {
+              final diasDiferencia =
+                  fechaLocal.difference(inicioSemana).inDays;
               if (diasDiferencia >= 0 && diasDiferencia < 7) {
                 _currentIngresos[diasDiferencia] += totalValue;
               }
@@ -195,17 +251,16 @@ class DashboardProvider extends ChangeNotifier {
           final rawJson = (gasto.runtimeType.toString().contains('Map'))
               ? gasto
               : gasto.toJson();
-          // Mapeo exacto a Supabase: expense_date
-          final String dateStr =
+          final String rawDate =
               rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
           final double amountValue =
               (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          if (dateStr.isNotEmpty) {
-            final fechaGst = DateTime.parse(dateStr);
-            if (fechaGst
-                .isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-              final diasDiferencia = fechaGst.difference(inicioSemana).inDays;
+          if (rawDate.isNotEmpty) {
+            final fechaLocal = _parseLocalDate(rawDate); // ← hora local
+            if (fechaLocal != null) {
+              final diasDiferencia =
+                  fechaLocal.difference(inicioSemana).inDays;
               if (diasDiferencia >= 0 && diasDiferencia < 7) {
                 _currentGastos[diasDiferencia] += amountValue;
               }
@@ -217,10 +272,10 @@ class DashboardProvider extends ChangeNotifier {
       for (var pagoProv in _allSupplierPayments) {
         try {
           if (pagoProv.date.isNotEmpty) {
-            final fechaPag = DateTime.parse(pagoProv.date);
-            if (fechaPag
-                .isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-              final diasDiferencia = fechaPag.difference(inicioSemana).inDays;
+            final fechaLocal = _parseLocalDate(pagoProv.date); // ← hora local
+            if (fechaLocal != null) {
+              final diasDiferencia =
+                  fechaLocal.difference(inicioSemana).inDays;
               if (diasDiferencia >= 0 && diasDiferencia < 7) {
                 _currentGastos[diasDiferencia] += pagoProv.amount;
               }
@@ -229,7 +284,7 @@ class DashboardProvider extends ChangeNotifier {
         } catch (_) {}
       }
     } else if (_filterType == 'mes') {
-      _currentLabels = ['01', '02', '03', '04'];
+      _currentLabels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
       _currentIngresos = List.generate(4, (_) => 0.0);
       _currentGastos = List.generate(4, (_) => 0.0);
 
@@ -238,14 +293,23 @@ class DashboardProvider extends ChangeNotifier {
           final rawJson = (orden.runtimeType.toString().contains('Map'))
               ? orden
               : orden.toJson();
-          final String dateStr = rawJson['created_at'] ?? '';
+          final String rawCreatedAt = rawJson['created_at']?.toString() ?? '';
           final double totalValue =
               (rawJson['total'] as num?)?.toDouble() ?? 0.0;
+          final String estado =
+              (rawJson['status'] ?? '').toString().toLowerCase();
 
-          if (dateStr.startsWith(mesActualStr)) {
-            final dia = int.tryParse(dateStr.substring(8, 10)) ?? 1;
-            final indiceSemana = ((dia - 1) / 7).floor().clamp(0, 3);
-            _currentIngresos[indiceSemana] += totalValue;
+          if (rawCreatedAt.isNotEmpty && estado == 'paid') {
+            final fechaLocal = _parseLocalDate(rawCreatedAt); // ← hora local
+            if (fechaLocal != null) {
+              final fechaMesStr =
+                  '${fechaLocal.year}-${fechaLocal.month.toString().padLeft(2, '0')}';
+              if (fechaMesStr == mesActualStr) {
+                final indiceSemana =
+                    ((fechaLocal.day - 1) / 7).floor().clamp(0, 3);
+                _currentIngresos[indiceSemana] += totalValue;
+              }
+            }
           }
         } catch (_) {}
       }
@@ -255,27 +319,42 @@ class DashboardProvider extends ChangeNotifier {
           final rawJson = (gasto.runtimeType.toString().contains('Map'))
               ? gasto
               : gasto.toJson();
-          final String dateStr =
+          final String rawDate =
               rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
           final double amountValue =
               (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          if (dateStr.startsWith(mesActualStr)) {
-            final dia = int.tryParse(dateStr.substring(8, 10)) ?? 1;
-            final indiceSemana = ((dia - 1) / 7).floor().clamp(0, 3);
-            _currentGastos[indiceSemana] += amountValue;
+          if (rawDate.isNotEmpty) {
+            final fechaLocal = _parseLocalDate(rawDate); // ← hora local
+            if (fechaLocal != null) {
+              final fechaMesStr =
+                  '${fechaLocal.year}-${fechaLocal.month.toString().padLeft(2, '0')}';
+              if (fechaMesStr == mesActualStr) {
+                final indiceSemana =
+                    ((fechaLocal.day - 1) / 7).floor().clamp(0, 3);
+                _currentGastos[indiceSemana] += amountValue;
+              }
+            }
           }
         } catch (_) {}
       }
 
       for (var pagoProv in _allSupplierPayments) {
-        if (pagoProv.date.startsWith(mesActualStr)) {
-          final dia = int.tryParse(pagoProv.date.substring(8, 10)) ?? 1;
-          final indiceSemana = ((dia - 1) / 7).floor().clamp(0, 3);
-          _currentGastos[indiceSemana] += pagoProv.amount;
+        if (pagoProv.date.isNotEmpty) {
+          final fechaLocal = _parseLocalDate(pagoProv.date); // ← hora local
+          if (fechaLocal != null) {
+            final fechaMesStr =
+                '${fechaLocal.year}-${fechaLocal.month.toString().padLeft(2, '0')}';
+            if (fechaMesStr == mesActualStr) {
+              final indiceSemana =
+                  ((fechaLocal.day - 1) / 7).floor().clamp(0, 3);
+              _currentGastos[indiceSemana] += pagoProv.amount;
+            }
+          }
         }
       }
     } else {
+      // Anual → agrupado por trimestre
       _currentLabels = ['Trim 1', 'Trim 2', 'Trim 3', 'Trim 4'];
       _currentIngresos = List.generate(4, (_) => 0.0);
       _currentGastos = List.generate(4, (_) => 0.0);
@@ -285,14 +364,20 @@ class DashboardProvider extends ChangeNotifier {
           final rawJson = (orden.runtimeType.toString().contains('Map'))
               ? orden
               : orden.toJson();
-          final String dateStr = rawJson['created_at'] ?? '';
+          final String rawCreatedAt = rawJson['created_at']?.toString() ?? '';
           final double totalValue =
               (rawJson['total'] as num?)?.toDouble() ?? 0.0;
+          final String estado =
+              (rawJson['status'] ?? '').toString().toLowerCase();
 
-          if (dateStr.startsWith(anioActualStr)) {
-            final mes = int.tryParse(dateStr.substring(5, 7)) ?? 1;
-            final indiceTrimestre = ((mes - 1) / 3).floor().clamp(0, 3);
-            _currentIngresos[indiceTrimestre] += totalValue;
+          if (rawCreatedAt.isNotEmpty && estado == 'paid') {
+            final fechaLocal = _parseLocalDate(rawCreatedAt); // ← hora local
+            if (fechaLocal != null &&
+                fechaLocal.year.toString() == anioActualStr) {
+              final indiceTrimestre =
+                  ((fechaLocal.month - 1) / 3).floor().clamp(0, 3);
+              _currentIngresos[indiceTrimestre] += totalValue;
+            }
           }
         } catch (_) {}
       }
@@ -302,55 +387,62 @@ class DashboardProvider extends ChangeNotifier {
           final rawJson = (gasto.runtimeType.toString().contains('Map'))
               ? gasto
               : gasto.toJson();
-          final String dateStr =
+          final String rawDate =
               rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
           final double amountValue =
               (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          if (dateStr.startsWith(anioActualStr)) {
-            final mes = int.tryParse(dateStr.substring(5, 7)) ?? 1;
-            final indiceTrimestre = ((mes - 1) / 3).floor().clamp(0, 3);
-            _currentGastos[indiceTrimestre] += amountValue;
+          if (rawDate.isNotEmpty) {
+            final fechaLocal = _parseLocalDate(rawDate); // ← hora local
+            if (fechaLocal != null &&
+                fechaLocal.year.toString() == anioActualStr) {
+              final indiceTrimestre =
+                  ((fechaLocal.month - 1) / 3).floor().clamp(0, 3);
+              _currentGastos[indiceTrimestre] += amountValue;
+            }
           }
         } catch (_) {}
       }
 
       for (var pagoProv in _allSupplierPayments) {
-        if (pagoProv.date.startsWith(anioActualStr)) {
-          final mes = int.tryParse(pagoProv.date.substring(5, 7)) ?? 1;
-          final indiceTrimestre = ((mes - 1) / 3).floor().clamp(0, 3);
-          _currentGastos[indiceTrimestre] += pagoProv.amount;
+        if (pagoProv.date.isNotEmpty) {
+          final fechaLocal = _parseLocalDate(pagoProv.date); // ← hora local
+          if (fechaLocal != null &&
+              fechaLocal.year.toString() == anioActualStr) {
+            final indiceTrimestre =
+                ((fechaLocal.month - 1) / 3).floor().clamp(0, 3);
+            _currentGastos[indiceTrimestre] += pagoProv.amount;
+          }
         }
       }
     }
 
-    // 3. EXTRACCIÓN Y CONSOLIDACIÓN DE SUB-TABLAS DE DETALLES DESDE SUPABASE
+    // 3. EXTRACCIÓN REAL DE SUB-TABLAS DE PRODUCTOS DESDE SUPABASE
     for (var orden in _allOrders) {
       try {
-        final rawJson = (orden.runtimeType.toString().contains('Map'))
-            ? orden
-            : orden.toJson();
-        final String dateStr = rawJson['created_at'] ?? '';
+        final rawJson =
+            (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
+        final String rawCreatedAt = rawJson['created_at']?.toString() ?? '';
+        final String estado = (rawJson['status'] ?? '').toString().toLowerCase();
 
-        if (dateStr.isNotEmpty) {
-          final fechaOrd = DateTime.parse(dateStr);
-
-          if (cumpleFiltroFecha(
-              fechaOrd, inicioSemana, mesActualStr, anioActualStr)) {
-            // Mapeo exacto a Supabase: order_items
+        // Solo contar productos de órdenes que ya fueron pagadas
+        if (rawCreatedAt.isNotEmpty && estado == 'paid') {
+          final fechaLocal = _parseLocalDate(rawCreatedAt); // ← hora local
+          if (fechaLocal != null && cumpleFiltroFecha(fechaLocal)) {
+            // Buscamos 'order_items' (el array que manda Supabase con el JOIN)
             final items = rawJson['order_items'] ?? rawJson['items'] ?? [];
             if (items is List) {
               for (var item in items) {
                 final nombreProd =
-                    (item['product_name'] ?? 'Producto General').toString();
-                // Si tienes un join con categories, se extrae; si no, asume Varios.
-                final categoriaProd = (item['categories'] != null
-                        ? item['categories']['name']
-                        : 'Varios')
-                    .toString();
-                final int cantidad = ((item['quantity'] ?? 1) as num).toInt();
-                final double precioSubtotal =
-                    ((item['total_price'] ?? item['unit_price'] ?? 0.0) as num)
+                    (item['product_name'] ?? 'Producto Desconocido').toString();
+                final categoriaProd =
+                    (item['category'] ?? 'General').toString();
+                final int cantidad =
+                    ((item['quantity'] ?? 1) as num).toInt();
+                final double precioSubtotal = ((item['total_price'] ??
+                            item['unit_price'] ??
+                            item['total'] ??
+                            0.0) as num)
                         .toDouble();
 
                 if (mapaProductosFiltro.containsKey(nombreProd)) {
