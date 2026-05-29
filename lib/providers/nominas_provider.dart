@@ -52,6 +52,12 @@ class NominasProvider extends ChangeNotifier {
   double get totalMensual {
     return _nominas.fold(0.0, (sum, item) => sum + item.monto);
   }
+  
+  List<NominaPago> filtrar(String busqueda) {
+    return _nominas.where((n) => 
+      n.empleadoNombre.toLowerCase().contains(busqueda.toLowerCase())
+    ).toList();
+  }
 
   // --- LÓGICA DE DATOS SEGURA ---
   Future<void> cargarNominas() async {
