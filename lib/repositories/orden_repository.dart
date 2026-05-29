@@ -21,8 +21,23 @@ class OrdenRepository {
     }
   }
 
+  Future<List<RestaurantOrder>> getAll() async {
+    try {
+      // ✅ EL SECRETO ESTÁ EN EL SELECT: '*, order_items(*)'
+      // Esto le dice a Supabase: "Trae la orden Y TODOS sus artículos"
+      final response = await _client.from('orders').select('*, order_items(*)');
+
+      return (response as List)
+          .map((json) => RestaurantOrder.fromJson(json))
+          .toList();
+    } catch (e) {
+      throw Exception('Error al obtener órdenes: $e');
+    }
+  }
+
   // CREATE: Insertar la comanda principal y sus productos asociados dentro de una transacción o lote
-  Future<void> crearOrden(RestaurantOrder orden, List<Map<String, dynamic>> itemsMap) async {
+  Future<void> crearOrden(
+      RestaurantOrder orden, List<Map<String, dynamic>> itemsMap) async {
     try {
       final Map<String, dynamic> ordenData = orden.toJson();
 
@@ -32,14 +47,12 @@ class OrdenRepository {
       // Borramos dinámicamente CUALQUIER campo que sea nulo o un string vacío.
       // Esto limpia 'id', 'table_id', 'waiter_id', 'discount_id', etc., si vienen vacíos.
       // Así Supabase no intentará convertirlos a UUID y usará nulos o sus valores DEFAULT.
-      ordenData.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+      ordenData.removeWhere(
+          (key, value) => value == null || value.toString().trim().isEmpty);
 
       // Insertamos la orden y pedimos el ID generado
-      final responseOrden = await _client
-          .from('orders')
-          .insert(ordenData)
-          .select('id')
-          .single();
+      final responseOrden =
+          await _client.from('orders').insert(ordenData).select('id').single();
 
       final String orderIdAsignado = responseOrden['id'].toString();
 
@@ -47,9 +60,11 @@ class OrdenRepository {
       if (itemsMap.isNotEmpty) {
         final itemsConRelacion = itemsMap.map((item) {
           // Clonamos el mapa para poder modificarlo
-          final Map<String, dynamic> itemLimpio = Map<String, dynamic>.from(item);
-          
-          itemLimpio['order_id'] = orderIdAsignado; // Asignamos la llave foránea
+          final Map<String, dynamic> itemLimpio =
+              Map<String, dynamic>.from(item);
+
+          itemLimpio['order_id'] =
+              orderIdAsignado; // Asignamos la llave foránea
 
           // CORRECCIÓN DE ESQUEMA: Tu base de datos espera 'total_price', no 'total'
           if (itemLimpio.containsKey('total')) {
@@ -58,7 +73,8 @@ class OrdenRepository {
           }
 
           // Limpieza nuclear también para los artículos (limpia product_id, combo_id, etc. si van vacíos)
-          itemLimpio.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+          itemLimpio.removeWhere(
+              (key, value) => value == null || value.toString().trim().isEmpty);
 
           return itemLimpio;
         }).toList();
@@ -69,6 +85,7 @@ class OrdenRepository {
       throw Exception('Error al insertar comanda en Supabase: $e');
     }
   }
+
   // UPDATE: Cambiar el estado de la comanda (ej: de 'pendiente' a 'preparando' o 'lista')
   Future<void> actualizarEstado(String id, String nuevoEstado) async {
     try {

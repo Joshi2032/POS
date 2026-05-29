@@ -73,51 +73,65 @@ class ReportesProvider extends ChangeNotifier {
       for (var orden in rawOrders) {
         try {
           final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
-          final String idOrd = (rawJson['id'] ?? rawJson['codigo'] ?? '').toString();
-          final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
+          final String idOrd = (rawJson['id'] ?? rawJson['order_number'] ?? '').toString();
+          
+          // Mapeo exacto a Supabase: created_at
+          final String dateStr = rawJson['created_at'] ?? '';
+          
           final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
-          final String metodoPago = rawJson['payment_method'] ?? rawJson['metodo_pago'] ?? 'Efectivo';
+          
+          // Traductor de BD a Interfaz
+          String metodoPagoUi = 'Efectivo';
+          final String metodoDb = (rawJson['payment_method'] ?? 'cash').toString().toLowerCase();
+          if (metodoDb == 'card') metodoPagoUi = 'Tarjeta';
+          if (metodoDb == 'transfer') metodoPagoUi = 'Transferencia';
 
-          final items = rawJson['items'] ?? rawJson['detalles'] ?? [];
+          // Mapeo exacto a Supabase: order_items
+          final items = rawJson['order_items'] ?? rawJson['items'] ?? [];
           String conceptoConstruido = '';
           String categoriaPrincipal = 'Otros';
 
           if (items is List && items.isNotEmpty) {
-            final listaNombres = items.map((i) => (i['product_name'] ?? i['nombre'] ?? '').toString()).toList();
+            final listaNombres = items.map((i) => (i['product_name'] ?? '').toString()).toList();
             conceptoConstruido = listaNombres.join(', ');
-            final String rawCat = (items.first['category'] ?? items.first['categoria'] ?? '').toString().toLowerCase();
-            if (rawCat.contains('alim') || rawCat.contains('parri') || rawCat.contains('comid')) {
+            
+            // Asignación de categoría visual por keywords (ya que category no está directamente en order_items)
+            final String rawName = conceptoConstruido.toLowerCase();
+            if (rawName.contains('arrachera') || rawName.contains('t-bone') || rawName.contains('plato')) {
               categoriaPrincipal = 'Alimentos';
-            } else if (rawCat.contains('beb') || rawCat.contains('toma')) {
+            } else if (rawName.contains('cerveza') || rawName.contains('refresco') || rawName.contains('agua')) {
               categoriaPrincipal = 'Bebidas';
-            } else if (rawCat.contains('comb') || rawCat.contains('paq')) {
+            } else if (rawName.contains('combo') || rawName.contains('paquete')) {
               categoriaPrincipal = 'Combos';
             }
           } else {
             conceptoConstruido = 'Consumo General';
           }
 
-          final fechaOrd = DateTime.parse(dateStr);
-          bool pasaFiltroTiempo = false;
-          if (_selectedPeriodo == 'Hoy') {
-            pasaFiltroTiempo = dateStr.startsWith(hoyStr);
-          } else if (_selectedPeriodo == 'Esta Semana') {
-            pasaFiltroTiempo = fechaOrd.isAfter(inicioSemana.subtract(const Duration(seconds: 1)));
-          } else if (_selectedPeriodo == 'Este Mes') {
-            pasaFiltroTiempo = dateStr.startsWith(mesActualStr);
-          } else {
-            pasaFiltroTiempo = true;
-          }
+          if (dateStr.isNotEmpty) {
+            final fechaOrd = DateTime.parse(dateStr);
+            bool pasaFiltroTiempo = false;
+            
+            if (_selectedPeriodo == 'Hoy') {
+              pasaFiltroTiempo = dateStr.startsWith(hoyStr);
+            } else if (_selectedPeriodo == 'Esta Semana') {
+              pasaFiltroTiempo = fechaOrd.isAfter(inicioSemana.subtract(const Duration(seconds: 1)));
+            } else if (_selectedPeriodo == 'Este Mes') {
+              pasaFiltroTiempo = dateStr.startsWith(mesActualStr);
+            } else {
+              pasaFiltroTiempo = true;
+            }
 
-          if (pasaFiltroTiempo) {
-            ventasProcesadas.add(VentaReporte(
-              id: idOrd.length > 6 ? idOrd.substring(idOrd.length - 6) : idOrd,
-              date: dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr,
-              concept: conceptoConstruido,
-              category: categoriaPrincipal,
-              amount: totalValue,
-              paymentMethod: metodoPago,
-            ));
+            if (pasaFiltroTiempo) {
+              ventasProcesadas.add(VentaReporte(
+                id: idOrd.length > 6 ? idOrd.substring(idOrd.length - 6) : idOrd,
+                date: dateStr.length > 10 ? dateStr.substring(0, 10) : dateStr,
+                concept: conceptoConstruido,
+                category: categoriaPrincipal,
+                amount: totalValue,
+                paymentMethod: metodoPagoUi,
+              ));
+            }
           }
         } catch (_) {}
       }
@@ -152,8 +166,11 @@ class ReportesProvider extends ChangeNotifier {
   double get totalIngresos => filteredVentas.fold(0.0, (sum, v) => sum + v.amount);
   int get totalTransacciones => filteredVentas.length;
   double get ticketPromedio => totalTransacciones > 0 ? totalIngresos / totalTransacciones : 0.0;
-  double get ingresosEfectivo => filteredVentas.where((v) => v.paymentMethod.toLowerCase() == 'efectivo').fold(0.0, (sum, v) => sum + v.amount);
-  double get ingresosTarjeta => filteredVentas.where((v) => v.paymentMethod.toLowerCase() != 'efectivo').fold(0.0, (sum, v) => sum + v.amount);
+  
+  // Modificado para coincidir con la traducción de UI
+  double get ingresosEfectivo => filteredVentas.where((v) => v.paymentMethod == 'Efectivo').fold(0.0, (sum, v) => sum + v.amount);
+  double get ingresosTarjeta => filteredVentas.where((v) => v.paymentMethod != 'Efectivo').fold(0.0, (sum, v) => sum + v.amount);
+  
   double get porcentajeEfectivo => totalIngresos > 0 ? ingresosEfectivo / totalIngresos : 0;
   double get porcentajeTarjeta => totalIngresos > 0 ? ingresosTarjeta / totalIngresos : 0;
 

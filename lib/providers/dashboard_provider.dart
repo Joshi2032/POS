@@ -162,15 +162,17 @@ class DashboardProvider extends ChangeNotifier {
     for (var orden in _allOrders) {
       try {
         final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
-        final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
+        // Mapeo exacto a Supabase: created_at
+        final String dateStr = rawJson['created_at']?.toString().substring(0, 10) ?? '';
         final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
-        final String estado = (rawJson['status'] ?? rawJson['estado'] ?? '').toString().toLowerCase();
+        final String estado = (rawJson['status'] ?? '').toString().toLowerCase();
 
         if (dateStr.startsWith(hoyStr)) {
           _ventasHoy += totalValue;
         }
 
-        if (estado == 'en cocina' || estado == 'pendiente' || estado == 'activa' || estado == '4') {
+        // Mapeo exacto a Supabase check constraints
+        if (estado == 'pending' || estado == 'preparing' || estado == 'ready') {
           _ordenesActivas++;
         }
       } catch (_) {}
@@ -190,14 +192,16 @@ class DashboardProvider extends ChangeNotifier {
       for (var orden in _allOrders) {
         try {
           final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
-          final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
+          final String dateStr = rawJson['created_at'] ?? '';
           final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
 
-          final fechaOrd = DateTime.parse(dateStr);
-          if (fechaOrd.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-            final diasDiferencia = fechaOrd.difference(inicioSemana).inDays;
-            if (diasDiferencia >= 0 && diasDiferencia < 7) {
-              _currentIngresos[diasDiferencia] += totalValue;
+          if (dateStr.isNotEmpty) {
+            final fechaOrd = DateTime.parse(dateStr);
+            if (fechaOrd.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
+              final diasDiferencia = fechaOrd.difference(inicioSemana).inDays;
+              if (diasDiferencia >= 0 && diasDiferencia < 7) {
+                _currentIngresos[diasDiferencia] += totalValue;
+              }
             }
           }
         } catch (_) {}
@@ -206,14 +210,17 @@ class DashboardProvider extends ChangeNotifier {
       for (var gasto in _allExpenses) {
         try {
           final rawJson = (gasto.runtimeType.toString().contains('Map')) ? gasto : gasto.toJson();
-          final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
-          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? (rawJson['monto'] as num?)?.toDouble() ?? 0.0;
+          // Mapeo exacto a Supabase: expense_date
+          final String dateStr = rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
+          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          final fechaGst = DateTime.parse(dateStr);
-          if (fechaGst.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-            final diasDiferencia = fechaGst.difference(inicioSemana).inDays;
-            if (diasDiferencia >= 0 && diasDiferencia < 7) {
-              _currentGastos[diasDiferencia] += amountValue;
+          if (dateStr.isNotEmpty) {
+            final fechaGst = DateTime.parse(dateStr);
+            if (fechaGst.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
+              final diasDiferencia = fechaGst.difference(inicioSemana).inDays;
+              if (diasDiferencia >= 0 && diasDiferencia < 7) {
+                _currentGastos[diasDiferencia] += amountValue;
+              }
             }
           }
         } catch (_) {}
@@ -221,11 +228,13 @@ class DashboardProvider extends ChangeNotifier {
 
       for (var pagoProv in _allSupplierPayments) {
         try {
-          final fechaPag = DateTime.parse(pagoProv.date);
-          if (fechaPag.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-            final diasDiferencia = fechaPag.difference(inicioSemana).inDays;
-            if (diasDiferencia >= 0 && diasDiferencia < 7) {
-              _currentGastos[diasDiferencia] += pagoProv.amount;
+          if (pagoProv.date.isNotEmpty) {
+            final fechaPag = DateTime.parse(pagoProv.date);
+            if (fechaPag.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
+              final diasDiferencia = fechaPag.difference(inicioSemana).inDays;
+              if (diasDiferencia >= 0 && diasDiferencia < 7) {
+                _currentGastos[diasDiferencia] += pagoProv.amount;
+              }
             }
           }
         } catch (_) {}
@@ -239,7 +248,7 @@ class DashboardProvider extends ChangeNotifier {
       for (var orden in _allOrders) {
         try {
           final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
-          final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
+          final String dateStr = rawJson['created_at'] ?? '';
           final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
 
           if (dateStr.startsWith(mesActualStr)) {
@@ -253,8 +262,8 @@ class DashboardProvider extends ChangeNotifier {
       for (var gasto in _allExpenses) {
         try {
           final rawJson = (gasto.runtimeType.toString().contains('Map')) ? gasto : gasto.toJson();
-          final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
-          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? (rawJson['monto'] as num?)?.toDouble() ?? 0.0;
+          final String dateStr = rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
+          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
           if (dateStr.startsWith(mesActualStr)) {
             final dia = int.tryParse(dateStr.substring(8, 10)) ?? 1;
@@ -280,7 +289,7 @@ class DashboardProvider extends ChangeNotifier {
       for (var orden in _allOrders) {
         try {
           final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
-          final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
+          final String dateStr = rawJson['created_at'] ?? '';
           final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
 
           if (dateStr.startsWith(anioActualStr)) {
@@ -294,8 +303,8 @@ class DashboardProvider extends ChangeNotifier {
       for (var gasto in _allExpenses) {
         try {
           final rawJson = (gasto.runtimeType.toString().contains('Map')) ? gasto : gasto.toJson();
-          final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
-          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? (rawJson['monto'] as num?)?.toDouble() ?? 0.0;
+          final String dateStr = rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
+          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
           if (dateStr.startsWith(anioActualStr)) {
             final mes = int.tryParse(dateStr.substring(5, 7)) ?? 1;
@@ -318,28 +327,33 @@ class DashboardProvider extends ChangeNotifier {
     for (var orden in _allOrders) {
       try {
         final rawJson = (orden.runtimeType.toString().contains('Map')) ? orden : orden.toJson();
-        final String dateStr = rawJson['date'] ?? rawJson['fecha'] ?? '';
-        final fechaOrd = DateTime.parse(dateStr);
+        final String dateStr = rawJson['created_at'] ?? '';
+        
+        if (dateStr.isNotEmpty) {
+          final fechaOrd = DateTime.parse(dateStr);
 
-        if (cumpleFiltroFecha(fechaOrd, inicioSemana, mesActualStr, anioActualStr)) {
-          final items = rawJson['items'] ?? rawJson['detalles'] ?? rawJson['orden_detalles'] ?? [];
-          if (items is List) {
-            for (var item in items) {
-              final nombreProd = (item['product_name'] ?? item['nombre'] ?? item['producto_nombre'] ?? 'Producto General').toString();
-              final categoriaProd = (item['category'] ?? item['categoria'] ?? 'Varios').toString();
-              final int cantidad = ((item['quantity'] ?? item['cantidad'] ?? 1) as num).toInt();
-              final double precioSubtotal = ((item['price'] ?? item['subtotal'] ?? item['precio'] ?? 0.0) as num).toDouble() * cantidad;
+          if (cumpleFiltroFecha(fechaOrd, inicioSemana, mesActualStr, anioActualStr)) {
+            // Mapeo exacto a Supabase: order_items
+            final items = rawJson['order_items'] ?? rawJson['items'] ?? [];
+            if (items is List) {
+              for (var item in items) {
+                final nombreProd = (item['product_name'] ?? 'Producto General').toString();
+                // Si tienes un join con categories, se extrae; si no, asume Varios.
+                final categoriaProd = (item['categories'] != null ? item['categories']['name'] : 'Varios').toString();
+                final int cantidad = ((item['quantity'] ?? 1) as num).toInt();
+                final double precioSubtotal = ((item['total_price'] ?? item['unit_price'] ?? 0.0) as num).toDouble();
 
-              if (mapaProductosFiltro.containsKey(nombreProd)) {
-                mapaProductosFiltro[nombreProd]!.unidadesVendidas += cantidad;
-                mapaProductosFiltro[nombreProd]!.montoTotal += precioSubtotal;
-              } else {
-                mapaProductosFiltro[nombreProd] = ProductoRendimiento(
-                  nombre: nombreProd,
-                  categoria: categoriaProd,
-                  unidadesVendidas: cantidad,
-                  montoTotal: precioSubtotal,
-                );
+                if (mapaProductosFiltro.containsKey(nombreProd)) {
+                  mapaProductosFiltro[nombreProd]!.unidadesVendidas += cantidad;
+                  mapaProductosFiltro[nombreProd]!.montoTotal += precioSubtotal;
+                } else {
+                  mapaProductosFiltro[nombreProd] = ProductoRendimiento(
+                    nombre: nombreProd,
+                    categoria: categoriaProd,
+                    unidadesVendidas: cantidad,
+                    montoTotal: precioSubtotal,
+                  );
+                }
               }
             }
           }
@@ -350,15 +364,7 @@ class DashboardProvider extends ChangeNotifier {
     _currentProductos = mapaProductosFiltro.values.toList();
     _currentProductos.sort((a, b) => b.montoTotal.compareTo(a.montoTotal));
 
-    // Resguardo MOCK proporcional en caso de que la BD relacional esté en ceros
-    if (_currentProductos.isEmpty) {
-      double factor = _filterType == 'semana' ? 1.0 : _filterType == 'mes' ? 4.0 : 48.0;
-      _currentProductos = [
-        ProductoRendimiento(nombre: 'Arrachera 300g', categoria: 'Parrilla', unidadesVendidas: (142 * factor).toInt(), montoTotal: 40470.0 * factor),
-        ProductoRendimiento(nombre: 'Cerveza Artesanal', categoria: 'Bebidas', unidadesVendidas: (320 * factor).toInt(), montoTotal: 27200.0 * factor),
-        ProductoRendimiento(nombre: 'T-Bone 500g', categoria: 'Parrilla', unidadesVendidas: (45 * factor).toInt(), montoTotal: 20250.0 * factor),
-      ];
-    }
+    
 
     // 4. GENERACIÓN DE VECTORES DE UTILIDAD Y TOTALES FINALES
     _currentUtilidad = List.generate(_currentIngresos.length, (_) => 0.0);
