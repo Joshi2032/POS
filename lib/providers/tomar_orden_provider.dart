@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
 import '../repositories/producto_repository.dart';
+import '../repositories/mesa_repository.dart';
 import '../models/product.dart'; // Asegúrate que esta ruta sea correcta
 import '../models/cart_item.dart';
+import '../models/mesa.dart';
 
 enum OrderType { dineIn, takeaway }
 
 class TomarOrdenProvider extends ChangeNotifier {
   final ProductoRepository _productoRepository;
+  final MesaRepository _mesaRepository;
 
-  final Map<String, List<String>> tableAreas = {
-    'A': ['A1', 'A2', 'A3', 'A4'],
-    'B': ['B1', 'B2', 'B3']
-  };
-
-  TomarOrdenProvider(this._productoRepository) {
+  TomarOrdenProvider(this._productoRepository, this._mesaRepository) {
     cargarProductos();
+    cargarMesas();
   }
 
   List<Producto> _products = [];
+  List<Mesa> _mesas = [];
   final List<CartItem> _cart = [];
   
   OrderType _orderType = OrderType.dineIn;
-  String _selectedArea = 'A';
-  String _selectedTable = 'A1';
+  String _selectedArea = '';
+  String _selectedTableId = ''; // UUID de la mesa, no el nombre
   String _selectedCategory = 'Todos';
   String _searchTerm = '';
   String _notes = '';
@@ -31,13 +31,41 @@ class TomarOrdenProvider extends ChangeNotifier {
   List<CartItem> get cart => _cart;
   OrderType get orderType => _orderType;
   String get selectedArea => _selectedArea;
-  String get selectedTable => _selectedTable;
+  String get selectedTable => _selectedTableId;
+  String get selectedTableName {
+    try {
+      final mesa = _mesas.firstWhere((m) => m.id == _selectedTableId);
+      return mesa.nombre;
+    } catch (e) {
+      return 'Sin mesa';
+    }
+  }
   String get selectedCategory => _selectedCategory;
   String get searchTerm => _searchTerm;
   String get notes => _notes;
   
-  List<String> get areas => tableAreas.keys.toList();
-  List<String> get currentTables => tableAreas[_selectedArea] ?? [];
+  List<String> get areas {
+    final uniqueAreas = _mesas.map((m) => m.area).toSet().toList();
+    uniqueAreas.sort();
+    return uniqueAreas.isEmpty ? ['General'] : uniqueAreas;
+  }
+  
+  List<String> get currentTables {
+    if (_selectedArea.isEmpty) return [];
+    return _mesas
+        .where((m) => m.area == _selectedArea && m.estado.toLowerCase() == 'libre')
+        .map((m) => m.nombre)
+        .toList();
+  }
+  
+  String? getTableIdByName(String tableName) {
+    try {
+      return _mesas.firstWhere((m) => m.nombre == tableName).id;
+    } catch (e) {
+      return null;
+    }
+  }
+  
   int get itemsCount => _cart.fold(0, (sum, item) => sum + item.qty);
   double get total => _cart.fold(0.0, (sum, item) => sum + (item.qty * item.product.price));
 
@@ -46,7 +74,6 @@ class TomarOrdenProvider extends ChangeNotifier {
     return ['Todos', ...cats];
   }
 
-  // CORRECCIÓN DE NULL SAFETY EN VISIBLE PRODUCTS
   List<Producto> get visibleProducts {
     return _products.where((product) {
       final name = product.name.toLowerCase();
@@ -66,13 +93,46 @@ class TomarOrdenProvider extends ChangeNotifier {
       _products = await _productoRepository.getAll();
       notifyListeners();
     } catch (e) {
-      debugPrint('Error: $e');
+      debugPrint('Error cargando productos: $e');
+    }
+  }
+
+  Future<void> cargarMesas() async {
+    try {
+      _mesas = await _mesaRepository.getAll();
+      // Inicializa el área y mesa selectas si están vacías
+      if (_selectedArea.isEmpty && areas.isNotEmpty) {
+        _selectedArea = areas.first;
+      }
+      if (_selectedTableId.isEmpty && currentTables.isNotEmpty) {
+        final firstTable = currentTables.first;
+        _selectedTableId = getTableIdByName(firstTable) ?? '';
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error cargando mesas: $e');
     }
   }
 
   void setOrderType(OrderType type) { _orderType = type; notifyListeners(); }
-  void setArea(String area) { _selectedArea = area; _selectedTable = tableAreas[area]!.first; notifyListeners(); }
-  void setTable(String table) { _selectedTable = table; notifyListeners(); }
+  
+  void setArea(String area) {
+    _selectedArea = area;
+    final mesasEnArea = _mesas.where((m) => m.area == area).toList();
+    if (mesasEnArea.isNotEmpty) {
+      _selectedTableId = mesasEnArea.first.id;
+    }
+    notifyListeners();
+  }
+  
+  void setTable(String tableName) {
+    final mesaId = getTableIdByName(tableName);
+    if (mesaId != null) {
+      _selectedTableId = mesaId;
+    }
+    notifyListeners();
+  }
+  
   void setCategory(String category) { _selectedCategory = category; notifyListeners(); }
   void setSearchTerm(String term) { _searchTerm = term; notifyListeners(); }
   void setNotes(String notes) { _notes = notes; notifyListeners(); }

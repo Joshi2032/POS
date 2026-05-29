@@ -30,15 +30,20 @@ class OrdenesProvider extends BaseProvider {
 
   List<RestaurantOrder> get filteredOrders {
     return _orders.where((order) {
-      final matchesSearch =
+      final matchesSearch = order.orderNumber
+              .toLowerCase()
+              .contains(_searchQuery.toLowerCase()) ||
           order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          order.tableOrCustomer.toLowerCase().contains(_searchQuery.toLowerCase());
+          order.tableOrCustomer
+              .toLowerCase()
+              .contains(_searchQuery.toLowerCase());
 
       final matchesStatus = _selectedFilterStatus == 'Todos' ||
           order.status.toLowerCase() == _selectedFilterStatus.toLowerCase();
 
       final matchesService = _selectedFilterService == 'Todos' ||
-          order.serviceType.toLowerCase() == _selectedFilterService.toLowerCase();
+          order.serviceType.toLowerCase() ==
+              _selectedFilterService.toLowerCase();
 
       return matchesSearch && matchesStatus && matchesService;
     }).toList();
@@ -48,13 +53,17 @@ class OrdenesProvider extends BaseProvider {
     final list = filteredOrders;
     final start = (_currentPage - 1) * pageSize;
     if (start >= list.length) return [];
-    return list.sublist(start, (start + pageSize) > list.length ? list.length : (start + pageSize));
+    return list.sublist(start,
+        (start + pageSize) > list.length ? list.length : (start + pageSize));
   }
 
-  int get totalPages => (filteredOrders.length / pageSize).ceil().clamp(1, 999999);
-  
+  int get totalPages =>
+      (filteredOrders.length / pageSize).ceil().clamp(1, 999999);
+
   // Condicionales basadas estrictamente en las propiedades de tus modelos
-  int get activeOrdersCount => _orders.where((o) => o.status == 'pendiente' || o.status == 'preparando').length;
+  int get activeOrdersCount => _orders
+      .where((o) => o.status == 'pendiente' || o.status == 'preparando')
+      .length;
   int get readyOrdersCount => _orders.where((o) => o.status == 'lista').length;
 
   // --- CONTROLES DE INTERFAZ ---
@@ -63,32 +72,32 @@ class OrdenesProvider extends BaseProvider {
     _currentPage = 1;
     notifyListeners();
   }
-  
+
   void onStatusFilterChange(String val) {
     _selectedFilterStatus = val;
     _currentPage = 1;
     notifyListeners();
   }
-  
+
   void onServiceFilterChange(String val) {
     _selectedFilterService = val;
     _currentPage = 1;
     notifyListeners();
   }
-  
+
   void goToPage(int page) {
     if (page >= 1 && page <= totalPages) {
       _currentPage = page;
       notifyListeners();
     }
   }
-  
+
   void abrirDetalleModal(RestaurantOrder order) {
     _selectedOrderForModal = order;
     _showModal = true;
     notifyListeners();
   }
-  
+
   void cerrarModal() {
     _showModal = false;
     _selectedOrderForModal = null;
@@ -107,11 +116,15 @@ class OrdenesProvider extends BaseProvider {
 
   Future<void> insertarNuevaComanda(RestaurantOrder nuevaOrden) async {
     await ejecutarOperacion(() async {
-      final itemsMap = nuevaOrden.items.map((i) => {
-        'product_name': i.productName,
-        'quantity': i.quantity,
-        'total': i.total,
-      }).toList();
+      final itemsMap = nuevaOrden.items
+          .map((i) => {
+                'product_name': i.productName,
+                'product_id': i.productId,
+                'quantity': i.quantity,
+                'unit_price': i.unitPrice,
+                'total': i.total,
+              })
+          .toList();
 
       await _repository.crearOrden(nuevaOrden, itemsMap);
       await cargarOrdenes(); // Re-sincroniza el listado activo
@@ -123,7 +136,7 @@ class OrdenesProvider extends BaseProvider {
     await ejecutarOperacion(() async {
       await _repository.actualizarEstado(id, nuevoEstado);
       await cargarOrdenes();
-      
+
       // Mantiene la actualización reactiva del modal si el usuario lo tiene abierto
       if (_selectedOrderForModal?.id == id) {
         final idx = _orders.indexWhere((o) => o.id == id);

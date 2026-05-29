@@ -195,8 +195,9 @@ class _ProductosView extends StatelessWidget {
                                 value: 'General', child: Text('General')),
                           ],
                     onChanged: (val) {
-                      if (val != null)
+                      if (val != null) {
                         setState(() => categoriaSeleccionada = val);
+                      }
                     },
                   ),
                 ],

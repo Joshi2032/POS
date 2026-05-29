@@ -145,7 +145,8 @@ Future<void> main() async {
                 ReportesProvider(context.read<OrdenRepository>())),
         ChangeNotifierProvider(
           create: (context) => TomarOrdenProvider(
-            context.read<ProductoRepository>(), // <-- ESTO es lo que faltaba
+            context.read<ProductoRepository>(),
+            context.read<MesaRepository>(),
           ),
         ),
 

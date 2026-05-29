@@ -14,7 +14,8 @@ class CajaRepository {
       // Si manejas una tabla de estado de caja o sumatoria de movimientos, se consulta aquí.
       // Por ahora simulamos la lectura asíncrona segura desde Supabase:
       final response = await _client
-          .from('cash_register') // Ajusta al nombre de tu tabla de balance general si aplica
+          .from(
+              'cash_register') // Ajusta al nombre de tu tabla de balance general si aplica
           .select('balance')
           .maybeSingle();
 
@@ -23,18 +24,29 @@ class CajaRepository {
       }
       return 0.0;
     } catch (e) {
-      throw Exception('Error al obtener el saldo total de caja de Supabase: $e');
+      throw Exception(
+          'Error al obtener el saldo total de caja de Supabase: $e');
     }
   }
 
   // Registrar un cobro de orden directamente en la base de datos
-  Future<void> registrarCobro(String orderId, String metodoPago, double total) async {
+  Future<void> registrarCobro(
+      String orderId, String metodoPago, double total) async {
     try {
       // 1. Actualizamos el estado de la comanda/factura a pagada
-      await _client
-          .from('orders')
-          .update({'status': 'pagada', 'payment_method': metodoPago.toLowerCase()})
-          .eq('id', orderId);
+      final updateQuery = _client.from('orders').update({
+        'status': 'pagada',
+        'payment_method': metodoPago.toLowerCase(),
+      });
+
+      // Si recibimos un UUID real, actualizamos por id; de lo contrario usamos order_number.
+      final uuidRegExp = RegExp(
+          r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+      if (uuidRegExp.hasMatch(orderId)) {
+        await updateQuery.eq('id', orderId);
+      } else {
+        await updateQuery.eq('order_number', orderId);
+      }
 
       // 2. Insertamos el flujo de efectivo correspondiente en el kárdex/movimientos de caja
       await _client.from('cash_movements').insert({
@@ -44,7 +56,8 @@ class CajaRepository {
         'date': DateTime.now().toIso8601String().substring(0, 10),
       });
     } catch (e) {
-      throw Exception('Error al registrar el cobro de la orden $orderId en Supabase: $e');
+      throw Exception(
+          'Error al registrar el cobro de la orden $orderId en Supabase: $e');
     }
   }
 

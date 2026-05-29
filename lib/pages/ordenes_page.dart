@@ -216,7 +216,10 @@ class _OrdenesView extends StatelessWidget {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(order.id,
+                                    Text(
+                                        order.orderNumber.isNotEmpty
+                                            ? order.orderNumber
+                                            : order.id,
                                         style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16,
@@ -352,7 +355,7 @@ class _OrdenesView extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                                'Detalle de Comanda: ${provider.selectedOrderForModal!.id}',
+                                'Detalle de Comanda: ${provider.selectedOrderForModal!.orderNumber.isNotEmpty ? provider.selectedOrderForModal!.orderNumber : provider.selectedOrderForModal!.id}',
                                 style: const TextStyle(
                                     fontSize: 20, fontWeight: FontWeight.bold)),
                             IconButton(
@@ -493,8 +496,7 @@ class _OrdenesView extends StatelessWidget {
                                   provider.cambiarEstadoOrden(
                                       provider.selectedOrderForModal!.id,
                                       'entregada');
-                                  UiUtils.showToast(
-                                      context, 'Orden despachada',
+                                  UiUtils.showToast(context, 'Orden despachada',
                                       color: Colors.grey);
                                 },
                               ),
@@ -512,8 +514,7 @@ class _OrdenesView extends StatelessWidget {
                                   provider.cambiarEstadoOrden(
                                       provider.selectedOrderForModal!.id,
                                       'cancelada');
-                                  UiUtils.showToast(
-                                      context, 'Orden cancelada',
+                                  UiUtils.showToast(context, 'Orden cancelada',
                                       color: Colors.red);
                                 },
                               ),

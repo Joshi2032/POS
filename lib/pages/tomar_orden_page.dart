@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
 // Importaciones del motor de rutas e interconexión
 import '../providers/ordenes_provider.dart';
@@ -489,12 +490,15 @@ class _CartSection extends StatelessWidget {
                   ),
                   onPressed: cart.isEmpty
                       ? null
-                      : () {
+                      : () async {
                           final ordenesProvider = Provider.of<OrdenesProvider>(
                               context,
                               listen: false);
                           final cajaProvider =
                               Provider.of<CajaProvider>(context, listen: false);
+                          final tomarOrdenProvider = Provider.of<TomarOrdenProvider>(
+                              context,
+                              listen: false);
 
                           final String idComanda =
                               'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
@@ -503,22 +507,26 @@ class _CartSection extends StatelessWidget {
 
                           final String identificador =
                               orderType == OrderType.dineIn
-                                  ? 'Mesa $selectedTable (Área $selectedArea)'
+                                  ? 'Mesa ${tomarOrdenProvider.selectedTableName} (Área $selectedArea)'
                                   : 'Para Llevar';
 
                           final String tipoDeServicio =
                               orderType == OrderType.dineIn
-                                  ? 'comedor'
-                                  : 'llevar';
+                                  ? 'dine_in'
+                                  : 'takeout';
 
+                          // Items para cocina (con product_id)
                           final cocinaItems = cart
                               .map((c) => OrderItem(
                                     productName: c.product.name,
                                     quantity: c.qty,
                                     total: c.total,
+                                    productId: c.product.id,
+                                    unitPrice: c.product.price,
                                   ))
                               .toList();
 
+                          // Items para caja
                           final cajaItems = cart
                               .map((c) => CashItem(
                                     name: c.product.name,
@@ -527,17 +535,41 @@ class _CartSection extends StatelessWidget {
                                   ))
                               .toList();
 
-                          ordenesProvider.insertarNuevaComanda(RestaurantOrder(
-                            id: idComanda,
+                          // Crear orden con tableId correcto
+                          final nuevaOrden = RestaurantOrder(
+                            id: '',
+                            orderNumber: idComanda,
+                            tableId: orderType == OrderType.dineIn
+                                ? selectedTable
+                                : null, // null para "Para Llevar"
                             tableOrCustomer: identificador,
                             time: horaActual,
-                            status: 'pendiente',
+                            status: 'pending',
                             serviceType: tipoDeServicio,
                             items: cocinaItems,
                             totalAmount: total,
                             notes: notes.isNotEmpty ? notes : null,
-                          ));
+                          );
 
+                          // Crear y guardar la orden
+                          await ordenesProvider.insertarNuevaComanda(nuevaOrden);
+
+                          // Verificar si hubo error (con mounted check)
+                          if (!context.mounted) return;
+
+                          if (ordenesProvider.errorMessage != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'Error al guardar orden: ${ordenesProvider.errorMessage}'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                            return;
+                          }
+
+                          // Agregar a caja
                           cajaProvider.agregarCuentaPorCobrar(CashOrder(
                             id: idComanda,
                             label: identificador,
@@ -548,15 +580,26 @@ class _CartSection extends StatelessWidget {
                             total: total,
                           ));
 
+                          // Limpiar carrito
                           context.read<TomarOrdenProvider>().sendOrder();
                           if (isMobile) Navigator.pop(context);
 
+                          // Mostrar éxito y navegar a órdenes
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                                content: Text(
-                                    'Orden $idComanda enviada a cocina y caja'),
-                                backgroundColor: Colors.green),
+                              content: Text(
+                                  'Orden $idComanda creada exitosamente'),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 3),
+                            ),
                           );
+                          
+                          // Navegar a la página de órdenes con pequeño delay
+                          Future.delayed(const Duration(milliseconds: 500), () {
+                            if (context.mounted) {
+                              context.go('/ordenes');
+                            }
+                          });
                         },
                   child: const Text('Confirmar y Enviar Orden',
                       style:
