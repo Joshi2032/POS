@@ -2,8 +2,8 @@ class Producto {
   final String id;
   final String name;
   final String description;
-  final String category;
-  final String? categoryId;
+  final String category; // Nombre para mostrar en la UI
+  final String? categoryId; // UUID real para la Base de Datos
   final double price;
   final int stock;
   final String unit;
@@ -22,11 +22,12 @@ class Producto {
   factory Producto.fromJson(Map<String, dynamic> json) {
     return Producto(
       id: (json['id'] ?? '').toString(),
-      name: json['name'] ?? json['nombre'] ?? 'Sin nombre',
-      description: json['description'] ?? json['descripcion'] ?? '',
+      name: json['name'] ?? 'Sin nombre',
+      description: json['description'] ?? '',
+      // Extraemos el nombre de la categoría del JOIN de Supabase
       category: json['categories'] != null
           ? json['categories']['name']
-          : (json['category'] ?? 'General'),
+          : 'General',
       categoryId: json['category_id']?.toString(),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       stock: (json['stock'] as num?)?.toInt() ?? 0,
@@ -35,16 +36,15 @@ class Producto {
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = {
+    return {
+      if (id.isNotEmpty) 'id': id,
       'name': name,
       'description': description,
       'price': price,
       'stock': stock,
       'unit': unit,
+      // OMITIMOS 'category' porque esa columna no existe en 'products'
+      'category_id': categoryId, 
     };
-    if (categoryId != null) {
-      data['category_id'] = categoryId;
-    }
-    return data;
   }
 }

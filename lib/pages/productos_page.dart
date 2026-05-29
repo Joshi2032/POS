@@ -24,9 +24,7 @@ class _ProductosView extends StatelessWidget {
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.hasError
-              ? Center(
-                  child: Text(
-                      provider.errorMessage ?? 'Error al cargar productos'))
+              ? Center(child: Text(provider.errorMessage ?? 'Error al cargar productos'))
               : Column(
                   children: [
                     Padding(
@@ -35,8 +33,7 @@ class _ProductosView extends StatelessWidget {
                         decoration: InputDecoration(
                           labelText: 'Buscar producto...',
                           prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onChanged: provider.setSearchTerm,
                       ),
@@ -64,42 +61,28 @@ class _ProductosView extends StatelessWidget {
                     ),
                     Expanded(
                       child: provider.productosFiltrados.isEmpty
-                          ? const Center(
-                              child: Text('No hay productos para mostrar.'))
+                          ? const Center(child: Text('No hay productos para mostrar.'))
                           : ListView.builder(
                               itemCount: provider.productosFiltrados.length,
                               itemBuilder: (context, index) {
-                                final producto =
-                                    provider.productosFiltrados[index];
+                                final producto = provider.productosFiltrados[index];
                                 return Card(
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 16.0, vertical: 8.0),
+                                  margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                                   child: ListTile(
-                                    title: Text(producto.name,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    subtitle: Text(
-                                        '${producto.category} | Stock: ${producto.stock} ${producto.unit}'),
+                                    title: Text(producto.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text('${producto.category} | Stock: ${producto.stock} ${producto.unit}'),
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text(
-                                            '\$${producto.price.toStringAsFixed(2)}',
-                                            style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold)),
+                                        Text('\$${producto.price.toStringAsFixed(2)}',
+                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                         IconButton(
-                                          icon: const Icon(Icons.edit,
-                                              color: Colors.blue),
-                                          onPressed: () =>
-                                              _mostrarDialogoFormulario(
-                                                  context, producto),
+                                          icon: const Icon(Icons.edit, color: Colors.blue),
+                                          onPressed: () => _mostrarDialogoFormulario(context, producto),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.delete,
-                                              color: Colors.red),
-                                          onPressed: () => provider
-                                              .deleteProducto(producto.id),
+                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () => provider.deleteProducto(producto.id),
                                         ),
                                       ],
                                     ),
@@ -118,28 +101,22 @@ class _ProductosView extends StatelessWidget {
     );
   }
 
-  void _mostrarDialogoFormulario(
-      BuildContext context, Producto? productoExistente) {
+  void _mostrarDialogoFormulario(BuildContext context, Producto? productoExistente) {
     final provider = context.read<ProductosProvider>();
     final isEditing = productoExistente != null;
 
-    final nombreCtrl =
-        TextEditingController(text: isEditing ? productoExistente.name : '');
-    final descCtrl = TextEditingController(
-        text: isEditing ? productoExistente.description : '');
-    final precioCtrl = TextEditingController(
-        text: isEditing ? productoExistente.price.toString() : '');
-    final stockCtrl = TextEditingController(
-        text: isEditing ? productoExistente.stock.toString() : '');
-    final unidadCtrl =
-        TextEditingController(text: isEditing ? productoExistente.unit : '');
-    final categoriasDisponibles =
-        provider.categorias.where((c) => c != 'Todos').toList();
-    String categoriaSeleccionada = isEditing
+    final nombreCtrl = TextEditingController(text: isEditing ? productoExistente.name : '');
+    final descCtrl = TextEditingController(text: isEditing ? productoExistente.description : '');
+    final precioCtrl = TextEditingController(text: isEditing ? productoExistente.price.toString() : '');
+    final stockCtrl = TextEditingController(text: isEditing ? productoExistente.stock.toString() : '');
+    final unidadCtrl = TextEditingController(text: isEditing ? productoExistente.unit : '');
+        
+    // Lista de categorías reales para pintar el menú (omitimos el filtro global 'Todos')
+    final categoriasDisponibles = provider.categorias.where((c) => c != 'Todos').toList();
+        
+    String? categoriaSeleccionada = isEditing
         ? productoExistente.category
-        : (categoriasDisponibles.isNotEmpty
-            ? categoriasDisponibles.first
-            : 'General');
+        : (categoriasDisponibles.isNotEmpty ? categoriasDisponibles.first : null);
 
     showDialog(
       context: context,
@@ -151,82 +128,92 @@ class _ProductosView extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(
-                      controller: nombreCtrl,
-                      decoration: const InputDecoration(labelText: 'Nombre')),
-                  TextField(
-                      controller: descCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Descripción')),
+                  TextField(controller: nombreCtrl, decoration: const InputDecoration(labelText: 'Nombre')),
+                  TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Descripción')),
                   Row(
                     children: [
                       Expanded(
                           child: TextField(
                               controller: precioCtrl,
-                              decoration: const InputDecoration(
-                                  labelText: 'Precio (\$)', prefixText: '\$'),
+                              decoration: const InputDecoration(labelText: 'Precio (\$)', prefixText: '\$'),
                               keyboardType: TextInputType.number)),
                       const SizedBox(width: 10),
                       Expanded(
                           child: TextField(
                               controller: stockCtrl,
-                              decoration:
-                                  const InputDecoration(labelText: 'Stock'),
+                              decoration: const InputDecoration(labelText: 'Stock'),
                               keyboardType: TextInputType.number)),
                     ],
                   ),
-                  TextField(
-                      controller: unidadCtrl,
-                      decoration: const InputDecoration(
-                          labelText: 'Unidad (pz, kg, etc.)')),
-                  DropdownButtonFormField<String>(
-                    initialValue:
-                        categoriasDisponibles.contains(categoriaSeleccionada)
+                  TextField(controller: unidadCtrl, decoration: const InputDecoration(labelText: 'Unidad (pz, kg, etc.)')),
+                  
+                  if (categoriasDisponibles.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 12.0),
+                      child: Text('Crea categorías en Supabase primero.',
+                          style: TextStyle(color: Colors.red, fontSize: 13)),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: DropdownButtonFormField<String>(
+                        initialValue: categoriasDisponibles.contains(categoriaSeleccionada)
                             ? categoriaSeleccionada
-                            : null,
-                    decoration: const InputDecoration(labelText: 'Categoría'),
-                    items: categoriasDisponibles.isNotEmpty
-                        ? categoriasDisponibles
-                            .map((cat) =>
-                                DropdownMenuItem(value: cat, child: Text(cat)))
-                            .toList()
-                        : [
-                            const DropdownMenuItem(
-                                value: 'General', child: Text('General')),
-                          ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() => categoriaSeleccionada = val);
-                      }
-                    },
-                  ),
+                            : categoriasDisponibles.first,
+                        decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
+                        items: categoriasDisponibles
+                            .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => categoriaSeleccionada = val);
+                          }
+                        },
+                      ),
+                    ),
                 ],
               ),
             ),
             actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancelar')),
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
               ElevatedButton(
-                onPressed: () {
-                  final nuevoProducto = Producto(
-                    id: productoExistente?.id ?? '',
-                    name: nombreCtrl.text,
-                    description: descCtrl.text,
-                    category: categoriaSeleccionada,
-                    price: double.tryParse(precioCtrl.text) ?? 0.0,
-                    stock: int.tryParse(stockCtrl.text) ?? 0,
-                    unit: unidadCtrl.text,
-                  );
+                onPressed: categoriasDisponibles.isEmpty
+                    ? null
+                    : () async {
+                        // Obtenemos el UUID relacional
+                        final uuidCategoria = provider.getCategoryIdByName(categoriaSeleccionada!);
 
-                  if (isEditing) {
-                    provider.updateProducto(
-                        productoExistente.id, nuevoProducto);
-                  } else {
-                    provider.addProducto(nuevoProducto);
-                  }
-                  Navigator.pop(dialogContext);
-                },
+                        final nuevoProducto = Producto(
+                          id: productoExistente?.id ?? '',
+                          name: nombreCtrl.text,
+                          description: descCtrl.text,
+                          category: categoriaSeleccionada!, // Nombre UI
+                          categoryId: uuidCategoria,        // UUID
+                          price: double.tryParse(precioCtrl.text) ?? 0.0,
+                          stock: int.tryParse(stockCtrl.text) ?? 0,
+                          unit: unidadCtrl.text,
+                        );
+
+                        bool exito;
+                        if (isEditing) {
+                          exito = await provider.updateProducto(productoExistente.id, nuevoProducto);
+                        } else {
+                          exito = await provider.addProducto(nuevoProducto);
+                        }
+
+                        // Validación del linter para evitar el warning
+                        if (!dialogContext.mounted) return;
+
+                        if (exito) {
+                          Navigator.pop(dialogContext);
+                        } else {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(
+                                content: Text(provider.errorMessage ?? 'Error al guardar en Supabase'),
+                                backgroundColor: Colors.red),
+                          );
+                        }
+                      },
                 child: Text(isEditing ? 'Guardar Cambios' : 'Añadir'),
               ),
             ],
