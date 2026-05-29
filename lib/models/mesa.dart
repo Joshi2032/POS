@@ -1,10 +1,9 @@
-// lib/models/mesa.dart
 class Mesa {
   final String id;
   String nombre;
   int capacidad;
   String area;
-  String estado; // 'Libre' | 'Ocupada'
+  String estado; // UI: 'Libre' | 'Ocupada'
 
   Mesa({
     required this.id,
@@ -14,31 +13,32 @@ class Mesa {
     this.estado = 'Libre',
   });
 
-  // Mapeo: Supabase a Flutter
   factory Mesa.fromJson(Map<String, dynamic> json) {
+    // Traducimos de BD (Inglés) a UI (Español)
+    String statusDb = json['status']?.toString().toLowerCase() ?? 'free';
+    String estadoUi = 'Libre';
+    if (statusDb == 'occupied') estadoUi = 'Ocupada';
+
     return Mesa(
       id: json['id']?.toString() ?? '',
       nombre: json['name'] ?? '',
       capacidad: json['capacity'] ?? 4,
       area: json['area'] ?? 'General',
-      // Supabase suele guardar strings sin capitalizar, aseguramos la vista:
-      estado: json['status'] == 'ocupada' ? 'Ocupada' : 'Libre',
+      estado: estadoUi,
     );
   }
 
-  // Mapeo: Flutter a Supabase
   Map<String, dynamic> toJson() {
-    final data = {
+    // Traducimos de UI (Español) a BD (Inglés) para pasar el CHECK
+    String statusDb = 'free';
+    if (estado == 'Ocupada') statusDb = 'occupied';
+
+    return {
+      if (id.isNotEmpty) 'id': id,
       'name': nombre,
       'capacity': capacidad,
       'area': area,
-      'status': estado.toLowerCase(), // Guardamos en minúsculas en BD
+      'status': statusDb, 
     };
-    
-    if (id.isNotEmpty) {
-      data['id'] = id;
-    }
-    
-    return data;
   }
 }

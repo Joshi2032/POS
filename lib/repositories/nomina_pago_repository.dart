@@ -21,12 +21,11 @@ class NominaPagoRepository {
   }
 
   // CREATE: Registrar una nueva transacción de nómina
+  // CREATE: Registrar una nueva transacción de nómina
   Future<void> create(NominaPago nomina) async {
     try {
       final data = nomina.toJson();
-      if (nomina.id.isEmpty) {
-        data.remove('id'); // Dejamos que Supabase asigne el UUID correspondiente
-      }
+      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
       await _client.from('payroll').insert(data);
     } catch (e) {
       throw Exception('Error al registrar el pago de nómina en Supabase: $e');
@@ -37,7 +36,8 @@ class NominaPagoRepository {
   Future<void> update(String id, NominaPago nomina) async {
     try {
       final data = nomina.toJson();
-      data.remove('id'); // Protegemos la llave primaria de modificaciones accidentales
+      data.remove('id');
+      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
       await _client.from('payroll').update(data).eq('id', id);
     } catch (e) {
       throw Exception('Error al actualizar el registro de nómina $id: $e');

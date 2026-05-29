@@ -92,7 +92,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         dropdownColor: Theme.of(context).cardColor,
-                        value: _formPosition,
+                        initialValue: _formPosition,
                         decoration: const InputDecoration(
                             labelText: 'Puesto / Puesto',
                             border: OutlineInputBorder()),
@@ -128,7 +128,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                           const Text('Estatus Activo'),
                           Switch(
                             value: _formActive,
-                            activeColor: Colors.green,
+                            activeThumbColor: Colors.green,
                             onChanged: (v) =>
                                 setModalState(() => _formActive = v),
                           ),
@@ -239,7 +239,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                     decoration: const InputDecoration(
                         contentPadding:
                             EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                    value: provider.selectedRol,
+                    initialValue: provider.selectedRol,
                     items: provider.roles
                         .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                         .toList(),

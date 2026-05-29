@@ -24,9 +24,7 @@ class ComboRepository {
   Future<void> create(ComboItem combo) async {
     try {
       final data = combo.toJson();
-      if (combo.id.isEmpty) {
-        data.remove('id'); // Supabase generará automáticamente la llave primaria
-      }
+      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
       await _client.from('combos').insert(data);
     } catch (e) {
       throw Exception('Error al guardar el combo en Supabase: $e');
@@ -37,7 +35,8 @@ class ComboRepository {
   Future<void> update(String id, ComboItem combo) async {
     try {
       final data = combo.toJson();
-      data.remove('id'); // Protegemos el ID para evitar mutaciones de llave primaria
+      data.remove('id');
+      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
       await _client.from('combos').update(data).eq('id', id);
     } catch (e) {
       throw Exception('Error al actualizar el combo $id: $e');
