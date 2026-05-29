@@ -6,8 +6,6 @@ import '../widgets/app_widgets.dart';
 import '../widgets/layout_widgets.dart';
 import '../widgets/search_bar.dart';
 
-final _telefonoCtrl = TextEditingController();
-
 class EmpleadosPage extends StatelessWidget {
   const EmpleadosPage({super.key});
 
@@ -26,29 +24,37 @@ class _EmpleadosView extends StatefulWidget {
 
 class _EmpleadosViewState extends State<_EmpleadosView> {
   final _formKey = GlobalKey<FormState>();
-  final _nombreCtrl = TextEditingController();
-  final _correoCtrl = TextEditingController();
-  String _formRol = 'Mesero';
-  bool _formActivo = true;
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  final _salaryCtrl = TextEditingController();
+  final _notesCtrl = TextEditingController();
+  String _formPosition = 'Mesero';
+  bool _formActive = true;
 
   @override
   void dispose() {
-    _nombreCtrl.dispose();
-    _telefonoCtrl.dispose();
+    _firstNameCtrl.dispose();
+    _lastNameCtrl.dispose();
+    _salaryCtrl.dispose();
+    _notesCtrl.dispose();
     super.dispose();
   }
 
   void _abrirFormularioModal(EmpleadosProvider provider, {Empleado? empleado}) {
     if (empleado != null) {
-      _nombreCtrl.text = empleado.nombre;
-      _correoCtrl.text = empleado.correo;
-      _formRol = empleado.rol;
-      _formActivo = empleado.activo;
+      _firstNameCtrl.text = empleado.firstName;
+      _lastNameCtrl.text = empleado.lastName;
+      _salaryCtrl.text = empleado.salary?.toString() ?? '';
+      _notesCtrl.text = empleado.notes ?? '';
+      _formPosition = empleado.position;
+      _formActive = empleado.active;
     } else {
-      _nombreCtrl.clear();
-      _correoCtrl.clear();
-      _formRol = 'Mesero';
-      _formActivo = true;
+      _firstNameCtrl.clear();
+      _lastNameCtrl.clear();
+      _salaryCtrl.clear();
+      _notesCtrl.clear();
+      _formPosition = 'Mesero';
+      _formActive = true;
     }
 
     showDialog(
@@ -57,10 +63,8 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              title: Text(
-                  empleado != null ? 'Editar Empleado' : 'Nuevo Empleado',
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              title: Text(empleado != null ? 'Editar Empleado' : 'Nuevo Empleado',
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Form(
@@ -69,34 +73,38 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       TextFormField(
-                        controller: _nombreCtrl,
-                        decoration: const InputDecoration(
-                            labelText: 'Nombre Completo',
-                            border: OutlineInputBorder()),
+                        controller: _firstNameCtrl,
+                        decoration: const InputDecoration(labelText: 'Nombre(s)', border: OutlineInputBorder()),
+                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _lastNameCtrl,
+                        decoration: const InputDecoration(labelText: 'Apellido(s)', border: OutlineInputBorder()),
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         dropdownColor: Theme.of(context).cardColor,
-                        initialValue: _formRol,
-                        decoration: const InputDecoration(
-                            labelText: 'Puesto / Rol',
-                            border: OutlineInputBorder()),
+                        value: _formPosition,
+                        decoration: const InputDecoration(labelText: 'Puesto / Puesto', border: OutlineInputBorder()),
                         items: provider.roles
                             .where((r) => r != 'Todos')
-                            .map((r) =>
-                                DropdownMenuItem(value: r, child: Text(r)))
+                            .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                             .toList(),
-                        onChanged: (v) => setModalState(() => _formRol = v!),
+                        onChanged: (v) => setModalState(() => _formPosition = v!),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
-                        controller: _correoCtrl,
-                        decoration: const InputDecoration(
-                            labelText: 'Correo electrónico',
-                            border: OutlineInputBorder()),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
+                        controller: _salaryCtrl,
+                        decoration: const InputDecoration(labelText: 'Salario Mensual (\$)', border: OutlineInputBorder(), prefixText: '\$'),
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _notesCtrl,
+                        decoration: const InputDecoration(labelText: 'Notas / Observaciones', border: OutlineInputBorder()),
+                        maxLines: 2,
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -104,10 +112,9 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                         children: [
                           const Text('Estatus Activo'),
                           Switch(
-                            value: _formActivo,
-                            activeThumbColor: Colors.green,
-                            onChanged: (v) =>
-                                setModalState(() => _formActivo = v),
+                            value: _formActive,
+                            activeColor: Colors.green,
+                            onChanged: (v) => setModalState(() => _formActive = v),
                           ),
                         ],
                       ),
@@ -116,29 +123,40 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                 ),
               ),
               actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar')),
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (_formKey.currentState!.validate()) {
                       final nuevo = Empleado(
-                        id: empleado?.id ?? '', // Asegúrate de manejar el ID
-                        nombre: _nombreCtrl.text,
-                        rol: _formRol,
-                        correo:
-                            _correoCtrl.text, // Asegúrate de incluir el correo
-                        activo: _formActivo,
+                        id: empleado?.id ?? '',
+                        profileId: empleado?.profileId,
+                        firstName: _firstNameCtrl.text,
+                        lastName: _lastNameCtrl.text,
+                        position: _formPosition,
+                        salary: double.tryParse(_salaryCtrl.text),
+                        notes: _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+                        active: _formActive,
                       );
 
+                      bool exito;
                       if (empleado != null) {
-                        provider.actualizarEmpleado(
-                            empleado.id, nuevo); // Usa el nombre correcto
+                        exito = await provider.actualizarEmpleado(empleado.id, nuevo);
                       } else {
-                        provider
-                            .agregarEmpleado(nuevo); // Usa el nombre correcto
+                        exito = await provider.agregarEmpleado(nuevo);
                       }
-                      Navigator.pop(context);
+
+                      if (exito) {
+                        if (context.mounted) Navigator.pop(context);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(provider.errorMessage ?? 'Error al guardar en Supabase'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
                     }
                   },
                   child: Text(empleado != null ? 'Guardar' : 'Agregar'),
@@ -165,7 +183,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
           children: [
             SectionHeader(
               title: '👥 Personal y Empleados',
-              subtitle: '${filtrados.length} empleados activos en el turno',
+              subtitle: '${filtrados.length} empleados en catálogo',
               actionLabel: 'Nuevo Empleado',
               onAction: () => _abrirFormularioModal(provider),
             ),
@@ -184,16 +202,10 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                   flex: 1,
                   child: DropdownButtonFormField<String>(
                     dropdownColor: Theme.of(context).cardColor,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 14),
-                    decoration: const InputDecoration(
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
-                    initialValue: provider.selectedRol,
-                    items: provider.roles
-                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                        .toList(),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                    value: provider.selectedRol,
+                    items: provider.roles.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
                     onChanged: (v) => provider.setSelectedRol(v!),
                   ),
                 ),
@@ -203,8 +215,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
             Expanded(
               child: filtrados.isEmpty
                   ? EmptyState(
-                      message:
-                          'No se encontraron colaboradores con este filtro.',
+                      message: 'No se encontraron colaboradores con este filtro.',
                       icon: Icons.person_off_outlined,
                       actionLabel: 'Restablecer',
                       onAction: () {
@@ -213,10 +224,9 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                       },
                     )
                   : GridView.builder(
-                      gridDelegate:
-                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: 320,
-                        childAspectRatio: 1.3,
+                        childAspectRatio: 1.2,
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
                       ),
@@ -228,65 +238,47 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .primaryColor
-                                          .withValues(alpha: 0.1),
+                                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: Text(emp.rol,
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: Theme.of(context)
-                                                .primaryColor)),
+                                    child: Text(emp.position,
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: (emp.activo
-                                              ? Colors.green
-                                              : Colors.red)
-                                          .withValues(alpha: 0.1),
+                                      color: (emp.active ? Colors.green : Colors.red).withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Text(
-                                        emp.activo ? 'Activo' : 'Inactivo',
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: emp.activo
-                                                ? Colors.green
-                                                : Colors.red)),
+                                    child: Text(emp.active ? 'Activo' : 'Inactivo',
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: emp.active ? Colors.green : Colors.red)),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              Text(emp.nombre,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold)),
+                              Text('${emp.firstName} ${emp.lastName}',
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                               const SizedBox(height: 4),
-                              Text('Email: ${emp.correo}',
-                                  style: Theme.of(context).textTheme.bodySmall),
+                              if (emp.salary != null)
+                                Text('Salario: \$${emp.salary!.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodySmall),
+                              if (emp.notes != null && emp.notes!.isNotEmpty)
+                                Text('Nota: ${emp.notes}', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
                               const Spacer(),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.edit_outlined,
-                                        size: 20, color: Colors.blueGrey),
-                                    onPressed: () => _abrirFormularioModal(
-                                        provider,
-                                        empleado: emp),
+                                    icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blueGrey),
+                                    onPressed: () => _abrirFormularioModal(provider, empleado: emp),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
+                                    onPressed: () => provider.eliminarEmpleado(emp.id),
                                   ),
                                 ],
                               )

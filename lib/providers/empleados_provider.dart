@@ -6,35 +6,27 @@ class EmpleadosProvider extends ChangeNotifier {
   final EmpleadoRepository _repository;
 
   EmpleadosProvider(this._repository) {
-    cargarEmpleados(); // Carga inicial al levantar el módulo
+    cargarEmpleados();
   }
 
   List<Empleado> _empleados = [];
   String _searchTerm = '';
-  String _selectedRol = 'Todos'; // Cambiado de _selectedRole a _selectedRol para tu UI
-
-  // --- ESTADOS DE CONTROL DE FLUJO Y ERRORES ---
+  String _selectedRol = 'Todos';
   bool _isLoading = false;
   String? _errorMessage;
 
-  // --- GETTERS COMPATIBLES CON TU VISTA ORIGINAL (empleados_page.dart) ---
   List<Empleado> get empleados => _empleados;
   String get searchTerm => _searchTerm;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
-
-  // Getters exactos que pide tu interfaz visual
   String get selectedRol => _selectedRol;
-  String get selectedRole => _selectedRol; // Mantener alias por seguridad
+  
+  List<String> get roles => ['Todos', 'Mesero', 'Cajero', 'Cocinero', 'Gerente', 'Admin'];
 
-  // Lista estática o dinámica de roles que utiliza tu UI para pintar los dropdowns o pestañas
-  List<String> get roles => ['Todos', 'Administrador', 'Mesero', 'Cocinero', 'Cajero'];
-
-  // --- MÉTODOS CRUD CON GESTIÓN DE ERRORES ---
   Future<void> cargarEmpleados() async {
     _setLoading(true);
-    _clearError();
+    _errorMessage = null;
     try {
       _empleados = await _repository.getAll();
     } catch (e) {
@@ -44,9 +36,9 @@ class EmpleadosProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> addEmpleado(Empleado empleado) async {
+  Future<bool> agregarEmpleado(Empleado empleado) async {
     _setLoading(true);
-    _clearError();
+    _errorMessage = null;
     try {
       await _repository.create(empleado);
       await cargarEmpleados();
@@ -60,16 +52,11 @@ class EmpleadosProvider extends ChangeNotifier {
     }
   }
 
-  // Enlaces de nombre idénticos a los errores de tu UI (línea 139)
-  Future<bool> agregarEmpleado(Empleado empleado) => addEmpleado(empleado);
-  Future<bool> crearEmpleado(Empleado empleado) => addEmpleado(empleado);
-
-  Future<bool> updateEmpleado(dynamic id, Empleado empleado) async {
+  Future<bool> actualizarEmpleado(String id, Empleado empleado) async {
     _setLoading(true);
-    _clearError();
+    _errorMessage = null;
     try {
-      final String convertedId = id.toString();
-      await _repository.update(convertedId, empleado);
+      await _repository.update(id, empleado);
       await cargarEmpleados();
       return true;
     } catch (e) {
@@ -81,14 +68,11 @@ class EmpleadosProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> actualizarEmpleado(dynamic id, Empleado empleado) => updateEmpleado(id, empleado);
-
-  Future<bool> deleteEmpleado(dynamic id) async {
+  Future<bool> eliminarEmpleado(String id) async {
     _setLoading(true);
-    _clearError();
+    _errorMessage = null;
     try {
-      final String convertedId = id.toString();
-      await _repository.delete(convertedId);
+      await _repository.delete(id);
       await cargarEmpleados();
       return true;
     } catch (e) {
@@ -100,17 +84,9 @@ class EmpleadosProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> eliminarEmpleado(dynamic id) => deleteEmpleado(id);
-  Future<bool> removeEmpleado(dynamic id) => deleteEmpleado(id);
-
-  // --- CONTROL DE FILTROS DE INTERFAZ REQUERIDOS (Líneas 197 y 212) ---
   void setSelectedRol(String rol) {
     _selectedRol = rol;
     notifyListeners();
-  }
-
-  void setRoleFilter(String role) {
-    setSelectedRol(role);
   }
 
   void setSearchTerm(String term) {
@@ -118,27 +94,21 @@ class EmpleadosProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- FILTRADOS DE COMPONENTES BASADOS EN EL ROL ORIGINAL DE TU MODELO ---
   List<Empleado> get empleadosFiltrados {
     return _empleados.where((e) {
-      final String nombreLower = (e.nombre).toLowerCase();
-      final String rolLower = (e.rol).toLowerCase(); 
+      final String fullName = '${e.firstName} ${e.lastName}'.toLowerCase();
+      final String position = e.position.toLowerCase();
       final String query = _searchTerm.toLowerCase();
 
-      final matchesSearch = nombreLower.contains(query) || rolLower.contains(query);
-      final matchesRole = _selectedRol == 'Todos' || e.rol == _selectedRol; 
+      final matchesSearch = fullName.contains(query) || position.contains(query);
+      final matchesRole = _selectedRol == 'Todos' || e.position == _selectedRol;
 
       return matchesSearch && matchesRole;
     }).toList();
   }
 
-  // --- MÉTODOS AUXILIARES ---
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
-  }
-
-  void _clearError() {
-    _errorMessage = null;
   }
 }
