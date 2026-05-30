@@ -15,8 +15,6 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    // Refresca los datos cada vez que el usuario entra al dashboard,
-    // así siempre verá las órdenes cobradas más recientes.
     Future.microtask(() {
       if (mounted) {
         context.read<DashboardProvider>().cargarMetricasGlobales();
@@ -41,6 +39,79 @@ class _DashboardView extends StatelessWidget {
         .toList();
   }
 
+  // ─── HELPERS DE ESCALA ────────────────────────────────────────────────────
+
+  /// Formatea un valor al label más legible según su magnitud.
+  String _formatAxisValue(double value) {
+    final abs = value.abs();
+    if (abs >= 1000000) return '\$${(value / 1000000).toStringAsFixed(1)}M';
+    if (abs >= 1000)    return '\$${(value / 1000).toStringAsFixed(1)}k';
+    if (abs >= 100)     return '\$${value.toStringAsFixed(0)}';
+    if (abs >= 10)      return '\$${value.toStringAsFixed(1)}';
+    return '\$${value.toStringAsFixed(2)}';
+  }
+
+  /// Calcula el intervalo "bonito" más cercano para ~5 ticks en el rango dado.
+  double _niceInterval(double range) {
+    if (range <= 0) return 1;
+    final raw = range / 5;
+    // Potencia de 10 inmediatamente inferior al raw
+    double mag = 1;
+    while (mag * 10 <= raw) mag *= 10;
+    // Candidatos bonitos: 1×, 2×, 5× la magnitud
+    for (final factor in [1.0, 2.0, 5.0, 10.0]) {
+      final candidate = factor * mag;
+      if (candidate >= raw) return candidate;
+    }
+    return mag * 10;
+  }
+
+  /// Devuelve {minY, maxY, interval} con suelo y techo "bonitos".
+  Map<String, double> _yScale(List<double> values, {bool allowNegative = false}) {
+    if (values.isEmpty || values.every((v) => v == 0)) {
+      return {'min': 0, 'max': 10, 'interval': 2};
+    }
+
+    final dataMin = values.reduce((a, b) => a < b ? a : b);
+    final dataMax = values.reduce((a, b) => a > b ? a : b);
+
+    // Margen del 15% en cada extremo según el signo del dato
+    double rawMin;
+    double rawMax;
+
+    if (allowNegative) {
+      rawMin = dataMin < 0 ? dataMin * 1.15 : 0;
+      rawMax = dataMax > 0 ? dataMax * 1.15 : (dataMin < 0 ? 0 : 10);
+    } else {
+      rawMin = 0;
+      rawMax = dataMax > 0 ? dataMax * 1.15 : 10;
+    }
+
+    // Garantizamos que el rango nunca sea cero
+    if (rawMax == rawMin) rawMax = rawMin + 10;
+
+    final double range    = rawMax - rawMin;
+    final double interval = _niceInterval(range);
+
+    // Redondeamos al múltiplo de interval hacia afuera en cada extremo
+    final double niceMin = (allowNegative && rawMin < 0)
+        ? (rawMin / interval).floor() * interval
+        : 0;
+    final double niceMax = (rawMax / interval).ceil() * interval;
+
+    if (niceMax <= niceMin) {
+      return {'min': niceMin, 'max': niceMin + interval, 'interval': interval};
+    }
+
+    return {
+      'min': niceMin,
+      'max': niceMax,
+      'interval': interval,
+    };
+  }
+
+  // ─── GRÁFICA DE LÍNEAS ───────────────────────────────────────────────────
+
   LineChartData _buildLineChartData(
       BuildContext context, DashboardProvider provider) {
     final primaryColor = Theme.of(context).primaryColor;
@@ -53,12 +124,22 @@ class _DashboardView extends StatelessWidget {
         ? (provider.currentLabels.length - 1).toDouble()
         : 0.0;
 
+    // Escala basada en los valores REALES de ingresos y gastos combinados
+    final allValues = [...provider.currentIngresos, ...provider.currentGastos];
+    final scale = _yScale(allValues);
+    final double minY     = scale['min']!;
+    final double maxY     = scale['max']!;
+    final double interval = scale['interval']!;
+
     return LineChartData(
       minX: 0,
       maxX: maxTicks,
+      minY: minY,
+      maxY: maxY,
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
+        horizontalInterval: interval,
         getDrawingHorizontalLine: (value) => FlLine(
           color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
           strokeWidth: 1,
@@ -79,10 +160,7 @@ class _DashboardView extends StatelessWidget {
               if (index >= 0 && index < provider.currentLabels.length) {
                 return Padding(
                   padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    provider.currentLabels[index],
-                    style: textStyle,
-                  ),
+                  child: Text(provider.currentLabels[index], style: textStyle),
                 );
               }
               return const SizedBox();
@@ -92,10 +170,13 @@ class _DashboardView extends StatelessWidget {
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
-            reservedSize: 50,
-            getTitlesWidget: (value, meta) => Text(
-                '\$${(value / 1000).toStringAsFixed(0)}k',
-                style: textStyle),
+            reservedSize: 62,
+            interval: interval,
+            getTitlesWidget: (value, meta) {
+              // Omitimos el label del techo si queda solapado
+              if (value > meta.max - interval * 0.3) return const SizedBox();
+              return Text(_formatAxisValue(value), style: textStyle);
+            },
           ),
         ),
       ),
@@ -145,17 +226,29 @@ class _DashboardView extends StatelessWidget {
     );
   }
 
+  // ─── GRÁFICA DE BARRAS ───────────────────────────────────────────────────
+
   BarChartData _buildBarChartData(
       BuildContext context, DashboardProvider provider) {
     final barColor = Theme.of(context).primaryColor;
+    final negativeColor = Theme.of(context).colorScheme.error;
     final textStyle = TextStyle(
         fontSize: 11,
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6));
 
+    // La utilidad SÍ puede ser negativa, por eso allowNegative: true
+    final scale    = _yScale(provider.currentUtilidad, allowNegative: true);
+    final double minY     = scale['min']!;
+    final double maxY     = scale['max']!;
+    final double interval = scale['interval']!;
+
     return BarChartData(
+      minY: minY,
+      maxY: maxY,
       gridData: FlGridData(
         show: true,
         drawVerticalLine: false,
+        horizontalInterval: interval,
         getDrawingHorizontalLine: (value) => FlLine(
             color: Theme.of(context).dividerColor.withValues(alpha: 0.4),
             strokeWidth: 1,
@@ -185,29 +278,41 @@ class _DashboardView extends StatelessWidget {
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
-            reservedSize: 50,
-            getTitlesWidget: (value, meta) => Text(
-                '\$${(value / 1000).toStringAsFixed(0)}k',
-                style: textStyle),
+            reservedSize: 62,
+            interval: interval,
+            getTitlesWidget: (value, meta) {
+              if (value > meta.max - interval * 0.3) return const SizedBox();
+              return Text(_formatAxisValue(value), style: textStyle);
+            },
           ),
         ),
       ),
       borderData: FlBorderData(show: false),
       barGroups: provider.currentUtilidad.asMap().entries.map((e) {
+        final isNegative = e.value < 0;
         return BarChartGroupData(
           x: e.key,
           barRods: [
             BarChartRodData(
-                toY: e.value,
-                color: barColor,
-                width: 14,
-                borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(4), topRight: Radius.circular(4)))
+              toY: e.value,
+              // Barras rojas si la utilidad es negativa
+              color: isNegative ? negativeColor : barColor,
+              width: 14,
+              borderRadius: isNegative
+                  ? const BorderRadius.only(
+                      bottomLeft: Radius.circular(4),
+                      bottomRight: Radius.circular(4))
+                  : const BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                      topRight: Radius.circular(4)),
+            )
           ],
         );
       }).toList(),
     );
   }
+
+  // ─── BUILD PRINCIPAL ─────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -218,20 +323,19 @@ class _DashboardView extends StatelessWidget {
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (provider.isLoading && provider.currentLabels.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           return RefreshIndicator(
-            // Pull-to-refresh para recargar manualmente desde el móvil
-            onRefresh: () => context.read<DashboardProvider>().cargarMetricasGlobales(),
+            onRefresh: () =>
+                context.read<DashboardProvider>().cargarMetricasGlobales(),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ── Header ──────────────────────────────────────────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -240,7 +344,6 @@ class _DashboardView extends StatelessWidget {
                             title: 'Dashboard',
                             subtitle: 'Resumen operativo del sistema'),
                       ),
-                      // Botón de recarga manual
                       IconButton(
                         onPressed: provider.isLoading
                             ? null
@@ -251,7 +354,8 @@ class _DashboardView extends StatelessWidget {
                             ? const SizedBox(
                                 width: 18,
                                 height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.refresh),
                         tooltip: 'Actualizar datos',
@@ -259,6 +363,8 @@ class _DashboardView extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // ── Tarjetas métricas ────────────────────────────────────
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final cols = constraints.maxWidth > 700
@@ -300,12 +406,14 @@ class _DashboardView extends StatelessWidget {
                                   '\$${provider.utilidadFiltroTotal.toStringAsFixed(2)}',
                               change: '+15.3%',
                               icon: Icons.account_balance_wallet,
-                              isPositive: true),
+                              isPositive: provider.utilidadFiltroTotal >= 0),
                         ],
                       );
                     },
                   ),
                   const SizedBox(height: 32),
+
+                  // ── Selector de filtro ───────────────────────────────────
                   Align(
                     alignment: Alignment.centerRight,
                     child: Container(
@@ -333,6 +441,8 @@ class _DashboardView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // ── Gráficas ─────────────────────────────────────────────
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final isWide = constraints.maxWidth > 700;
@@ -356,10 +466,7 @@ class _DashboardView extends StatelessWidget {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text('Flujo Financiero',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium),
+                                              _buildChartLegend(context),
                                               const SizedBox(height: 24),
                                               SizedBox(
                                                   height: 300,
@@ -399,10 +506,7 @@ class _DashboardView extends StatelessWidget {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text('Flujo Financiero',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium),
+                                          _buildChartLegend(context),
                                           const SizedBox(height: 24),
                                           SizedBox(
                                               height: 260,
@@ -434,6 +538,8 @@ class _DashboardView extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 32),
+
+                  // ── Tabla de productos ───────────────────────────────────
                   _buildPremiumProductTable(context, provider),
                 ],
               ),
@@ -443,6 +549,43 @@ class _DashboardView extends StatelessWidget {
       ),
     );
   }
+
+  // ─── LEYENDA DE LA GRÁFICA DE LÍNEAS ────────────────────────────────────
+
+  Widget _buildChartLegend(BuildContext context) {
+    final primary = Theme.of(context).primaryColor;
+    final error   = Theme.of(context).colorScheme.error;
+    return Row(
+      children: [
+        Expanded(
+          child: Text('Flujo Financiero',
+              style: Theme.of(context).textTheme.titleMedium),
+        ),
+        _legendDot(color: primary, label: 'Ingresos', context: context),
+        const SizedBox(width: 16),
+        _legendDot(color: error,   label: 'Gastos',   context: context),
+      ],
+    );
+  }
+
+  Widget _legendDot({required Color color, required String label, required BuildContext context}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10, height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+      ],
+    );
+  }
+
+  // ─── TARJETA DE MÉTRICA ──────────────────────────────────────────────────
 
   Widget _buildMetricCard(BuildContext context,
       {required String title,
@@ -508,6 +651,8 @@ class _DashboardView extends StatelessWidget {
     );
   }
 
+  // ─── TABLA DE PRODUCTOS ──────────────────────────────────────────────────
+
   Widget _buildPremiumProductTable(
       BuildContext context, DashboardProvider provider) {
     final theme = Theme.of(context);
@@ -550,8 +695,7 @@ class _DashboardView extends StatelessWidget {
           ),
           Container(
             color: theme.primaryColor.withValues(alpha: 0.06),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             child: Row(
               children: [
                 Expanded(
@@ -593,8 +737,10 @@ class _DashboardView extends StatelessWidget {
                 : SizedBox(
                     width: double.infinity,
                     child: Column(
-                      children:
-                          provider.currentProductos.asMap().entries.map((entry) {
+                      children: provider.currentProductos
+                          .asMap()
+                          .entries
+                          .map((entry) {
                         final int index = entry.key;
                         final prod = entry.value;
                         final rowColor = index % 2 == 0

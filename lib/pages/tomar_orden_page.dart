@@ -16,7 +16,7 @@ import '../ui_models/cash_order.dart';
 import '../models/product.dart';
 
 // ==========================================================================
-// INTERFAZ DE USUARIO ADAPTATIVA (Tu diseño original intacto al 100%)
+// INTERFAZ DE USUARIO ADAPTATIVA
 // ==========================================================================
 
 class TomarOrdenPage extends StatelessWidget {
@@ -31,6 +31,7 @@ class TomarOrdenPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: scaffoldBg,
+      resizeToAvoidBottomInset: false, // Evita que el teclado mueva componentes clave
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -63,15 +64,19 @@ class TomarOrdenPage extends StatelessWidget {
               context.select<TomarOrdenProvider, double>((p) => p.total);
           final itemsCount =
               context.select<TomarOrdenProvider, int>((p) => p.itemsCount);
-          return FloatingActionButton.extended(
-            backgroundColor: Theme.of(context).primaryColor,
-            onPressed: () => _openMobileCart(context),
-            label: Text(
-              '${formatCurrency(total)} ($itemsCount)',
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
+              
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16.0), // Eleva el botón flotante en móviles
+            child: FloatingActionButton.extended(
+              backgroundColor: Theme.of(context).primaryColor,
+              onPressed: () => _openMobileCart(context),
+              label: Text(
+                '${formatCurrency(total)} ($itemsCount)',
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              icon: const Icon(Icons.shopping_cart, color: Colors.white),
             ),
-            icon: const Icon(Icons.shopping_cart, color: Colors.white),
           );
         },
       ),
@@ -108,7 +113,6 @@ class _MenuSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Escuchamos la lista de Producto (modelo unificado)
     final visibleProducts = context
         .select<TomarOrdenProvider, List<Producto>>((p) => p.visibleProducts);
 
@@ -184,7 +188,7 @@ class _MenuSection extends StatelessWidget {
               children: categories.map((cat) {
                 final isSelected = selectedCategory == cat;
                 return Padding(
-                  padding: const EdgeInsets.only(right: 6.0),
+                  padding: const EdgeInsets.only(bottom: 16.0),
                   child: ChoiceChip(
                     label: Text(cat),
                     selected: isSelected,
@@ -208,8 +212,7 @@ class _MenuSection extends StatelessWidget {
                 : ListView.builder(
                     itemCount: visibleProducts.length,
                     itemBuilder: (context, index) {
-                      final product =
-                          visibleProducts[index]; // Ahora es Producto
+                      final product = visibleProducts[index]; 
                       return Card(
                         color: cardBg,
                         child: ListTile(
@@ -240,13 +243,26 @@ class _MenuSection extends StatelessWidget {
   Widget _buildTypeButton(BuildContext context, String text, OrderType type) {
     final isSelected =
         context.select<TomarOrdenProvider, bool>((p) => p.orderType == type);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Expanded(
       child: ElevatedButton(
         onPressed: () => context.read<TomarOrdenProvider>().setOrderType(type),
         style: ElevatedButton.styleFrom(
-            backgroundColor:
-                isSelected ? Theme.of(context).primaryColor : Colors.grey[200]),
-        child: Text(text),
+          backgroundColor: isSelected 
+              ? Theme.of(context).primaryColor 
+              : (isDark ? const Color(0xFF2D2D44) : Colors.grey[200]),
+          elevation: 0, 
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: isSelected 
+                ? Colors.white 
+                : (isDark ? Colors.white70 : Colors.black87),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
