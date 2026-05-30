@@ -2,11 +2,14 @@ class Producto {
   final String id;
   final String name;
   final String description;
-  final String category; // Nombre para mostrar en la UI
-  final String? categoryId; // UUID real para la Base de Datos
+  final String category;
+  final String? categoryId;
   final double price;
   final int stock;
   final String unit;
+  
+  // --- NUEVO CAMPO ---
+  final String? recipeId;
 
   Producto({
     required this.id,
@@ -17,6 +20,7 @@ class Producto {
     required this.price,
     required this.stock,
     required this.unit,
+    this.recipeId, // --- NUEVO ---
   });
 
   factory Producto.fromJson(Map<String, dynamic> json) {
@@ -24,14 +28,12 @@ class Producto {
       id: (json['id'] ?? '').toString(),
       name: json['name'] ?? 'Sin nombre',
       description: json['description'] ?? '',
-      // Extraemos el nombre de la categoría del JOIN de Supabase
-      category: json['categories'] != null
-          ? json['categories']['name']
-          : 'General',
+      category: json['categories'] != null ? json['categories']['name'] : 'General',
       categoryId: json['category_id']?.toString(),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       stock: (json['stock'] as num?)?.toInt() ?? 0,
       unit: json['unit'] ?? 'unidad',
+      recipeId: json['recipe_id']?.toString(), // --- NUEVO ---
     );
   }
 
@@ -43,8 +45,8 @@ class Producto {
       'price': price,
       'stock': stock,
       'unit': unit,
-      // OMITIMOS 'category' porque esa columna no existe en 'products'
-      'category_id': categoryId, 
+      'category_id': categoryId,
+      'recipe_id': recipeId, // --- NUEVO ---
     };
   }
 }

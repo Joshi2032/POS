@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/recipe.dart';
 import '../repositories/recipe_repository.dart';
 
@@ -6,146 +7,88 @@ class RecipeProvider extends ChangeNotifier {
   final RecipeRepository _repository;
 
   RecipeProvider(this._repository) {
-    cargarRecetas(); // Carga inicial
+    cargarDatos();
   }
 
   List<Recipe> _recipes = [];
-  bool _isLoading = false;
-
-  // --- NUEVA PROPIEDAD CENTRALIZADA DE CONTROL DE EXCEPCIONES ---
-  String? _errorMessage;
-
-  // --- GETTERS COMPATIBLES CON TU INTERFAZ ORIGINAL ---
-  List<Recipe> get recipes => _recipes;
-  bool get isLoading => _isLoading;
+  List<Map<String, dynamic>> _inventarioDisponible = [];
   
+  bool _isLoading = false;
+  String? _errorMessage;
+  String _searchTerm = '';
+
+  List<Recipe> get recipes => _recipes;
+  List<Map<String, dynamic>> get inventarioDisponible => _inventarioDisponible;
+  bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get hasError => _errorMessage != null;
 
-  List<Recipe> get recetasActivas => _recipes.where((r) => r.active).toList();
+  List<Recipe> get filtradas {
+    if (_searchTerm.isEmpty) return _recipes;
+    return _recipes.where((r) => r.name.toLowerCase().contains(_searchTerm.toLowerCase())).toList();
+  }
 
-  // --- LÓGICA DE DATOS ROBUSTA Y CONTROLADA ---
-  Future<void> cargarRecetas() async {
-    _setLoading(true);
-    _clearError();
+  Future<void> cargarDatos() async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
     try {
+      // Cargar recetas
       _recipes = await _repository.getAll();
+      
+      // Cargar inventario activo para armar las recetas
+      final inv = await Supabase.instance.client
+          .from('inventory_items')
+          .select('id, name, unit')
+          .eq('active', true);
+      _inventarioDisponible = List<Map<String, dynamic>>.from(inv);
+      
     } catch (e) {
       _errorMessage = e.toString();
-      debugPrint('Error cargando recetas: $e');
     } finally {
-      _setLoading(false);
-    }
-  }
-
-  Future<void> cargarRecetasActivas() async {
-    _setLoading(true);
-    _clearError();
-    try {
-      _recipes = await _repository.getActives();
-    } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error cargando recetas activas: $e');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // --- ACCIONES C.R.U.D CON CAPTURA ASÍNCRONA DE RETORNO ---
-  Future<bool> agregarReceta(Recipe recipe) async {
-    _setLoading(true);
-    _clearError();
-    try {
-      await _repository.create(recipe);
-      await cargarRecetas();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error agregando receta: $e');
+      _isLoading = false;
       notifyListeners();
-      return false;
-    } finally {
-      _setLoading(false);
     }
   }
 
-  // Soporta dynamic en los identificadores para blindar la comunicación con los widgets
-  Future<bool> actualizarReceta(dynamic id, Recipe recipe) async {
-    _setLoading(true);
-    _clearError();
-    try {
-      final String convertedId = id.toString();
-      await _repository.update(convertedId, recipe);
-      await cargarRecetas();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error actualizando receta: $e');
-      notifyListeners();
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  Future<bool> eliminarReceta(dynamic id) async {
-    _setLoading(true);
-    _clearError();
-    try {
-      final String convertedId = id.toString();
-      await _repository.delete(convertedId);
-      await cargarRecetas();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error eliminando receta: $e');
-      notifyListeners();
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  Future<bool> toggleRecetaActiva(dynamic id, bool activa) async {
-    _setLoading(true);
-    _clearError();
-    try {
-      final String convertedId = id.toString();
-      await _repository.toggleActiva(convertedId, activa);
-      await cargarRecetas();
-      return true;
-    } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error al cambiar estado de receta: $e');
-      notifyListeners();
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  Future<Recipe?> obtenerRecetaPorId(dynamic id) async {
-    _setLoading(true);
-    _clearError();
-    try {
-      final String convertedId = id.toString();
-      return await _repository.getById(convertedId);
-    } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error obteniendo receta: $e');
-      return null;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // --- MÉTODOS AUXILIARES ---
-  void _setLoading(bool value) {
-    _isLoading = value;
+  void setSearchTerm(String term) {
+    _searchTerm = term;
     notifyListeners();
   }
 
-  void _clearError() {
-    _errorMessage = null;
+  Future<bool> addRecipe(Recipe recipe) async {
+    try {
+      await _repository.create(recipe);
+      await cargarDatos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateRecipe(String id, Recipe recipe) async {
+    try {
+      await _repository.update(id, recipe);
+      await cargarDatos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteRecipe(String id) async {
+    try {
+      await _repository.delete(id);
+      await cargarDatos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
   }
 }

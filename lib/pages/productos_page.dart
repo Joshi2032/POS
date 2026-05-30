@@ -111,12 +111,21 @@ class _ProductosView extends StatelessWidget {
     final stockCtrl = TextEditingController(text: isEditing ? productoExistente.stock.toString() : '');
     final unidadCtrl = TextEditingController(text: isEditing ? productoExistente.unit : '');
         
-    // Lista de categorías reales para pintar el menú (omitimos el filtro global 'Todos')
     final categoriasDisponibles = provider.categorias.where((c) => c != 'Todos').toList();
         
     String? categoriaSeleccionada = isEditing
         ? productoExistente.category
         : (categoriasDisponibles.isNotEmpty ? categoriasDisponibles.first : null);
+
+    // LÓGICA DE RECETAS PARA EL FORMULARIO
+    String? recetaSeleccionada = 'Ninguna';
+    if (isEditing && productoExistente.recipeId != null) {
+      final match = provider.recetas.firstWhere(
+        (name) => provider.getRecipeIdByName(name) == productoExistente.recipeId,
+        orElse: () => 'Ninguna'
+      );
+      recetaSeleccionada = match;
+    }
 
     showDialog(
       context: context,
@@ -165,12 +174,22 @@ class _ProductosView extends StatelessWidget {
                             .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
                             .toList(),
                         onChanged: (val) {
-                          if (val != null) {
-                            setState(() => categoriaSeleccionada = val);
-                          }
+                          if (val != null) setState(() => categoriaSeleccionada = val);
                         },
                       ),
                     ),
+
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: DropdownButtonFormField<String>(
+                      value: provider.recetas.contains(recetaSeleccionada) ? recetaSeleccionada : 'Ninguna',
+                      decoration: const InputDecoration(labelText: 'Receta a descontar (Opcional)', border: OutlineInputBorder()),
+                      items: provider.recetas.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => recetaSeleccionada = val);
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -180,18 +199,19 @@ class _ProductosView extends StatelessWidget {
                 onPressed: categoriasDisponibles.isEmpty
                     ? null
                     : () async {
-                        // Obtenemos el UUID relacional
                         final uuidCategoria = provider.getCategoryIdByName(categoriaSeleccionada!);
+                        final uuidReceta = provider.getRecipeIdByName(recetaSeleccionada!);
 
                         final nuevoProducto = Producto(
                           id: productoExistente?.id ?? '',
                           name: nombreCtrl.text,
                           description: descCtrl.text,
-                          category: categoriaSeleccionada!, // Nombre UI
-                          categoryId: uuidCategoria,        // UUID
+                          category: categoriaSeleccionada!, 
+                          categoryId: uuidCategoria,        
                           price: double.tryParse(precioCtrl.text) ?? 0.0,
                           stock: int.tryParse(stockCtrl.text) ?? 0,
                           unit: unidadCtrl.text,
+                          recipeId: uuidReceta, // Vinculamos la receta
                         );
 
                         bool exito;
@@ -201,7 +221,6 @@ class _ProductosView extends StatelessWidget {
                           exito = await provider.addProducto(nuevoProducto);
                         }
 
-                        // Validación del linter para evitar el warning
                         if (!dialogContext.mounted) return;
 
                         if (exito) {

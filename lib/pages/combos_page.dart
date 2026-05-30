@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:zapata_flutter/widgets/layout_widgets.dart';
 import '../models/combo_item.dart';
 import '../providers/combos_provider.dart';
 import '../widgets/app_widgets.dart';
-import '../widgets/layout_widgets.dart';
 
 class CombosPage extends StatelessWidget {
   const CombosPage({super.key});
@@ -35,9 +35,9 @@ class _CombosViewState extends State<_CombosView> {
     super.dispose();
   }
 
-  
-
   void _abrirFormularioModal(CombosProvider provider, {ComboItem? combo}) {
+    List<String> productosSeleccionados = [];
+
     if (combo != null) {
       _nombreCtrl.text = combo.title;
       _descripcionCtrl.text = combo.subtitle;
@@ -62,42 +62,80 @@ class _CombosViewState extends State<_CombosView> {
               title: Text(combo != null ? 'Editar Combo' : 'Nuevo Combo',
                   style: TextStyle(
                       fontWeight: FontWeight.bold, color: modalTextColor)),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: _nombreCtrl,
-                        style: TextStyle(color: modalTextColor),
-                        decoration: const InputDecoration(
-                            labelText: 'Nombre del Combo',
-                            border: OutlineInputBorder()),
-                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _descripcionCtrl,
-                        maxLines: 3,
-                        style: TextStyle(color: modalTextColor),
-                        decoration: const InputDecoration(
-                            labelText: 'Descripción / Productos incluidos',
-                            border: OutlineInputBorder()),
-                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _precioCtrl,
-                        style: TextStyle(color: modalTextColor),
-                        decoration: const InputDecoration(
-                            labelText: 'Precio Especial',
-                            prefixText: '\$',
-                            border: OutlineInputBorder()),
-                        keyboardType: TextInputType.number,
-                        validator: (v) => v!.isEmpty ? 'Requerido' : null,
-                      ),
-                    ],
+              content: SizedBox(
+                // Limitamos el ancho para que se vea bien en tablets y web
+                width: MediaQuery.of(context).size.width > 600 ? 500 : double.maxFinite,
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: _nombreCtrl,
+                          style: TextStyle(color: modalTextColor),
+                          decoration: const InputDecoration(
+                              labelText: 'Nombre del Combo',
+                              border: OutlineInputBorder()),
+                          validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _descripcionCtrl,
+                          maxLines: 2,
+                          style: TextStyle(color: modalTextColor),
+                          decoration: const InputDecoration(
+                              labelText: 'Descripción pública',
+                              border: OutlineInputBorder()),
+                          validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _precioCtrl,
+                          style: TextStyle(color: modalTextColor),
+                          decoration: const InputDecoration(
+                              labelText: 'Precio Especial',
+                              prefixText: '\$',
+                              border: OutlineInputBorder()),
+                          keyboardType: TextInputType.number,
+                          validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        const Text('¿Qué productos incluye el combo?', 
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        
+                        // EL FIX DEL ERROR: Usamos Column en lugar de ListView
+                        if (provider.productosDisponibles.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Center(child: Text('No hay productos registrados en el sistema.')),
+                          )
+                        else
+                          Column(
+                            children: provider.productosDisponibles.map((prod) {
+                              final pId = prod['id'].toString();
+                              final isChecked = productosSeleccionados.contains(pId);
+                              
+                              return CheckboxListTile(
+                                title: Text(prod['name'], style: TextStyle(color: modalTextColor)),
+                                value: isChecked,
+                                activeColor: Theme.of(context).primaryColor,
+                                onChanged: (bool? val) {
+                                  setModalState(() {
+                                    if (val == true) {
+                                      productosSeleccionados.add(pId);
+                                    } else {
+                                      productosSeleccionados.remove(pId);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          )
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -113,16 +151,16 @@ class _CombosViewState extends State<_CombosView> {
                             'CMB-${DateTime.now().millisecondsSinceEpoch}',
                         title: _nombreCtrl.text,
                         subtitle: _descripcionCtrl.text,
-                        tags: [],
+                        tags: [], 
                         price: double.tryParse(_precioCtrl.text) ?? 0,
                         oldPrice: double.tryParse(_precioCtrl.text) ?? 0,
                         ahorro: '',
                       );
 
                       if (combo != null) {
-                        provider.actualizarCombo(combo.id, nuevo);
+                        provider.actualizarCombo(combo.id, nuevo, productosSeleccionados);
                       } else {
-                        provider.agregarCombo(nuevo);
+                        provider.agregarCombo(nuevo, productosSeleccionados);
                       }
                       Navigator.pop(context);
                     }
@@ -165,10 +203,8 @@ class _CombosViewState extends State<_CombosView> {
     final provider = context.watch<CombosProvider>();
     final filtrados = provider.combosFiltrados;
 
-    // DETECTAMOS SI EL MODO OSCURO ESTÁ ACTIVO
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // DECLARACIÓN DE VARIABLES PARA COLORES ADAPTATIVOS
     final searchFillColor = isDark ? const Color(0xFF1E1E2D) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black87;
     final textSubColor = isDark ? Colors.white60 : Colors.grey[700];

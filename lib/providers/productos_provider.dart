@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/product.dart';
 import '../repositories/producto_repository.dart';
 
@@ -11,9 +12,12 @@ class ProductosProvider extends ChangeNotifier {
 
   List<Producto> _productos = [];
   
-  // DICCIONARIO: Conecta el nombre en la UI con el UUID de la base de datos
+  // DICCIONARIOS: Conectan el nombre en la UI con el UUID de la BD
   final Map<String, String> _categoriaDiccionario = {}; 
   List<String> _categoriasUI = ['Todos'];
+
+  final Map<String, String> _recetaDiccionario = {};
+  List<String> _recetasUI = ['Ninguna']; 
 
   String _searchTerm = '';
   String _selectedCategory = 'Todos';
@@ -28,38 +32,46 @@ class ProductosProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
 
-  // Getter para los chips y dropdowns de la UI
+  // Getters para los chips y dropdowns de la UI
   List<String> get categorias => _categoriasUI;
+  List<String> get recetas => _recetasUI;
 
-  // FUNCIÓN VITAL: Traduce de Nombre UI a UUID para guardarlo en la BD
-  String? getCategoryIdByName(String name) {
-    return _categoriaDiccionario[name];
-  }
+  // FUNCIONES VITALES: Traducen de Nombre UI a UUID para guardarlo en la BD
+  String? getCategoryIdByName(String name) => _categoriaDiccionario[name];
+  String? getRecipeIdByName(String name) => _recetaDiccionario[name];
 
   // --- MÉTODOS CRUD ---
   Future<void> cargarDatosCompletos() async {
     _setLoading(true);
     _clearError();
     try {
-      // 1. Cargar primero las categorías reales de la tabla 'categories'
+      // 1. Cargar categorías
       final catsDb = await _repository.getCategorias();
       _categoriaDiccionario.clear();
       List<String> nombresCat = [];
-      
       for (var cat in catsDb) {
         final nombre = cat['name'].toString();
-        final id = cat['id'].toString();
-        _categoriaDiccionario[nombre] = id; // Guardamos en el diccionario
+        _categoriaDiccionario[nombre] = cat['id'].toString();
         nombresCat.add(nombre);
       }
-      
       nombresCat.sort();
-      _categoriasUI = ['Todos', ...nombresCat]; // Mantenemos 'Todos' al inicio
+      _categoriasUI = ['Todos', ...nombresCat];
+
+      // 1.5. Cargar recetas disponibles
+      final recipesDb = await Supabase.instance.client.from('recipes').select('id, name').eq('active', true);
+      _recetaDiccionario.clear();
+      List<String> nombresRecetas = [];
+      for (var r in recipesDb) {
+        final nombre = r['name'].toString();
+        _recetaDiccionario[nombre] = r['id'].toString();
+        nombresRecetas.add(nombre);
+      }
+      nombresRecetas.sort();
+      _recetasUI = ['Ninguna', ...nombresRecetas];
 
       // 2. Cargar los productos
       _productos = await _repository.getAll();
 
-      // Validación de filtro actual
       if (!_categoriasUI.contains(_selectedCategory)) {
         _selectedCategory = 'Todos';
       }
