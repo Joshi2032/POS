@@ -50,8 +50,9 @@ class CajaProvider extends ChangeNotifier {
   bool get hasError => _errorMessage != null;
 
   double get changeDue {
-    if (_selectedOrder == null || _receivedAmount < _selectedOrder!.total)
+    if (_selectedOrder == null || _receivedAmount < _selectedOrder!.total) {
       return 0.0;
+    }
     return _receivedAmount - _selectedOrder!.total;
   }
 

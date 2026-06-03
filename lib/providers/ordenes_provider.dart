@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/restaurant_order.dart';
@@ -37,25 +37,24 @@ class OrdenesProvider extends BaseProvider {
     });
   }
 
-  RealtimeSubscription? _ordersSubscription;
+  dynamic _ordersChannel;
 
   void _initRealtimeSubscription() {
     try {
-      // Subscribe to inserts, updates and deletes on the orders table
-      _ordersSubscription = Supabase.instance.client
-          .from('orders')
-          .on(SupabaseEventTypes.insert, (payload) {
+      final channel = Supabase.instance.client.channel('orders-channel');
+
+      channel.on(RealtimeListenTypes.postgresChanges,
+          ChannelFilter(event: '*', schema: 'public', table: 'orders'),
+          (payload, [ref]) {
+        // Any change on orders -> reload
         cargarOrdenes();
-      }).on(SupabaseEventTypes.update, (payload) {
-        cargarOrdenes();
-      }).on(SupabaseEventTypes.delete, (payload) {
-        cargarOrdenes();
-      }).subscribe();
+      });
+
+      channel.subscribe();
+      _ordersChannel = channel;
 
       // If subscription established, cancel polling fallback
-      if (_ordersSubscription != null) {
-        _pollTimer?.cancel();
-      }
+      _pollTimer?.cancel();
     } catch (e) {
       debugPrint('Realtime subscription failed: $e');
     }
@@ -65,8 +64,8 @@ class OrdenesProvider extends BaseProvider {
   void dispose() {
     _pollTimer?.cancel();
     try {
-      if (_ordersSubscription != null) {
-        Supabase.instance.client.removeSubscription(_ordersSubscription!);
+      if (_ordersChannel != null) {
+        _ordersChannel.unsubscribe();
       }
     } catch (_) {}
     super.dispose();
