@@ -94,33 +94,36 @@ class _ReportesView extends StatelessWidget {
 
                 // BARRAS DE PROGRESO DE PAGOS REPARADAS
                 Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Distribución por Métodos de Pago',
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                                child: _buildPaymentTypeIndicator(
-                                    'Efectivo',
-                                    Formatters.money(provider.ingresosEfectivo),
-                                    provider.porcentajeEfectivo,
-                                    Colors.orange)),
-                            const SizedBox(width: 16),
-                            Expanded(
-                                child: _buildPaymentTypeIndicator(
-                                    'Tarjeta / Transf.',
-                                    Formatters.money(provider.ingresosTarjeta),
-                                    provider.porcentajeTarjeta,
-                                    Colors.blue)),
-                          ],
-                        )
-                      ],
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Distribución por Métodos de Pago',
+                              style: TextStyle(
+                                  fontSize: 15, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                  child: _buildPaymentTypeIndicator(
+                                      'Efectivo',
+                                      Formatters.money(provider.ingresosEfectivo),
+                                      provider.porcentajeEfectivo,
+                                      Colors.orange)),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                  child: _buildPaymentTypeIndicator(
+                                      'Tarjeta / Transf.',
+                                      Formatters.money(provider.ingresosTarjeta),
+                                      provider.porcentajeTarjeta,
+                                      Colors.blue)),
+                            ],
+                          )
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -184,65 +187,85 @@ class _ReportesView extends StatelessWidget {
                                         'No hay datos disponibles para este período'),
                                   ),
                                 )
-                              : SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: DataTable(
-                                    headingRowColor: WidgetStateProperty.all(
-                                        Theme.of(context)
-                                            .colorScheme
-                                            .surfaceContainerHighest),
-                                    columns: const [
-                                      DataColumn(
-                                          label: Text('Producto',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                      DataColumn(
-                                          label: Text('Categoría',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                      DataColumn(
-                                          label: Text('Unidades',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                      DataColumn(
-                                          label: Text('Monto Total',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                    ],
-                                    rows: provider.productosRendimiento
-                                        .map((p) => DataRow(cells: [
-                                              DataCell(Text(p.nombre,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w500))),
-                                              DataCell(Chip(
-                                                  label: Text(p.categoria,
-                                                      style: const TextStyle(
-                                                          fontSize: 10)),
-                                                  padding: EdgeInsets.zero)),
-                                              DataCell(Text(
-                                                  p.unidadesVendidas.toString(),
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold))),
-                                              DataCell(Container(
-                                                alignment:
-                                                    Alignment.centerRight,
-                                                child: Text(
-                                                    Formatters.money(
-                                                        p.montoTotal),
-                                                    style: const TextStyle(
+                              : LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    return SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                            minWidth: constraints.maxWidth),
+                                        child: DataTable(
+                                          headingRowColor:
+                                              WidgetStateProperty.all(
+                                                  Theme.of(context)
+                                                      .colorScheme
+                                                      .surfaceContainerHighest),
+                                          columns: const [
+                                            DataColumn(
+                                                label: Text('Producto',
+                                                    style: TextStyle(
                                                         fontWeight:
-                                                            FontWeight.bold,
-                                                        color: Colors.green)),
-                                              )),
-                                            ]))
-                                        .toList(),
-                                  ),
+                                                            FontWeight.bold))),
+                                            DataColumn(
+                                                label: Text('Categoría',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold))),
+                                            DataColumn(
+                                                label: Text('Unidades',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold))),
+                                            DataColumn(
+                                                label: Text('Monto Total',
+                                                    style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold))),
+                                          ],
+                                          rows: provider.productosRendimiento
+                                              .map((p) => DataRow(cells: [
+                                                    DataCell(Text(p.nombre,
+                                                        style:
+                                                            const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500))),
+                                                    DataCell(Chip(
+                                                        label: Text(p.categoria,
+                                                            style:
+                                                                const TextStyle(
+                                                                    fontSize:
+                                                                        10)),
+                                                        padding:
+                                                            EdgeInsets.zero)),
+                                                    DataCell(Text(
+                                                        p.unidadesVendidas
+                                                            .toString(),
+                                                        style:
+                                                            const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold))),
+                                                    DataCell(Container(
+                                                      alignment:
+                                                          Alignment.centerRight,
+                                                      child: Text(
+                                                          Formatters.money(
+                                                              p.montoTotal),
+                                                          style:
+                                                              const TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  color:
+                                                                      Colors.green)),
+                                                    )),
+                                                  ]))
+                                              .toList(),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                         ],
                       ),
@@ -260,64 +283,81 @@ class _ReportesView extends StatelessWidget {
                         ? const Padding(
                             padding: EdgeInsets.all(30),
                             child: Center(child: CircularProgressIndicator()))
-                        : SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: DataTable(
-                              headingRowColor: WidgetStateProperty.all(
-                                  Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest),
-                              columns: const [
-                                DataColumn(
-                                    label: Text('ID',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold))),
-                                DataColumn(
-                                    label: Text('Fecha',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold))),
-                                DataColumn(
-                                    label: Text('Concepto',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold))),
-                                DataColumn(
-                                    label: Text('Cat.',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold))),
-                                DataColumn(
-                                    label: Text('Pago',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold))),
-                                DataColumn(
-                                    label: Text('Monto',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold))),
-                              ],
-                              rows: provider.paginatedVentas
-                                  .map((v) => DataRow(cells: [
-                                        DataCell(Text(v.id,
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.grey))),
-                                        DataCell(Text(v.date)),
-                                        DataCell(Text(v.concept)),
-                                        DataCell(Chip(
-                                            label: Text(v.category,
-                                                style: const TextStyle(
-                                                    fontSize: 10)),
-                                            padding: EdgeInsets.zero)),
-                                        DataCell(Text(v.paymentMethod)),
-                                        DataCell(Container(
-                                          alignment: Alignment.centerRight,
-                                          child: Text(
-                                              Formatters.money(v.amount),
-                                              style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.green)),
-                                        )),
-                                      ]))
-                                  .toList(),
-                            ),
+                        : LayoutBuilder(
+                            builder: (context, constraints) {
+                              return SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                      minWidth: constraints.maxWidth),
+                                  child: DataTable(
+                                    headingRowColor: WidgetStateProperty.all(
+                                        Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest),
+                                    columns: const [
+                                      DataColumn(
+                                          label: Text('ID',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Fecha',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Concepto',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Cat.',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Pago',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Monto',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                    ],
+                                    rows: provider.paginatedVentas
+                                        .map((v) => DataRow(cells: [
+                                              DataCell(Text(v.id,
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Colors.grey))),
+                                              DataCell(Text(v.date)),
+                                              DataCell(Text(v.concept)),
+                                              DataCell(Chip(
+                                                  label: Text(v.category,
+                                                      style: const TextStyle(
+                                                          fontSize: 10)),
+                                                  padding: EdgeInsets.zero)),
+                                              DataCell(Text(v.paymentMethod)),
+                                              DataCell(Container(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: Text(
+                                                    Formatters.money(v.amount),
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.green)),
+                                              )),
+                                            ]))
+                                        .toList(),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                   ),
                 ),
@@ -352,20 +392,40 @@ class _ReportesView extends StatelessWidget {
 
   Widget _buildStatCard(String l, String v, IconData i, Color c) => Card(
       color: c,
-      child: Padding(
+      child: SizedBox(
+        width: double.infinity,
+        child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Row(children: [
-            Icon(i, color: Colors.white38, size: 36),
-            const SizedBox(width: 16),
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(l, style: const TextStyle(color: Colors.white70)),
-              Text(v,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold))
-            ])
-          ])));
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(i, color: Colors.white38, size: 36),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l,
+                              style:
+                                  const TextStyle(color: Colors.white70)),
+                          Text(v,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold))
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ));
 
   Widget _buildPaymentTypeIndicator(String l, String v, double p, Color c) =>
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

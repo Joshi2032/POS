@@ -131,7 +131,8 @@ class _NominasViewState extends State<_NominasView> {
                 final nuevaNomina = NominaPago(
                   id: idController.text,
                   fecha: fechaController.text,
-                  empleadoNombre: empleadoController.text, // <--- AQUÍ ESTÁ LA CORRECCIÓN
+                  empleadoNombre:
+                      empleadoController.text, // <--- AQUÍ ESTÁ LA CORRECCIÓN
                   tipo: tipo,
                   periodo: periodo,
                   monto: double.tryParse(montoController.text) ?? 0.0,
