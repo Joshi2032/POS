@@ -11,13 +11,13 @@ class ProductosProvider extends ChangeNotifier {
   }
 
   List<Producto> _productos = [];
-  
+
   // DICCIONARIOS: Conectan el nombre en la UI con el UUID de la BD
-  final Map<String, String> _categoriaDiccionario = {}; 
+  final Map<String, String> _categoriaDiccionario = {};
   List<String> _categoriasUI = ['Todos'];
 
   final Map<String, String> _recetaDiccionario = {};
-  List<String> _recetasUI = ['Ninguna']; 
+  List<String> _recetasUI = ['Ninguna'];
 
   String _searchTerm = '';
   String _selectedCategory = 'Todos';
@@ -58,7 +58,10 @@ class ProductosProvider extends ChangeNotifier {
       _categoriasUI = ['Todos', ...nombresCat];
 
       // 1.5. Cargar recetas disponibles
-      final recipesDb = await Supabase.instance.client.from('recipes').select('id, name').eq('active', true);
+      final recipesDb = await Supabase.instance.client
+          .from('recipes')
+          .select('id, name')
+          .eq('active', true);
       _recetaDiccionario.clear();
       List<String> nombresRecetas = [];
       for (var r in recipesDb) {
@@ -87,6 +90,22 @@ class ProductosProvider extends ChangeNotifier {
     _clearError();
     try {
       await _repository.create(producto);
+      await cargarDatosCompletos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> addCategoria(String name) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _repository.createCategoria(name);
       await cargarDatosCompletos();
       return true;
     } catch (e) {
@@ -152,8 +171,11 @@ class ProductosProvider extends ChangeNotifier {
 
   List<Producto> get productosFiltrados {
     return _productos.where((product) {
-      final matchesCategory = _selectedCategory == 'Todos' || product.category == _selectedCategory;
-      final matchesSearch = product.name.toLowerCase().contains(_searchTerm.toLowerCase()) ||
+      final matchesCategory =
+          _selectedCategory == 'Todos' || product.category == _selectedCategory;
+      final matchesSearch = product.name
+              .toLowerCase()
+              .contains(_searchTerm.toLowerCase()) ||
           product.description.toLowerCase().contains(_searchTerm.toLowerCase());
       return matchesCategory && matchesSearch;
     }).toList();

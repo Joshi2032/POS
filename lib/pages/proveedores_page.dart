@@ -200,7 +200,7 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                 maxCrossAxisExtent: 220,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 2.2,
+                childAspectRatio: 1.2,
               ),
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
