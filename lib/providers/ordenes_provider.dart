@@ -186,16 +186,49 @@ class OrdenesProvider extends BaseProvider {
   Future<bool> cambiarEstadoOrden(String id, String nuevoEstado) async {
     bool exito = false;
     await ejecutarOperacion(() async {
-      await _repository.actualizarEstado(id, nuevoEstado);
+      // Mapear estados desde la UI (es: 'preparando', 'pagada')
+      // al valor que espera la base de datos (en inglés: 'preparing', 'paid').
+      final estadoDb = _mapEstadoUiToDb(nuevoEstado);
+      debugPrint(
+          'ORDENES_PROVIDER: cambiarEstadoOrden(id=$id, nuevoEstado=$nuevoEstado) -> estadoDb=$estadoDb');
+      await _repository.actualizarEstado(id, estadoDb);
       await cargarOrdenes();
 
       // Mantiene la actualización reactiva del modal si el usuario lo tiene abierto
       if (_selectedOrderForModal?.id == id) {
         final idx = _orders.indexWhere((o) => o.id == id);
-        if (idx != -1) _selectedOrderForModal = _orders[idx];
+        if (idx != -1) {
+          _selectedOrderForModal = _orders[idx];
+        }
       }
       exito = true;
     });
     return exito;
+  }
+
+  String _mapEstadoUiToDb(String estado) {
+    final e = estado.toLowerCase();
+    switch (e) {
+      case 'preparando':
+        return 'preparing';
+      case 'lista':
+        return 'ready';
+      case 'entregada':
+        return 'delivered';
+      case 'pagada':
+        return 'paid';
+      case 'cancelada':
+        return 'cancelled';
+      case 'pendiente':
+        return 'pending';
+      default:
+        // Si ya se pasó un estado en inglés, lo devolvemos tal cual si es válido
+        if (['pending', 'preparing', 'ready', 'delivered', 'paid', 'cancelled']
+            .contains(e)) {
+          return e;
+        }
+        // Fallback seguro
+        return 'pending';
+    }
   }
 }

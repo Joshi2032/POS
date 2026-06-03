@@ -97,10 +97,15 @@ class OrdenRepository {
   // UPDATE: Cambiar el estado de la comanda (ej: de 'pendiente' a 'preparando' o 'lista')
   Future<void> actualizarEstado(String id, String nuevoEstado) async {
     try {
+      final estadoNormalized = nuevoEstado.toLowerCase();
+      debugPrint(
+          'ORDEN_REPO: actualizarEstado id=$id status=$estadoNormalized');
       await _client
           .from('orders')
-          .update({'status': nuevoEstado.toLowerCase()}).eq('id', id);
+          .update({'status': estadoNormalized}).eq('id', id);
     } catch (e) {
+      debugPrint(
+          'ORDEN_REPO: Error al modificar el estado de la orden $id: $e');
       throw Exception('Error al modificar el estado de la orden $id: $e');
     }
   }

@@ -157,86 +157,95 @@ class _ReportesView extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // TABLA DE RENDIMIENTO DE PRODUCTOS
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Rendimiento de Productos',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold)),
-                        Text(
-                            'Datos correspondientes a: ${provider.selectedPeriodo.toLowerCase()}',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 12)),
-                        const SizedBox(height: 16),
-                        provider.productosRendimiento.isEmpty
-                            ? const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(20.0),
-                                  child: Text(
-                                      'No hay datos disponibles para este período'),
-                                ),
-                              )
-                            : SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: DataTable(
-                                  headingRowColor: WidgetStateProperty.all(
-                                      Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHighest),
-                                  columns: const [
-                                    DataColumn(
-                                        label: Text('Producto',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold))),
-                                    DataColumn(
-                                        label: Text('Categoría',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold))),
-                                    DataColumn(
-                                        label: Text('Unidades',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold))),
-                                    DataColumn(
-                                        label: Text('Monto Total',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold))),
-                                  ],
-                                  rows: provider.productosRendimiento
-                                      .map((p) => DataRow(cells: [
-                                            DataCell(Text(p.nombre,
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.w500))),
-                                            DataCell(Chip(
-                                                label: Text(p.categoria,
-                                                    style: const TextStyle(
-                                                        fontSize: 10)),
-                                                padding: EdgeInsets.zero)),
-                                            DataCell(Text(
-                                                p.unidadesVendidas.toString(),
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold))),
-                                            DataCell(Container(
-                                              alignment: Alignment.centerRight,
-                                              child: Text(
-                                                  Formatters.money(
-                                                      p.montoTotal),
+                SizedBox(
+                  width: double.infinity,
+                  child: Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Rendimiento de Productos',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(
+                              'Datos correspondientes a: ${provider.selectedPeriodo.toLowerCase()}',
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 12)),
+                          const SizedBox(height: 16),
+                          provider.productosRendimiento.isEmpty
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(20.0),
+                                    child: Text(
+                                        'No hay datos disponibles para este período'),
+                                  ),
+                                )
+                              : SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    headingRowColor: WidgetStateProperty.all(
+                                        Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest),
+                                    columns: const [
+                                      DataColumn(
+                                          label: Text('Producto',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Categoría',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Unidades',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Monto Total',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                    ],
+                                    rows: provider.productosRendimiento
+                                        .map((p) => DataRow(cells: [
+                                              DataCell(Text(p.nombre,
                                                   style: const TextStyle(
                                                       fontWeight:
-                                                          FontWeight.bold,
-                                                      color: Colors.green)),
-                                            )),
-                                          ]))
-                                      .toList(),
+                                                          FontWeight.w500))),
+                                              DataCell(Chip(
+                                                  label: Text(p.categoria,
+                                                      style: const TextStyle(
+                                                          fontSize: 10)),
+                                                  padding: EdgeInsets.zero)),
+                                              DataCell(Text(
+                                                  p.unidadesVendidas.toString(),
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold))),
+                                              DataCell(Container(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: Text(
+                                                    Formatters.money(
+                                                        p.montoTotal),
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.green)),
+                                              )),
+                                            ]))
+                                        .toList(),
+                                  ),
                                 ),
-                              ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -332,7 +341,7 @@ class _ReportesView extends StatelessWidget {
                                   provider.changePage(provider.currentPage + 1)
                               : null),
                     ],
-                  )
+                  ),
               ],
             ),
           );
