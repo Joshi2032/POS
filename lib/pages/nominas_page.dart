@@ -218,30 +218,33 @@ class _NominasViewState extends State<_NominasView> {
             ),
             const SizedBox(height: 24),
             AppCard(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Total pagado este mes',
+              child: SizedBox(
+                width: double.infinity,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Total pagado este mes',
+                            style: TextStyle(
+                                color: mutedTextColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 4),
+                        Text(
+                          _money.format(provider.totalMensual),
                           style: TextStyle(
-                              color: mutedTextColor,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 4),
-                      Text(
-                        _money.format(provider.totalMensual),
-                        style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: primaryTextColor),
-                      ),
-                    ],
-                  ),
-                  Icon(Icons.account_balance_wallet_outlined,
-                      color: Theme.of(context).primaryColor, size: 28),
-                ],
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: primaryTextColor),
+                        ),
+                      ],
+                    ),
+                    Icon(Icons.account_balance_wallet_outlined,
+                        color: Theme.of(context).primaryColor, size: 28),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -259,57 +262,61 @@ class _NominasViewState extends State<_NominasView> {
                     )
                   : AppCard(
                       padding: EdgeInsets.zero,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: ListView.separated(
-                          itemCount: paginated.length,
-                          separatorBuilder: (_, __) => Divider(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: ListView.separated(
+                            itemCount: paginated.length,
+                            separatorBuilder: (_, __) => Divider(
                               color: Theme.of(context)
                                   .dividerColor
                                   .withValues(alpha: 0.5),
-                              height: 1),
-                          itemBuilder: (_, index) {
-                            final nomina = paginated[index];
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 4),
-                              title: Text(nomina.empleado,
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryTextColor)),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Text(
-                                    '${nomina.tipo} · ${nomina.periodo} · ${nomina.fecha}',
-                                    style: TextStyle(color: mutedTextColor)),
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(_money.format(nomina.monto),
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 16,
-                                          color: Colors.green)),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: const Icon(Icons.edit_outlined,
-                                        color: Colors.blueGrey, size: 20),
-                                    tooltip: 'Editar',
-                                    onPressed: () =>
-                                        _openEditor(provider, nomina: nomina),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline,
-                                        color: Colors.redAccent, size: 20),
-                                    tooltip: 'Eliminar',
-                                    onPressed: () =>
-                                        provider.eliminarNomina(nomina.id),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                              height: 1,
+                            ),
+                            itemBuilder: (_, index) {
+                              final nomina = paginated[index];
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 4),
+                                title: Text(nomina.empleado,
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryTextColor)),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                      '${nomina.tipo} · ${nomina.periodo} · ${nomina.fecha}',
+                                      style: TextStyle(color: mutedTextColor)),
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(_money.format(nomina.monto),
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 16,
+                                            color: Colors.green)),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined,
+                                          color: Colors.blueGrey, size: 20),
+                                      tooltip: 'Editar',
+                                      onPressed: () =>
+                                          _openEditor(provider, nomina: nomina),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline,
+                                          color: Colors.redAccent, size: 20),
+                                      tooltip: 'Eliminar',
+                                      onPressed: () =>
+                                          provider.eliminarNomina(nomina.id),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),

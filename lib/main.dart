@@ -47,16 +47,39 @@ import 'providers/movimiento_caja_provider.dart';
 import 'providers/recipe_provider.dart';
 
 Future<String?> _findEnvFile() async {
-  final envFile = File('.env');
-  if (envFile.existsSync()) return envFile.path;
+  final candidates = <File>[];
 
-  var currentDirectory = File(Platform.script.toFilePath()).parent;
-  for (var i = 0; i < 6; i++) {
-    final candidate =
-        File('${currentDirectory.path}${Platform.pathSeparator}.env');
-    if (candidate.existsSync()) return candidate.path;
+  // 1) Archivo .env en el directorio actual
+  candidates.add(File('.env'));
+
+  // 2) Recorremos parents de Directory.current
+  var currentDirectory = Directory.current;
+  for (var i = 0; i < 8; i++) {
+    candidates
+        .add(File('${currentDirectory.path}${Platform.pathSeparator}.env'));
     if (currentDirectory.path == currentDirectory.parent.path) break;
     currentDirectory = currentDirectory.parent;
+  }
+
+  // 3) Recorremos parents del script actual
+  var scriptDirectory = File(Platform.script.toFilePath()).parent;
+  for (var i = 0; i < 8; i++) {
+    candidates
+        .add(File('${scriptDirectory.path}${Platform.pathSeparator}.env'));
+    if (scriptDirectory.path == scriptDirectory.parent.path) break;
+    scriptDirectory = scriptDirectory.parent;
+  }
+
+  // 4) Recorremos parents del ejecutable resuelto
+  var execDirectory = File(Platform.resolvedExecutable).parent;
+  for (var i = 0; i < 8; i++) {
+    candidates.add(File('${execDirectory.path}${Platform.pathSeparator}.env'));
+    if (execDirectory.path == execDirectory.parent.path) break;
+    execDirectory = execDirectory.parent;
+  }
+
+  for (final candidate in candidates) {
+    if (await candidate.exists()) return candidate.path;
   }
   return null;
 }
