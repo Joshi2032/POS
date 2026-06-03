@@ -45,9 +45,9 @@ class _DashboardView extends StatelessWidget {
   String _formatAxisValue(double value) {
     final abs = value.abs();
     if (abs >= 1000000) return '\$${(value / 1000000).toStringAsFixed(1)}M';
-    if (abs >= 1000)    return '\$${(value / 1000).toStringAsFixed(1)}k';
-    if (abs >= 100)     return '\$${value.toStringAsFixed(0)}';
-    if (abs >= 10)      return '\$${value.toStringAsFixed(1)}';
+    if (abs >= 1000) return '\$${(value / 1000).toStringAsFixed(1)}k';
+    if (abs >= 100) return '\$${value.toStringAsFixed(0)}';
+    if (abs >= 10) return '\$${value.toStringAsFixed(1)}';
     return '\$${value.toStringAsFixed(2)}';
   }
 
@@ -57,7 +57,9 @@ class _DashboardView extends StatelessWidget {
     final raw = range / 5;
     // Potencia de 10 inmediatamente inferior al raw
     double mag = 1;
-    while (mag * 10 <= raw) mag *= 10;
+    while (mag * 10 <= raw) {
+      mag *= 10;
+    }
     // Candidatos bonitos: 1×, 2×, 5× la magnitud
     for (final factor in [1.0, 2.0, 5.0, 10.0]) {
       final candidate = factor * mag;
@@ -67,7 +69,8 @@ class _DashboardView extends StatelessWidget {
   }
 
   /// Devuelve {minY, maxY, interval} con suelo y techo "bonitos".
-  Map<String, double> _yScale(List<double> values, {bool allowNegative = false}) {
+  Map<String, double> _yScale(List<double> values,
+      {bool allowNegative = false}) {
     if (values.isEmpty || values.every((v) => v == 0)) {
       return {'min': 0, 'max': 10, 'interval': 2};
     }
@@ -90,7 +93,7 @@ class _DashboardView extends StatelessWidget {
     // Garantizamos que el rango nunca sea cero
     if (rawMax == rawMin) rawMax = rawMin + 10;
 
-    final double range    = rawMax - rawMin;
+    final double range = rawMax - rawMin;
     final double interval = _niceInterval(range);
 
     // Redondeamos al múltiplo de interval hacia afuera en cada extremo
@@ -127,8 +130,8 @@ class _DashboardView extends StatelessWidget {
     // Escala basada en los valores REALES de ingresos y gastos combinados
     final allValues = [...provider.currentIngresos, ...provider.currentGastos];
     final scale = _yScale(allValues);
-    final double minY     = scale['min']!;
-    final double maxY     = scale['max']!;
+    final double minY = scale['min']!;
+    final double maxY = scale['max']!;
     final double interval = scale['interval']!;
 
     return LineChartData(
@@ -237,9 +240,9 @@ class _DashboardView extends StatelessWidget {
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6));
 
     // La utilidad SÍ puede ser negativa, por eso allowNegative: true
-    final scale    = _yScale(provider.currentUtilidad, allowNegative: true);
-    final double minY     = scale['min']!;
-    final double maxY     = scale['max']!;
+    final scale = _yScale(provider.currentUtilidad, allowNegative: true);
+    final double minY = scale['min']!;
+    final double maxY = scale['max']!;
     final double interval = scale['interval']!;
 
     return BarChartData(
@@ -554,7 +557,7 @@ class _DashboardView extends StatelessWidget {
 
   Widget _buildChartLegend(BuildContext context) {
     final primary = Theme.of(context).primaryColor;
-    final error   = Theme.of(context).colorScheme.error;
+    final error = Theme.of(context).colorScheme.error;
     return Row(
       children: [
         Expanded(
@@ -563,24 +566,31 @@ class _DashboardView extends StatelessWidget {
         ),
         _legendDot(color: primary, label: 'Ingresos', context: context),
         const SizedBox(width: 16),
-        _legendDot(color: error,   label: 'Gastos',   context: context),
+        _legendDot(color: error, label: 'Gastos', context: context),
       ],
     );
   }
 
-  Widget _legendDot({required Color color, required String label, required BuildContext context}) {
+  Widget _legendDot(
+      {required Color color,
+      required String label,
+      required BuildContext context}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 10, height: 10,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
         Text(label,
             style: TextStyle(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7))),
       ],
     );
   }
@@ -699,21 +709,17 @@ class _DashboardView extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                    flex: 3,
-                    child: Text('Producto', style: textStyleHeader)),
+                    flex: 3, child: Text('Producto', style: textStyleHeader)),
                 Expanded(
-                    flex: 2,
-                    child: Text('Categoría', style: textStyleHeader)),
+                    flex: 2, child: Text('Categoría', style: textStyleHeader)),
                 Expanded(
                     flex: 2,
                     child: Text('Unidades',
-                        style: textStyleHeader,
-                        textAlign: TextAlign.center)),
+                        style: textStyleHeader, textAlign: TextAlign.center)),
                 Expanded(
                     flex: 2,
                     child: Text('Monto Total',
-                        style: textStyleHeader,
-                        textAlign: TextAlign.right)),
+                        style: textStyleHeader, textAlign: TextAlign.right)),
               ],
             ),
           ),
@@ -774,8 +780,7 @@ class _DashboardView extends StatelessWidget {
                                       decoration: BoxDecoration(
                                         color: theme.primaryColor
                                             .withValues(alpha: 0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(6),
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(prod.categoria,
                                           style: TextStyle(

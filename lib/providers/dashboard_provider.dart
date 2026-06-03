@@ -18,8 +18,9 @@ class ProductoRendimiento {
 
 class DashboardProvider extends ChangeNotifier {
   // Mantenemos la firma del constructor para no romper tu main.dart
-  DashboardProvider(dynamic repoOrdenes, dynamic repoGastos, dynamic repoPayments) {
-    cargarMetricasGlobales(); 
+  DashboardProvider(
+      dynamic repoOrdenes, dynamic repoGastos, dynamic repoPayments) {
+    cargarMetricasGlobales();
   }
 
   // Cliente directo de Supabase para consultas analíticas sin pérdida de datos
@@ -28,7 +29,7 @@ class DashboardProvider extends ChangeNotifier {
   // --- ESTADOS INTERNOS ---
   bool _isLoading = false;
   String? _errorMessage;
-  String _filterType = 'semana'; 
+  String _filterType = 'semana';
 
   // Guardaremos los datos crudos (JSON real de la BD)
   List<dynamic> _allOrders = [];
@@ -63,7 +64,7 @@ class DashboardProvider extends ChangeNotifier {
   List<double> get currentIngresos => _currentIngresos;
   List<double> get currentGastos => _currentGastos;
   List<double> get currentUtilidad => _currentUtilidad;
-  
+
   List<ProductoRendimiento> get currentProductos => _currentProductos;
 
   String get labelFiltro {
@@ -73,7 +74,7 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   void setFilterType(String type) {
-    if (_filterType == type) return; 
+    if (_filterType == type) return;
     _filterType = type;
     _procesarOperacionesFinancieras();
     notifyListeners();
@@ -87,8 +88,9 @@ class DashboardProvider extends ChangeNotifier {
 
     try {
       // 1. Extraemos las órdenes con TODOS sus items relacionados
-      final ordersRes = await _client.from('orders').select('*, order_items(*)');
-      
+      final ordersRes =
+          await _client.from('orders').select('*, order_items(*)');
+
       // 2. Extraemos los gastos
       List<dynamic> expensesRes = [];
       try {
@@ -99,7 +101,7 @@ class DashboardProvider extends ChangeNotifier {
       List<dynamic> paymentsRes = [];
       try {
         paymentsRes = await _client.from('supplier_payments').select('*');
-      } catch (_) {} 
+      } catch (_) {}
 
       _allOrders = ordersRes;
       _allExpenses = expensesRes;
@@ -118,17 +120,19 @@ class DashboardProvider extends ChangeNotifier {
   // --- MOTOR ANALÍTICO Y CRUCE DE TABLAS ---
   void _procesarOperacionesFinancieras() {
     final ahora = DateTime.now();
-    final hoyStr = ahora.toIso8601String().substring(0, 10); 
+    final hoyStr = ahora.toIso8601String().substring(0, 10);
 
     _ventasHoy = 0.0;
     _ordenesActivas = 0;
 
     final Map<String, ProductoRendimiento> mapaProductosFiltro = {};
 
-    bool cumpleFiltroFecha(DateTime fechaObjeto, DateTime inicioSemana, String mesStr, String anioStr) {
+    bool cumpleFiltroFecha(DateTime fechaObjeto, DateTime inicioSemana,
+        String mesStr, String anioStr) {
       if (_filterType == 'semana') {
-        return fechaObjeto.isAfter(inicioSemana.subtract(const Duration(seconds: 1))) && 
-               fechaObjeto.difference(inicioSemana).inDays < 7;
+        return fechaObjeto
+                .isAfter(inicioSemana.subtract(const Duration(seconds: 1))) &&
+            fechaObjeto.difference(inicioSemana).inDays < 7;
       } else if (_filterType == 'mes') {
         return fechaObjeto.toIso8601String().startsWith(mesStr);
       } else {
@@ -139,9 +143,11 @@ class DashboardProvider extends ChangeNotifier {
     // 1. CÁLCULO DE VENTAS DE HOY Y ÓRDENES ACTIVAS
     for (var rawJson in _allOrders) {
       try {
-        final String dateStr = rawJson['created_at']?.toString().substring(0, 10) ?? '';
+        final String dateStr =
+            rawJson['created_at']?.toString().substring(0, 10) ?? '';
         final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
-        final String estado = (rawJson['status'] ?? '').toString().toLowerCase();
+        final String estado =
+            (rawJson['status'] ?? '').toString().toLowerCase();
 
         // Solo sumamos dinero de órdenes que ya están pagadas (paid)
         if (dateStr.startsWith(hoyStr) && estado == 'paid') {
@@ -155,7 +161,8 @@ class DashboardProvider extends ChangeNotifier {
     }
 
     final lunesDeEstaSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
-    final inicioSemana = DateTime(lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
+    final inicioSemana = DateTime(
+        lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
     final mesActualStr = ahora.toIso8601String().substring(0, 7);
     final anioActualStr = ahora.year.toString();
 
@@ -168,12 +175,15 @@ class DashboardProvider extends ChangeNotifier {
       for (var rawJson in _allOrders) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
-          final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
-          final String estado = (rawJson['status'] ?? '').toString().toLowerCase();
+          final double totalValue =
+              (rawJson['total'] as num?)?.toDouble() ?? 0.0;
+          final String estado =
+              (rawJson['status'] ?? '').toString().toLowerCase();
 
           if (dateStr.isNotEmpty && estado == 'paid') {
             final fechaOrd = DateTime.parse(dateStr);
-            if (fechaOrd.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
+            if (fechaOrd
+                .isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
               final diasDiferencia = fechaOrd.difference(inicioSemana).inDays;
               if (diasDiferencia >= 0 && diasDiferencia < 7) {
                 _currentIngresos[diasDiferencia] += totalValue;
@@ -185,12 +195,15 @@ class DashboardProvider extends ChangeNotifier {
 
       for (var rawJson in _allExpenses) {
         try {
-          final String dateStr = rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
-          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
+          final String dateStr =
+              rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
+          final double amountValue =
+              (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
           if (dateStr.isNotEmpty) {
             final fechaGst = DateTime.parse(dateStr);
-            if (fechaGst.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
+            if (fechaGst
+                .isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
               final diasDiferencia = fechaGst.difference(inicioSemana).inDays;
               if (diasDiferencia >= 0 && diasDiferencia < 7) {
                 _currentGastos[diasDiferencia] += amountValue;
@@ -203,11 +216,13 @@ class DashboardProvider extends ChangeNotifier {
       for (var rawJson in _allSupplierPayments) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
-          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
-          
+          final double amountValue =
+              (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
+
           if (dateStr.isNotEmpty) {
             final fechaPag = DateTime.parse(dateStr);
-            if (fechaPag.isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
+            if (fechaPag
+                .isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
               final diasDiferencia = fechaPag.difference(inicioSemana).inDays;
               if (diasDiferencia >= 0 && diasDiferencia < 7) {
                 _currentGastos[diasDiferencia] += amountValue;
@@ -216,7 +231,6 @@ class DashboardProvider extends ChangeNotifier {
           }
         } catch (_) {}
       }
-
     } else if (_filterType == 'mes') {
       _currentLabels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
       _currentIngresos = List.generate(4, (_) => 0.0);
@@ -225,8 +239,10 @@ class DashboardProvider extends ChangeNotifier {
       for (var rawJson in _allOrders) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
-          final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
-          final String estado = (rawJson['status'] ?? '').toString().toLowerCase();
+          final double totalValue =
+              (rawJson['total'] as num?)?.toDouble() ?? 0.0;
+          final String estado =
+              (rawJson['status'] ?? '').toString().toLowerCase();
 
           if (dateStr.startsWith(mesActualStr) && estado == 'paid') {
             final dia = int.tryParse(dateStr.substring(8, 10)) ?? 1;
@@ -238,8 +254,10 @@ class DashboardProvider extends ChangeNotifier {
 
       for (var rawJson in _allExpenses) {
         try {
-          final String dateStr = rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
-          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
+          final String dateStr =
+              rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
+          final double amountValue =
+              (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
           if (dateStr.startsWith(mesActualStr)) {
             final dia = int.tryParse(dateStr.substring(8, 10)) ?? 1;
@@ -252,7 +270,8 @@ class DashboardProvider extends ChangeNotifier {
       for (var rawJson in _allSupplierPayments) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
-          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
+          final double amountValue =
+              (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
           if (dateStr.startsWith(mesActualStr)) {
             final dia = int.tryParse(dateStr.substring(8, 10)) ?? 1;
@@ -261,7 +280,6 @@ class DashboardProvider extends ChangeNotifier {
           }
         } catch (_) {}
       }
-
     } else {
       _currentLabels = ['Trim 1', 'Trim 2', 'Trim 3', 'Trim 4'];
       _currentIngresos = List.generate(4, (_) => 0.0);
@@ -270,8 +288,10 @@ class DashboardProvider extends ChangeNotifier {
       for (var rawJson in _allOrders) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
-          final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
-          final String estado = (rawJson['status'] ?? '').toString().toLowerCase();
+          final double totalValue =
+              (rawJson['total'] as num?)?.toDouble() ?? 0.0;
+          final String estado =
+              (rawJson['status'] ?? '').toString().toLowerCase();
 
           if (dateStr.startsWith(anioActualStr) && estado == 'paid') {
             final mes = int.tryParse(dateStr.substring(5, 7)) ?? 1;
@@ -283,8 +303,10 @@ class DashboardProvider extends ChangeNotifier {
 
       for (var rawJson in _allExpenses) {
         try {
-          final String dateStr = rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
-          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
+          final String dateStr =
+              rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
+          final double amountValue =
+              (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
           if (dateStr.startsWith(anioActualStr)) {
             final mes = int.tryParse(dateStr.substring(5, 7)) ?? 1;
@@ -297,7 +319,8 @@ class DashboardProvider extends ChangeNotifier {
       for (var rawJson in _allSupplierPayments) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
-          final double amountValue = (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
+          final double amountValue =
+              (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
           if (dateStr.startsWith(anioActualStr)) {
             final mes = int.tryParse(dateStr.substring(5, 7)) ?? 1;
@@ -312,28 +335,41 @@ class DashboardProvider extends ChangeNotifier {
     for (var rawJson in _allOrders) {
       try {
         final String dateStr = rawJson['created_at'] ?? '';
-        final String estado = (rawJson['status'] ?? '').toString().toLowerCase();
-        
+        final String estado =
+            (rawJson['status'] ?? '').toString().toLowerCase();
+
         // Solo contar productos de órdenes que ya fueron pagadas
         if (dateStr.isNotEmpty && estado == 'paid') {
           final fechaOrd = DateTime.parse(dateStr);
 
-          if (cumpleFiltroFecha(fechaOrd, inicioSemana, mesActualStr, anioActualStr)) {
+          if (cumpleFiltroFecha(
+              fechaOrd, inicioSemana, mesActualStr, anioActualStr)) {
             // Leemos los order_items obtenidos gracias a la consulta '.select("*, order_items(*)")'
             final items = rawJson['order_items'] ?? [];
             if (items is List) {
               for (var item in items) {
-                final nombreProd = (item['product_name'] ?? 'Producto Desconocido').toString();
-                
-                // Lógica de clasificación automática 
+                final nombreProd =
+                    (item['product_name'] ?? 'Producto Desconocido').toString();
+
+                // Lógica de clasificación automática
                 String categoriaProd = 'General';
                 final rawName = nombreProd.toLowerCase();
-                if (rawName.contains('arrachera') || rawName.contains('t-bone') || rawName.contains('corte')) categoriaProd = 'Parrilla';
-                else if (rawName.contains('cerveza') || rawName.contains('agua') || rawName.contains('refresco')) categoriaProd = 'Bebidas';
-                else if (rawName.contains('combo')) categoriaProd = 'Combos';
+                if (rawName.contains('arrachera') ||
+                    rawName.contains('t-bone') ||
+                    rawName.contains('corte')) {
+                  categoriaProd = 'Parrilla';
+                } else if (rawName.contains('cerveza') ||
+                    rawName.contains('agua') ||
+                    rawName.contains('refresco')) {
+                  categoriaProd = 'Bebidas';
+                } else if (rawName.contains('combo')) {
+                  categoriaProd = 'Combos';
+                }
 
                 final int cantidad = ((item['quantity'] ?? 1) as num).toInt();
-                final double precioSubtotal = ((item['total_price'] ?? item['unit_price'] ?? 0.0) as num).toDouble();
+                final double precioSubtotal =
+                    ((item['total_price'] ?? item['unit_price'] ?? 0.0) as num)
+                        .toDouble();
 
                 if (mapaProductosFiltro.containsKey(nombreProd)) {
                   mapaProductosFiltro[nombreProd]!.unidadesVendidas += cantidad;

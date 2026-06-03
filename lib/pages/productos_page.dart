@@ -24,7 +24,9 @@ class _ProductosView extends StatelessWidget {
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : provider.hasError
-              ? Center(child: Text(provider.errorMessage ?? 'Error al cargar productos'))
+              ? Center(
+                  child: Text(
+                      provider.errorMessage ?? 'Error al cargar productos'))
               : Column(
                   children: [
                     Padding(
@@ -33,7 +35,8 @@ class _ProductosView extends StatelessWidget {
                         decoration: InputDecoration(
                           labelText: 'Buscar producto...',
                           prefixIcon: const Icon(Icons.search),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10)),
                         ),
                         onChanged: provider.setSearchTerm,
                       ),
@@ -61,28 +64,42 @@ class _ProductosView extends StatelessWidget {
                     ),
                     Expanded(
                       child: provider.productosFiltrados.isEmpty
-                          ? const Center(child: Text('No hay productos para mostrar.'))
+                          ? const Center(
+                              child: Text('No hay productos para mostrar.'))
                           : ListView.builder(
                               itemCount: provider.productosFiltrados.length,
                               itemBuilder: (context, index) {
-                                final producto = provider.productosFiltrados[index];
+                                final producto =
+                                    provider.productosFiltrados[index];
                                 return Card(
-                                  margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 16.0, vertical: 8.0),
                                   child: ListTile(
-                                    title: Text(producto.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    subtitle: Text('${producto.category} | Stock: ${producto.stock} ${producto.unit}'),
+                                    title: Text(producto.name,
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    subtitle: Text(
+                                        '${producto.category} | Stock: ${producto.stock} ${producto.unit}'),
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Text('\$${producto.price.toStringAsFixed(2)}',
-                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                        Text(
+                                            '\$${producto.price.toStringAsFixed(2)}',
+                                            style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold)),
                                         IconButton(
-                                          icon: const Icon(Icons.edit, color: Colors.blue),
-                                          onPressed: () => _mostrarDialogoFormulario(context, producto),
+                                          icon: const Icon(Icons.edit,
+                                              color: Colors.blue),
+                                          onPressed: () =>
+                                              _mostrarDialogoFormulario(
+                                                  context, producto),
                                         ),
                                         IconButton(
-                                          icon: const Icon(Icons.delete, color: Colors.red),
-                                          onPressed: () => provider.deleteProducto(producto.id),
+                                          icon: const Icon(Icons.delete,
+                                              color: Colors.red),
+                                          onPressed: () => provider
+                                              .deleteProducto(producto.id),
                                         ),
                                       ],
                                     ),
@@ -101,29 +118,38 @@ class _ProductosView extends StatelessWidget {
     );
   }
 
-  void _mostrarDialogoFormulario(BuildContext context, Producto? productoExistente) {
+  void _mostrarDialogoFormulario(
+      BuildContext context, Producto? productoExistente) {
     final provider = context.read<ProductosProvider>();
     final isEditing = productoExistente != null;
 
-    final nombreCtrl = TextEditingController(text: isEditing ? productoExistente.name : '');
-    final descCtrl = TextEditingController(text: isEditing ? productoExistente.description : '');
-    final precioCtrl = TextEditingController(text: isEditing ? productoExistente.price.toString() : '');
-    final stockCtrl = TextEditingController(text: isEditing ? productoExistente.stock.toString() : '');
-    final unidadCtrl = TextEditingController(text: isEditing ? productoExistente.unit : '');
-        
-    final categoriasDisponibles = provider.categorias.where((c) => c != 'Todos').toList();
-        
+    final nombreCtrl =
+        TextEditingController(text: isEditing ? productoExistente.name : '');
+    final descCtrl = TextEditingController(
+        text: isEditing ? productoExistente.description : '');
+    final precioCtrl = TextEditingController(
+        text: isEditing ? productoExistente.price.toString() : '');
+    final stockCtrl = TextEditingController(
+        text: isEditing ? productoExistente.stock.toString() : '');
+    final unidadCtrl =
+        TextEditingController(text: isEditing ? productoExistente.unit : '');
+
+    final categoriasDisponibles =
+        provider.categorias.where((c) => c != 'Todos').toList();
+
     String? categoriaSeleccionada = isEditing
         ? productoExistente.category
-        : (categoriasDisponibles.isNotEmpty ? categoriasDisponibles.first : null);
+        : (categoriasDisponibles.isNotEmpty
+            ? categoriasDisponibles.first
+            : null);
 
     // LÓGICA DE RECETAS PARA EL FORMULARIO
     String? recetaSeleccionada = 'Ninguna';
     if (isEditing && productoExistente.recipeId != null) {
       final match = provider.recetas.firstWhere(
-        (name) => provider.getRecipeIdByName(name) == productoExistente.recipeId,
-        orElse: () => 'Ninguna'
-      );
+          (name) =>
+              provider.getRecipeIdByName(name) == productoExistente.recipeId,
+          orElse: () => 'Ninguna');
       recetaSeleccionada = match;
     }
 
@@ -137,25 +163,34 @@ class _ProductosView extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: nombreCtrl, decoration: const InputDecoration(labelText: 'Nombre')),
-                  TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Descripción')),
+                  TextField(
+                      controller: nombreCtrl,
+                      decoration: const InputDecoration(labelText: 'Nombre')),
+                  TextField(
+                      controller: descCtrl,
+                      decoration:
+                          const InputDecoration(labelText: 'Descripción')),
                   Row(
                     children: [
                       Expanded(
                           child: TextField(
                               controller: precioCtrl,
-                              decoration: const InputDecoration(labelText: 'Precio (\$)', prefixText: '\$'),
+                              decoration: const InputDecoration(
+                                  labelText: 'Precio (\$)', prefixText: '\$'),
                               keyboardType: TextInputType.number)),
                       const SizedBox(width: 10),
                       Expanded(
                           child: TextField(
                               controller: stockCtrl,
-                              decoration: const InputDecoration(labelText: 'Stock'),
+                              decoration:
+                                  const InputDecoration(labelText: 'Stock'),
                               keyboardType: TextInputType.number)),
                     ],
                   ),
-                  TextField(controller: unidadCtrl, decoration: const InputDecoration(labelText: 'Unidad (pz, kg, etc.)')),
-                  
+                  TextField(
+                      controller: unidadCtrl,
+                      decoration: const InputDecoration(
+                          labelText: 'Unidad (pz, kg, etc.)')),
                   if (categoriasDisponibles.isEmpty)
                     const Padding(
                       padding: EdgeInsets.only(top: 12.0),
@@ -166,27 +201,42 @@ class _ProductosView extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(top: 12.0),
                       child: DropdownButtonFormField<String>(
-                        initialValue: categoriasDisponibles.contains(categoriaSeleccionada)
+                        initialValue: categoriasDisponibles
+                                .contains(categoriaSeleccionada)
                             ? categoriaSeleccionada
                             : categoriasDisponibles.first,
-                        decoration: const InputDecoration(labelText: 'Categoría', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Categoría',
+                            border: OutlineInputBorder()),
                         items: categoriasDisponibles
-                            .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                            .map((cat) =>
+                                DropdownMenuItem(value: cat, child: Text(cat)))
                             .toList(),
                         onChanged: (val) {
-                          if (val != null) setState(() => categoriaSeleccionada = val);
+                          if (val != null) {
+                            setState(() => categoriaSeleccionada = val);
+                          }
                         },
                       ),
                     ),
-
                   Padding(
                     padding: const EdgeInsets.only(top: 12.0),
                     child: DropdownButtonFormField<String>(
-                      value: provider.recetas.contains(recetaSeleccionada) ? recetaSeleccionada : 'Ninguna',
-                      decoration: const InputDecoration(labelText: 'Receta a descontar (Opcional)', border: OutlineInputBorder()),
-                      items: provider.recetas.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                      initialValue:
+                          provider.recetas.contains(recetaSeleccionada)
+                              ? recetaSeleccionada
+                              : 'Ninguna',
+                      decoration: const InputDecoration(
+                          labelText: 'Receta a descontar (Opcional)',
+                          border: OutlineInputBorder()),
+                      items: provider.recetas
+                          .map(
+                              (r) => DropdownMenuItem(value: r, child: Text(r)))
+                          .toList(),
                       onChanged: (val) {
-                        if (val != null) setState(() => recetaSeleccionada = val);
+                        if (val != null) {
+                          setState(() => recetaSeleccionada = val);
+                        }
                       },
                     ),
                   ),
@@ -194,20 +244,24 @@ class _ProductosView extends StatelessWidget {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancelar')),
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancelar')),
               ElevatedButton(
                 onPressed: categoriasDisponibles.isEmpty
                     ? null
                     : () async {
-                        final uuidCategoria = provider.getCategoryIdByName(categoriaSeleccionada!);
-                        final uuidReceta = provider.getRecipeIdByName(recetaSeleccionada!);
+                        final uuidCategoria = provider
+                            .getCategoryIdByName(categoriaSeleccionada!);
+                        final uuidReceta =
+                            provider.getRecipeIdByName(recetaSeleccionada!);
 
                         final nuevoProducto = Producto(
                           id: productoExistente?.id ?? '',
                           name: nombreCtrl.text,
                           description: descCtrl.text,
-                          category: categoriaSeleccionada!, 
-                          categoryId: uuidCategoria,        
+                          category: categoriaSeleccionada!,
+                          categoryId: uuidCategoria,
                           price: double.tryParse(precioCtrl.text) ?? 0.0,
                           stock: int.tryParse(stockCtrl.text) ?? 0,
                           unit: unidadCtrl.text,
@@ -216,7 +270,8 @@ class _ProductosView extends StatelessWidget {
 
                         bool exito;
                         if (isEditing) {
-                          exito = await provider.updateProducto(productoExistente.id, nuevoProducto);
+                          exito = await provider.updateProducto(
+                              productoExistente.id, nuevoProducto);
                         } else {
                           exito = await provider.addProducto(nuevoProducto);
                         }
@@ -228,7 +283,8 @@ class _ProductosView extends StatelessWidget {
                         } else {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
                             SnackBar(
-                                content: Text(provider.errorMessage ?? 'Error al guardar en Supabase'),
+                                content: Text(provider.errorMessage ??
+                                    'Error al guardar en Supabase'),
                                 backgroundColor: Colors.red),
                           );
                         }
