@@ -213,17 +213,20 @@ class _OrdenesView extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                        order.orderNumber.isNotEmpty
-                                            ? order.orderNumber
-                                            : order.id,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: Colors.grey)),
+                                    Expanded(
+                                      child: Text(
+                                          order.orderNumber.isNotEmpty
+                                              ? order.orderNumber
+                                              : order.id,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                              color: Colors.grey)),
+                                    ),
+                                    const SizedBox(width: 8),
                                     Text('🕒 ${order.time}',
                                         style: const TextStyle(
                                             fontWeight: FontWeight.w500)),

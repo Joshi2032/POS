@@ -13,7 +13,7 @@ class CorteCajaRepository {
   Future<List<CorteCaja>> getAll() async {
     try {
       final response =
-          await _client.from(_table).select().order('date', ascending: false);
+          await _client.from(_table).select().order('cut_at', ascending: false);
       return (response as List)
           .map((json) => CorteCaja.fromJson(json))
           .toList();

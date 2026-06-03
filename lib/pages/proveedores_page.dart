@@ -200,7 +200,7 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                 maxCrossAxisExtent: 220,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                childAspectRatio: 1.8,
+                childAspectRatio: 2.2,
               ),
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -355,6 +355,7 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
     return AppCard(
       padding: const EdgeInsets.all(12),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
