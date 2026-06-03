@@ -24,9 +24,9 @@ class _ProductosView extends StatelessWidget {
         title: const Text('Inventario de Productos'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.category_outlined),
-            tooltip: 'Crear categoría',
-            onPressed: () => _mostrarDialogoCategoria(context),
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refrescar categorías',
+            onPressed: provider.cargarDatosCompletos,
           ),
         ],
       ),
@@ -172,106 +172,137 @@ class _ProductosView extends StatelessWidget {
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextField(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: TextField(
                       controller: nombreCtrl,
-                      decoration: const InputDecoration(labelText: 'Nombre')),
-                  TextField(
-                      controller: descCtrl,
-                      decoration:
-                          const InputDecoration(labelText: 'Descripción')),
-                  Row(
-                    children: [
-                      Expanded(
-                          child: TextField(
-                              controller: precioCtrl,
-                              decoration: const InputDecoration(
-                                  labelText: 'Precio (\$)', prefixText: '\$'),
-                              keyboardType: TextInputType.number)),
-                      const SizedBox(width: 10),
-                      Expanded(
-                          child: TextField(
-                              controller: stockCtrl,
-                              decoration:
-                                  const InputDecoration(labelText: 'Stock'),
-                              keyboardType: TextInputType.number)),
-                    ],
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre',
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                      ),
+                    ),
                   ),
-                  TextField(
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: TextField(
+                      controller: descCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Descripción',
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: precioCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Precio (\$)',
+                              prefixText: '\$',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 16),
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: stockCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Stock',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 16),
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: TextField(
                       controller: unidadCtrl,
                       decoration: const InputDecoration(
-                          labelText: 'Unidad (pz, kg, etc.)')),
+                        labelText: 'Unidad (pz, kg, etc.)',
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                      ),
+                    ),
+                  ),
                   Padding(
-                    padding: const EdgeInsets.only(top: 12.0),
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: categoriasDisponibles.isEmpty
                         ? Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Aún no hay categorías. Crea una ahora.',
+                                'Aún no hay categorías. Crea las categorías en la página "Categorías" y luego actualiza esta lista.',
                                 style:
                                     TextStyle(color: Colors.red, fontSize: 13),
                               ),
                               const SizedBox(height: 8),
                               OutlinedButton.icon(
-                                icon: const Icon(Icons.add),
-                                label: const Text('Crear Categoría'),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Actualizar categorías'),
                                 onPressed: () async {
                                   Navigator.pop(dialogContext);
-                                  await _mostrarDialogoCategoria(context);
+                                  await provider.cargarDatosCompletos();
+                                  if (!dialogContext.mounted) return;
                                   _mostrarDialogoFormulario(
                                       context, productoExistente);
                                 },
                               ),
                             ],
                           )
-                        : Column(
-                            children: [
-                              DropdownButtonFormField<String>(
-                                value: categoriasDisponibles
-                                        .contains(categoriaSeleccionada)
-                                    ? categoriaSeleccionada
-                                    : categoriasDisponibles.first,
-                                decoration: const InputDecoration(
-                                    labelText: 'Categoría',
-                                    border: OutlineInputBorder()),
-                                items: categoriasDisponibles
-                                    .map((cat) => DropdownMenuItem(
-                                        value: cat, child: Text(cat)))
-                                    .toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() => categoriaSeleccionada = val);
-                                  }
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: TextButton.icon(
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  label: const Text('Crear categoría nueva'),
-                                  onPressed: () async {
-                                    Navigator.pop(dialogContext);
-                                    await _mostrarDialogoCategoria(context);
-                                    _mostrarDialogoFormulario(
-                                        context, productoExistente);
-                                  },
-                                ),
-                              ),
-                            ],
+                        : DropdownButtonFormField<String>(
+                            initialValue: categoriasDisponibles
+                                    .contains(categoriaSeleccionada)
+                                ? categoriaSeleccionada
+                                : categoriasDisponibles.first,
+                            decoration: const InputDecoration(
+                              labelText: 'Categoría',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 16),
+                            ),
+                            items: categoriasDisponibles
+                                .map((cat) => DropdownMenuItem(
+                                    value: cat, child: Text(cat)))
+                                .toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => categoriaSeleccionada = val);
+                              }
+                            },
                           ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.only(top: 12.0),
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: DropdownButtonFormField<String>(
                       initialValue:
                           provider.recetas.contains(recetaSeleccionada)
                               ? recetaSeleccionada
                               : 'Ninguna',
                       decoration: const InputDecoration(
-                          labelText: 'Receta a descontar (Opcional)',
-                          border: OutlineInputBorder()),
+                        labelText: 'Receta a descontar (Opcional)',
+                        border: OutlineInputBorder(),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                      ),
                       items: provider.recetas
                           .map(
                               (r) => DropdownMenuItem(value: r, child: Text(r)))
@@ -337,57 +368,6 @@ class _ProductosView extends StatelessWidget {
             ],
           );
         });
-      },
-    );
-  }
-
-  Future<void> _mostrarDialogoCategoria(BuildContext context) async {
-    final provider = context.read<ProductosProvider>();
-    final nombreCtrl = TextEditingController();
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Crear categoría'),
-          content: TextField(
-            controller: nombreCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Nombre de la categoría',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final nombre = nombreCtrl.text.trim();
-                if (nombre.isEmpty) return;
-
-                final exito = await provider.addCategoria(nombre);
-                if (!dialogContext.mounted) return;
-
-                if (exito) {
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Categoría "$nombre" creada')),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          provider.errorMessage ?? 'Error al crear categoría'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              child: const Text('Crear'),
-            ),
-          ],
-        );
       },
     );
   }

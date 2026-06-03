@@ -133,6 +133,38 @@ class ProductosProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateCategoria(String id, String name) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _repository.updateCategoria(id, name);
+      await cargarDatosCompletos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<bool> deleteCategoria(String id) async {
+    _setLoading(true);
+    _clearError();
+    try {
+      await _repository.deleteCategoria(id);
+      await cargarDatosCompletos();
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<bool> deleteProducto(String id) async {
     _setLoading(true);
     _clearError();

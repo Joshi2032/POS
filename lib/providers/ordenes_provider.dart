@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../models/restaurant_order.dart';
 import '../repositories/orden_repository.dart';
 import 'base_provider.dart';
@@ -17,6 +21,55 @@ class OrdenesProvider extends BaseProvider {
 
   OrdenesProvider(this._repository) : super() {
     cargarOrdenes();
+    // In absence of a Realtime subscription, poll periodically as a safe fallback
+    _startPolling();
+    _initRealtimeSubscription();
+  }
+
+  Timer? _pollTimer;
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      try {
+        await cargarOrdenes();
+      } catch (_) {}
+    });
+  }
+
+  RealtimeSubscription? _ordersSubscription;
+
+  void _initRealtimeSubscription() {
+    try {
+      // Subscribe to inserts, updates and deletes on the orders table
+      _ordersSubscription = Supabase.instance.client
+          .from('orders')
+          .on(SupabaseEventTypes.insert, (payload) {
+        cargarOrdenes();
+      }).on(SupabaseEventTypes.update, (payload) {
+        cargarOrdenes();
+      }).on(SupabaseEventTypes.delete, (payload) {
+        cargarOrdenes();
+      }).subscribe();
+
+      // If subscription established, cancel polling fallback
+      if (_ordersSubscription != null) {
+        _pollTimer?.cancel();
+      }
+    } catch (e) {
+      debugPrint('Realtime subscription failed: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    try {
+      if (_ordersSubscription != null) {
+        Supabase.instance.client.removeSubscription(_ordersSubscription!);
+      }
+    } catch (_) {}
+    super.dispose();
   }
 
   // --- GETTERS (Exactamente como los necesita tu UI original) ---

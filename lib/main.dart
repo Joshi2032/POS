@@ -7,6 +7,7 @@ import 'app.dart';
 // --- Servicios y Repositorios ---
 import 'services/supabase_service.dart';
 import 'repositories/producto_repository.dart';
+import 'repositories/categoria_repository.dart';
 import 'repositories/gasto_repository.dart';
 import 'repositories/orden_repository.dart';
 import 'repositories/caja_repository.dart';
@@ -33,6 +34,7 @@ import 'providers/mesas_provider.dart';
 import 'providers/nominas_provider.dart';
 import 'providers/ordenes_provider.dart';
 import 'providers/productos_provider.dart';
+import 'providers/categorias_provider.dart';
 import 'providers/provider_payment.dart';
 import 'providers/reportes_provider.dart';
 import 'providers/reservaciones_provider.dart';
@@ -67,6 +69,7 @@ Future<void> main() async {
         // 2. REPOSITORIOS (Capa de Datos Estática)
         // ==========================================
         Provider(create: (_) => ProductoRepository(SupabaseService.client)),
+        Provider(create: (_) => CategoriaRepository(SupabaseService.client)),
         Provider(create: (_) => GastoRepository(SupabaseService.client)),
         Provider(create: (_) => OrdenRepository(SupabaseService.client)),
         Provider(create: (_) => CajaRepository(SupabaseService.client)),
@@ -90,13 +93,18 @@ Future<void> main() async {
               ProductosProvider(context.read<ProductoRepository>()),
         ),
         ChangeNotifierProvider(
+          create: (context) =>
+              CategoriasProvider(context.read<CategoriaRepository>()),
+        ),
+        ChangeNotifierProvider(
           create: (context) => GastosProvider(context.read<GastoRepository>()),
         ),
         ChangeNotifierProvider(
           create: (context) => OrdenesProvider(context.read<OrdenRepository>()),
         ),
         ChangeNotifierProvider(
-          create: (context) => CajaProvider(context.read<CajaRepository>()),
+          create: (context) => CajaProvider(
+              context.read<CajaRepository>(), context.read<OrdenesProvider>()),
         ),
         ChangeNotifierProvider(
             create: (context) =>

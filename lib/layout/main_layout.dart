@@ -14,24 +14,44 @@ class MainLayout extends StatelessWidget {
 
   String _getTitle() {
     switch (currentPath) {
-      case '/dashboard': return 'Dashboard';
-      case '/tomar-orden': return 'Tomar Orden';
-      case '/caja': return 'Caja';
-      case '/proveedores': return 'Proveedores';
-      case '/ordenes': return 'Órdenes';
-      case '/reservaciones': return 'Reservaciones';
-      case '/productos': return 'Productos';
-      case '/combos': return 'Combos';
-      case '/recetas': return 'Recetas';
-      case '/empleados': return 'Empleados';
-      case '/inventario': return 'Inventario';
-      case '/mesas': return 'Mesas';
-      case '/reportes': return 'Reportes';
-      case '/gastos': return 'Gastos';
-      case '/nominas': return 'Nóminas';
-      case '/historial-cortes': return 'Cortes de Caja';
-      case '/ajustes': return 'Ajustes';
-      default: return 'Zapata POS';
+      case '/dashboard':
+        return 'Dashboard';
+      case '/tomar-orden':
+        return 'Tomar Orden';
+      case '/caja':
+        return 'Caja';
+      case '/proveedores':
+        return 'Proveedores';
+      case '/ordenes':
+        return 'Órdenes';
+      case '/reservaciones':
+        return 'Reservaciones';
+      case '/productos':
+        return 'Productos';
+      case '/categorias':
+        return 'Categorías';
+      case '/combos':
+        return 'Combos';
+      case '/recetas':
+        return 'Recetas';
+      case '/empleados':
+        return 'Empleados';
+      case '/inventario':
+        return 'Inventario';
+      case '/mesas':
+        return 'Mesas';
+      case '/reportes':
+        return 'Reportes';
+      case '/gastos':
+        return 'Gastos';
+      case '/nominas':
+        return 'Nóminas';
+      case '/historial-cortes':
+        return 'Cortes de Caja';
+      case '/ajustes':
+        return 'Ajustes';
+      default:
+        return 'Zapata POS';
     }
   }
 

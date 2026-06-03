@@ -107,6 +107,16 @@ class DashboardProvider extends ChangeNotifier {
       _allExpenses = expensesRes;
       _allSupplierPayments = paymentsRes;
 
+      // DEBUG: mostrar información básica para depuración
+      try {
+        debugPrint('✅ DASHBOARD: órdenes obtenidas: ${_allOrders.length}');
+        if (_allOrders.isNotEmpty) {
+          // Muestra los primeros 3 estados para inspección rápida
+          final sample = _allOrders.take(3).map((o) => o['status']).toList();
+          debugPrint('✅ DASHBOARD: sample statuses: $sample');
+        }
+      } catch (_) {}
+
       _procesarOperacionesFinancieras();
     } catch (e) {
       _errorMessage = e.toString();
@@ -404,5 +414,10 @@ class DashboardProvider extends ChangeNotifier {
     }
 
     _utilidadFiltroTotal = _ingresoFiltroTotal - totalGastosFiltro;
+    // DEBUG: resultado rápido de métricas calculadas
+    try {
+      debugPrint(
+          '✅ DASHBOARD: ventasHoy=${_ventasHoy.toStringAsFixed(2)}, ordenesActivas=$_ordenesActivas, ingresoFiltro=${_ingresoFiltroTotal.toStringAsFixed(2)}');
+    } catch (_) {}
   }
 }

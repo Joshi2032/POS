@@ -31,6 +31,22 @@ class ProductoRepository {
     }
   }
 
+  Future<void> updateCategoria(String id, String name) async {
+    try {
+      await _client.from('categories').update({'name': name}).eq('id', id);
+    } catch (e) {
+      throw Exception('Error al actualizar categoría: $e');
+    }
+  }
+
+  Future<void> deleteCategoria(String id) async {
+    try {
+      await _client.from('categories').delete().eq('id', id);
+    } catch (e) {
+      throw Exception('Error al eliminar categoría: $e');
+    }
+  }
+
   Future<List<Producto>> getAll() async {
     try {
       // El JOIN para traer el nombre de la categoría

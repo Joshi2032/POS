@@ -14,6 +14,7 @@ import 'pages/caja_page.dart';
 import 'pages/proveedores_page.dart';
 import 'pages/combos_page.dart';
 import 'pages/recetas_page.dart';
+import 'pages/categorias_page.dart';
 import 'pages/reportes_page.dart';
 import 'pages/gastos_page.dart';
 import 'pages/nominas_page.dart';
@@ -21,7 +22,8 @@ import 'pages/historial_cortes_page.dart';
 import 'pages/ajustes_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
-final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _shellNavigatorKey =
+    GlobalKey<NavigatorState>();
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
@@ -34,23 +36,50 @@ final GoRouter appRouter = GoRouter(
         return MainLayout(currentPath: state.uri.path, child: child);
       },
       routes: [
-        GoRoute(path: '/dashboard', builder: (context, state) => const DashboardPage()),
-        GoRoute(path: '/tomar-orden', builder: (context, state) => const TomarOrdenPage()),
+        GoRoute(
+            path: '/dashboard',
+            builder: (context, state) => const DashboardPage()),
+        GoRoute(
+            path: '/tomar-orden',
+            builder: (context, state) => const TomarOrdenPage()),
         GoRoute(path: '/caja', builder: (context, state) => const CajaPage()),
-        GoRoute(path: '/proveedores', builder: (context, state) => const ProveedoresPage()),
-        GoRoute(path: '/ordenes', builder: (context, state) => const OrdenesPage()),
-        GoRoute(path: '/reservaciones', builder: (context, state) => const ReservacionesPage()),
-        GoRoute(path: '/productos', builder: (context, state) => const ProductosPage()),
-        GoRoute(path: '/combos', builder: (context, state) => const CombosPage()),
-        GoRoute(path: '/recetas', builder: (context, state) => const RecetasPage()),
-        GoRoute(path: '/empleados', builder: (context, state) => const EmpleadosPage()),
-        GoRoute(path: '/inventario', builder: (context, state) => const InventarioPage()),
+        GoRoute(
+            path: '/proveedores',
+            builder: (context, state) => const ProveedoresPage()),
+        GoRoute(
+            path: '/ordenes', builder: (context, state) => const OrdenesPage()),
+        GoRoute(
+            path: '/reservaciones',
+            builder: (context, state) => const ReservacionesPage()),
+        GoRoute(
+            path: '/productos',
+            builder: (context, state) => const ProductosPage()),
+        GoRoute(
+            path: '/categorias',
+            builder: (context, state) => const CategoriasPage()),
+        GoRoute(
+            path: '/combos', builder: (context, state) => const CombosPage()),
+        GoRoute(
+            path: '/recetas', builder: (context, state) => const RecetasPage()),
+        GoRoute(
+            path: '/empleados',
+            builder: (context, state) => const EmpleadosPage()),
+        GoRoute(
+            path: '/inventario',
+            builder: (context, state) => const InventarioPage()),
         GoRoute(path: '/mesas', builder: (context, state) => const MesasPage()),
-        GoRoute(path: '/reportes', builder: (context, state) => const ReportesPage()),
-        GoRoute(path: '/gastos', builder: (context, state) => const GastosPage()),
-        GoRoute(path: '/nominas', builder: (context, state) => const NominasPage()),
-        GoRoute(path: '/historial-cortes', builder: (context, state) => const HistorialCortesPage()),
-        GoRoute(path: '/ajustes', builder: (context, state) => const AjustesPage()),
+        GoRoute(
+            path: '/reportes',
+            builder: (context, state) => const ReportesPage()),
+        GoRoute(
+            path: '/gastos', builder: (context, state) => const GastosPage()),
+        GoRoute(
+            path: '/nominas', builder: (context, state) => const NominasPage()),
+        GoRoute(
+            path: '/historial-cortes',
+            builder: (context, state) => const HistorialCortesPage()),
+        GoRoute(
+            path: '/ajustes', builder: (context, state) => const AjustesPage()),
       ],
     ),
   ],
