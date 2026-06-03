@@ -381,7 +381,7 @@ class _DashboardView extends StatelessWidget {
                         physics: const NeverScrollableScrollPhysics(),
                         crossAxisSpacing: 16,
                         mainAxisSpacing: 16,
-                        childAspectRatio: 1.58,
+                        childAspectRatio: 1.45,
                         children: [
                           _buildMetricCard(context,
                               title: 'Ventas Hoy',
@@ -608,6 +608,7 @@ class _DashboardView extends StatelessWidget {
     return AppCard(
       padding: const EdgeInsets.all(12.0),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(

@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 
 class CorteCajaRepository {
   final SupabaseClient _client;
-  final String _table = 'cash_cuts';
+  final String _table = 'cash_register_cuts';
 
   // Inyección limpia mediante constructor
   CorteCajaRepository(this._client);
@@ -12,11 +12,11 @@ class CorteCajaRepository {
   // READ: Obtener todos los cortes ordenados por fecha descendente
   Future<List<CorteCaja>> getAll() async {
     try {
-      final response = await _client
-          .from(_table)
-          .select()
-          .order('date', ascending: false);
-      return (response as List).map((json) => CorteCaja.fromJson(json)).toList();
+      final response =
+          await _client.from(_table).select().order('date', ascending: false);
+      return (response as List)
+          .map((json) => CorteCaja.fromJson(json))
+          .toList();
     } catch (e) {
       throw Exception('Error al obtener los cortes de caja desde Supabase: $e');
     }
@@ -58,11 +58,8 @@ class CorteCajaRepository {
   // READ SINGLE: Buscar un arqueo por su identificador único
   Future<CorteCaja?> getById(String id) async {
     try {
-      final response = await _client
-          .from(_table)
-          .select()
-          .eq('id', id)
-          .single();
+      final response =
+          await _client.from(_table).select().eq('id', id).single();
       return CorteCaja.fromJson(response);
     } catch (e) {
       debugPrint('No se localizó el arqueo $id: $e');
