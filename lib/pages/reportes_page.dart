@@ -110,14 +110,16 @@ class _ReportesView extends StatelessWidget {
                               Expanded(
                                   child: _buildPaymentTypeIndicator(
                                       'Efectivo',
-                                      Formatters.money(provider.ingresosEfectivo),
+                                      Formatters.money(
+                                          provider.ingresosEfectivo),
                                       provider.porcentajeEfectivo,
                                       Colors.orange)),
                               const SizedBox(width: 16),
                               Expanded(
                                   child: _buildPaymentTypeIndicator(
                                       'Tarjeta / Transf.',
-                                      Formatters.money(provider.ingresosTarjeta),
+                                      Formatters.money(
+                                          provider.ingresosTarjeta),
                                       provider.porcentajeTarjeta,
                                       Colors.blue)),
                             ],
@@ -225,11 +227,10 @@ class _ReportesView extends StatelessWidget {
                                           rows: provider.productosRendimiento
                                               .map((p) => DataRow(cells: [
                                                     DataCell(Text(p.nombre,
-                                                        style:
-                                                            const TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500))),
+                                                        style: const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w500))),
                                                     DataCell(Chip(
                                                         label: Text(p.categoria,
                                                             style:
@@ -241,11 +242,10 @@ class _ReportesView extends StatelessWidget {
                                                     DataCell(Text(
                                                         p.unidadesVendidas
                                                             .toString(),
-                                                        style:
-                                                            const TextStyle(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold))),
+                                                        style: const TextStyle(
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold))),
                                                     DataCell(Container(
                                                       alignment:
                                                           Alignment.centerRight,
@@ -257,8 +257,8 @@ class _ReportesView extends StatelessWidget {
                                                                   fontWeight:
                                                                       FontWeight
                                                                           .bold,
-                                                                  color:
-                                                                      Colors.green)),
+                                                                  color: Colors
+                                                                      .green)),
                                                     )),
                                                   ]))
                                               .toList(),
@@ -409,8 +409,7 @@ class _ReportesView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(l,
-                              style:
-                                  const TextStyle(color: Colors.white70)),
+                              style: const TextStyle(color: Colors.white70)),
                           Text(v,
                               style: const TextStyle(
                                   color: Colors.white,
