@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Importación de dotenv
@@ -44,17 +46,56 @@ import 'providers/inventario_provider.dart';
 import 'providers/movimiento_caja_provider.dart';
 import 'providers/recipe_provider.dart';
 
+Future<String?> _findEnvFile() async {
+  final envFile = File('.env');
+  if (envFile.existsSync()) return envFile.path;
+
+  var currentDirectory = File(Platform.script.toFilePath()).parent;
+  for (var i = 0; i < 6; i++) {
+    final candidate =
+        File('${currentDirectory.path}${Platform.pathSeparator}.env');
+    if (candidate.existsSync()) return candidate.path;
+    if (currentDirectory.path == currentDirectory.parent.path) break;
+    currentDirectory = currentDirectory.parent;
+  }
+  return null;
+}
+
 Future<void> main() async {
   // Asegura que los canales de la plataforma nativa estén listos antes de inicializar servicios externos
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Carga asíncrona de las variables de entorno desde el archivo .env
-  await dotenv.load(fileName: ".env");
+  final envFile = await _findEnvFile();
+  if (envFile != null) {
+    await dotenv.load(fileName: envFile);
+    debugPrint('Cargado .env desde: $envFile');
+  } else {
+    debugPrint('No se encontró .env; usando variables de entorno del sistema.');
+  }
 
-  // Inicialización de Supabase usando las credenciales protegidas del archivo .env
+  final envUrl = dotenv.env['SUPABASE_URL']?.trim();
+  final envAnonKey = dotenv.env['SUPABASE_ANON_KEY']?.trim();
+  final url = (envUrl != null && envUrl.isNotEmpty)
+      ? envUrl
+      : Platform.environment['SUPABASE_URL']?.trim() ?? '';
+  final anonKey = (envAnonKey != null && envAnonKey.isNotEmpty)
+      ? envAnonKey
+      : Platform.environment['SUPABASE_ANON_KEY']?.trim() ?? '';
+
+  if (url.isEmpty || anonKey.isEmpty) {
+    throw StateError(
+      'SUPABASE_URL o SUPABASE_ANON_KEY faltan. '
+      'url=${url.isEmpty ? 'MISSING' : url}, '
+      'anonKey length=${anonKey.length}',
+    );
+  }
+  debugPrint(
+      'Supabase inicializado con URL=$url y anonKey length=${anonKey.length}');
+
+  // Inicialización de Supabase usando las credenciales protegidas del archivo .env o las variables de entorno
   await SupabaseService.init(
-    url: dotenv.env['SUPABASE_URL'] ?? '',
-    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    url: url,
+    anonKey: anonKey,
   );
 
   runApp(
