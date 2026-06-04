@@ -44,8 +44,9 @@ class _InventarioViewState extends State<_InventarioView> {
       categorias.insert(0, item.category);
     }
 
-    final generatedId =
-        item?.id ?? 'IT-${DateTime.now().millisecondsSinceEpoch}';
+    // CORRECCIÓN: Si es un nuevo registro, dejamos el ID vacío ('') 
+    // para que Supabase se encargue de generarlo automáticamente.
+    final generatedId = item?.id ?? '';
     final idController = TextEditingController(text: generatedId);
     final categoryController = TextEditingController(
         text:
@@ -141,8 +142,18 @@ class _InventarioViewState extends State<_InventarioView> {
                           item.id, inventoryItem);
                     }
 
-                    if (mounted && success) {
-                      Navigator.pop(dialogContext);
+                    if (mounted) {
+                      if (success) {
+                        Navigator.pop(dialogContext);
+                      } else {
+                        // MEJORA: Muestra un SnackBar si Supabase rechaza la petición
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(provider.errorMessage ?? 'Error al guardar en Supabase'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
                     }
                   },
                   child: const Text('Guardar'))
