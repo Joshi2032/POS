@@ -123,7 +123,7 @@ class _InventarioViewState extends State<_InventarioView> {
                   onPressed: () => Navigator.pop(dialogContext),
                   child: const Text('Cancelar')),
               ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final inventoryItem = InventoryItem(
                       id: generatedId,
                       name: nameController.text,
@@ -133,13 +133,17 @@ class _InventarioViewState extends State<_InventarioView> {
                       provider: providerController.text,
                     );
 
+                    bool success = false;
                     if (item == null) {
-                      provider.addInventoryItem(inventoryItem);
+                      success = await provider.addInventoryItem(inventoryItem);
                     } else {
-                      provider.updateInventoryItem(item.id, inventoryItem);
+                      success = await provider.updateInventoryItem(
+                          item.id, inventoryItem);
                     }
 
-                    Navigator.pop(dialogContext);
+                    if (mounted && success) {
+                      Navigator.pop(dialogContext);
+                    }
                   },
                   child: const Text('Guardar'))
             ],
