@@ -22,10 +22,18 @@ class _InventarioView extends StatefulWidget {
 }
 
 class _InventarioViewState extends State<_InventarioView> {
-  void openEditor(InventarioProvider provider, {InventoryItem? item}) {
-    final categorias = context
-        .read<CategoriasProvider>()
-        .categorias
+  Future<void> openEditor(InventarioProvider provider,
+      {InventoryItem? item}) async {
+    final categoriasProvider = context.read<CategoriasProvider>();
+
+    // Si no hay categorías cargadas, esperamos a que carguen
+    if (categoriasProvider.categorias.isEmpty) {
+      await categoriasProvider.cargarCategorias();
+    }
+
+    if (!mounted) return;
+
+    final categorias = categoriasProvider.categorias
         .map((cat) => cat['name']?.toString() ?? '')
         .where((name) => name.isNotEmpty)
         .toList();
@@ -50,9 +58,11 @@ class _InventarioViewState extends State<_InventarioView> {
     final providerController =
         TextEditingController(text: item?.provider ?? '');
 
+    if (!mounted) return;
+
     showDialog(
         context: context,
-        builder: (_) {
+        builder: (dialogContext) {
           return AlertDialog(
             title: Text(item == null ? 'Agregar Insumo' : 'Editar Insumo'),
             content: SingleChildScrollView(
@@ -110,7 +120,7 @@ class _InventarioViewState extends State<_InventarioView> {
             ),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(dialogContext),
                   child: const Text('Cancelar')),
               ElevatedButton(
                   onPressed: () {
@@ -129,7 +139,7 @@ class _InventarioViewState extends State<_InventarioView> {
                       provider.updateInventoryItem(item.id, inventoryItem);
                     }
 
-                    Navigator.pop(context);
+                    Navigator.pop(dialogContext);
                   },
                   child: const Text('Guardar'))
             ],
@@ -170,7 +180,9 @@ class _InventarioViewState extends State<_InventarioView> {
                               Row(mainAxisSize: MainAxisSize.min, children: [
                             IconButton(
                               icon: const Icon(Icons.edit),
-                              onPressed: () => openEditor(provider, item: it),
+                              onPressed: () async {
+                                await openEditor(provider, item: it);
+                              },
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete),
@@ -186,7 +198,9 @@ class _InventarioViewState extends State<_InventarioView> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => openEditor(provider),
+          onPressed: () async {
+            await openEditor(provider);
+          },
           icon: const Icon(Icons.add),
           label: const Text('Agregar')),
     );
