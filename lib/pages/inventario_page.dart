@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/inventory_item.dart';
+import '../providers/categorias_provider.dart';
 import '../providers/inventario_provider.dart';
 
 class InventarioPage extends StatelessWidget {
@@ -22,11 +23,26 @@ class _InventarioView extends StatefulWidget {
 
 class _InventarioViewState extends State<_InventarioView> {
   void openEditor(InventarioProvider provider, {InventoryItem? item}) {
-    final idController = TextEditingController(
-        text: item?.id ?? 'IT-${DateTime.now().millisecondsSinceEpoch}');
+    final categorias = context
+        .read<CategoriasProvider>()
+        .categorias
+        .map((cat) => cat['name']?.toString() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toList();
+
+    if (item != null &&
+        item.category.isNotEmpty &&
+        !categorias.contains(item.category)) {
+      categorias.insert(0, item.category);
+    }
+
+    final generatedId =
+        item?.id ?? 'IT-${DateTime.now().millisecondsSinceEpoch}';
+    final idController = TextEditingController(text: generatedId);
+    final categoryController = TextEditingController(
+        text:
+            item?.category ?? (categorias.isNotEmpty ? categorias.first : ''));
     final nameController = TextEditingController(text: item?.name ?? '');
-    final categoryController =
-        TextEditingController(text: item?.category ?? '');
     final stockController =
         TextEditingController(text: item?.stock.toString() ?? '0');
     final costController =
@@ -41,25 +57,50 @@ class _InventarioViewState extends State<_InventarioView> {
             title: Text(item == null ? 'Agregar Insumo' : 'Editar Insumo'),
             content: SingleChildScrollView(
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextField(
+                  if (item != null) ...[
+                    TextField(
                       controller: idController,
-                      decoration: const InputDecoration(labelText: 'ID')),
+                      enabled: false,
+                      decoration: const InputDecoration(labelText: 'ID'),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   TextField(
                       controller: nameController,
                       decoration: const InputDecoration(labelText: 'Nombre')),
-                  TextField(
-                      controller: categoryController,
-                      decoration:
-                          const InputDecoration(labelText: 'Categoría')),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: categorias.contains(categoryController.text)
+                        ? categoryController.text
+                        : null,
+                    decoration: const InputDecoration(labelText: 'Categoría'),
+                    items: categorias
+                        .map((cat) =>
+                            DropdownMenuItem(value: cat, child: Text(cat)))
+                        .toList(),
+                    onChanged: categorias.isNotEmpty
+                        ? (value) {
+                            if (value != null) {
+                              categoryController.text = value;
+                            }
+                          }
+                        : null,
+                    hint: const Text('Selecciona una categoría'),
+                    disabledHint: const Text('No hay categorías disponibles'),
+                  ),
+                  const SizedBox(height: 16),
                   TextField(
                       controller: stockController,
                       decoration: const InputDecoration(labelText: 'Stock'),
                       keyboardType: TextInputType.number),
+                  const SizedBox(height: 16),
                   TextField(
                       controller: costController,
                       decoration: const InputDecoration(labelText: 'Costo'),
                       keyboardType: TextInputType.number),
+                  const SizedBox(height: 16),
                   TextField(
                       controller: providerController,
                       decoration:
@@ -74,7 +115,7 @@ class _InventarioViewState extends State<_InventarioView> {
               ElevatedButton(
                   onPressed: () {
                     final inventoryItem = InventoryItem(
-                      id: idController.text,
+                      id: generatedId,
                       name: nameController.text,
                       category: categoryController.text,
                       stock: double.tryParse(stockController.text) ?? 0.0,
