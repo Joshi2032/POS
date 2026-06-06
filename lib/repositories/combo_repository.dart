@@ -16,27 +16,39 @@ class ComboRepository {
 
   // --- NUEVA LÓGICA DE TRANSACCIÓN: COMBO + PRODUCTOS ---
   Future<void> create(ComboItem combo, List<String> productIds) async {
-    try {
-      final data = combo.toJson();
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      
-      // 1. Insertamos el Combo y pedimos que nos devuelva el ID generado
-      final response = await _client.from('combos').insert(data).select('id').single();
-      final comboId = response['id'];
+  try {
+    final data = combo.toJson();
 
-      // 2. Insertamos las relaciones en la tabla pivote
-      if (productIds.isNotEmpty) {
-        final itemsToInsert = productIds.map((pId) => {
-          'combo_id': comboId,
-          'product_id': pId,
-          'quantity': 1
-        }).toList();
-        await _client.from('combo_items').insert(itemsToInsert);
-      }
-    } catch (e) {
-      throw Exception('Error al guardar el combo: $e');
+    // Quitamos el ID para que Supabase/PostgreSQL genere el UUID automáticamente
+    data.remove('id');
+
+    data.removeWhere(
+      (key, value) => value == null || value.toString().trim().isEmpty,
+    );
+
+    // 1. Insertamos el combo y obtenemos el UUID generado
+    final response = await _client
+        .from('combos')
+        .insert(data)
+        .select('id')
+        .single();
+
+    final comboId = response['id'];
+
+    // 2. Insertamos los productos asociados al combo
+    if (productIds.isNotEmpty) {
+      final itemsToInsert = productIds.map((pId) => {
+            'combo_id': comboId,
+            'product_id': pId,
+            'quantity': 1,
+          }).toList();
+
+      await _client.from('combo_items').insert(itemsToInsert);
     }
+  } catch (e) {
+    throw Exception('Error al guardar el combo: $e');
   }
+}
 
   Future<void> update(String id, ComboItem combo, List<String> productIds) async {
     try {
