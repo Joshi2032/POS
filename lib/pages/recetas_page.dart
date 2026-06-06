@@ -179,6 +179,10 @@ class _RecetasViewState extends State<_RecetasView> {
     String? selectedInsumoId = provider.inventarioDisponible.first['id'].toString();
     final qtyCtrl = TextEditingController(text: '1');
 
+    // 👇 1. Variables para controlar las opciones de unidad 👇
+    final List<String> opcionesUnidades = ['kg', 'g', 'l', 'ml', 'pza'];
+    String? unidadElegida; // Inicia en null para tomar la del inventario primero
+
     showDialog(
       context: parentContext,
       builder: (context) {
@@ -187,12 +191,20 @@ class _RecetasViewState extends State<_RecetasView> {
             final insumoMap = provider.inventarioDisponible.firstWhere((i) => i['id'].toString() == selectedInsumoId);
             final currentUnit = insumoMap['unit'] ?? 'ud';
 
+            // 👇 2. Aseguramos que la unidad del inventario no crashee el Dropdown si no está en la lista 👇
+            List<String> dropDownItems = List.from(opcionesUnidades);
+            if (!dropDownItems.contains(currentUnit)) {
+              dropDownItems.add(currentUnit);
+            }
+
+            // Usamos la elegida por el usuario, o la por defecto
+            final unidadAUsar = unidadElegida ?? currentUnit;
+
             return AlertDialog(
               title: const Text('Añadir Ingrediente', style: TextStyle(fontSize: 16)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // FIX: Se usa initialValue en lugar de value por actualización de Flutter
                   DropdownButtonFormField<String>(
                     isExpanded: true,
                     initialValue: selectedInsumoId,
@@ -203,12 +215,16 @@ class _RecetasViewState extends State<_RecetasView> {
                         child: Text(inv['name']),
                       );
                     }).toList(),
-                    onChanged: (val) => setStateSub(() => selectedInsumoId = val),
+                    onChanged: (val) => setStateSub(() {
+                      selectedInsumoId = val;
+                      unidadElegida = null; // Resetea la unidad a la de por defecto al cambiar de materia prima
+                    }),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
+                        flex: 2,
                         child: TextField(
                           controller: qtyCtrl,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -216,7 +232,24 @@ class _RecetasViewState extends State<_RecetasView> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text(currentUnit, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      
+                      // 👇 3. Cambiamos el Text por el DropdownButtonFormField 👇
+                      Expanded(
+                        flex: 1,
+                        child: DropdownButtonFormField<String>(
+                          value: unidadAUsar,
+                          decoration: const InputDecoration(border: OutlineInputBorder()),
+                          items: dropDownItems.map((u) {
+                            return DropdownMenuItem(
+                              value: u,
+                              child: Text(u, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            setStateSub(() => unidadElegida = val);
+                          },
+                        ),
+                      ),
                     ],
                   )
                 ],
@@ -231,7 +264,8 @@ class _RecetasViewState extends State<_RecetasView> {
                         supplyId: selectedInsumoId,
                         supplyName: insumoMap['name'],
                         quantity: qty,
-                        unit: currentUnit,
+                        // 👇 4. Aquí guardamos la unidad que seleccionaste 👇
+                        unit: unidadAUsar,
                       ));
                       Navigator.pop(context);
                     }
