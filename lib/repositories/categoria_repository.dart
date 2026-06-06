@@ -28,6 +28,17 @@ class CategoriaRepository {
     }
   }
 
+  Future<void> toggleActive(String id, bool active) async {
+  try {
+    await _client
+        .from('categories')
+        .update({'active': active})
+        .eq('id', id);
+  } catch (e) {
+    throw Exception('Error al cambiar estado de categoría: $e');
+  }
+}
+
   Future<void> update(String id, String name) async {
     try {
       await _client.from('categories').update({'name': name}).eq('id', id);

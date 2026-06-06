@@ -65,6 +65,28 @@ class _CategoriasView extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
+  icon: Icon(
+    categoria['active'] == true
+        ? Icons.visibility
+        : Icons.visibility_off,
+    color: categoria['active'] == true
+        ? Colors.green
+        : Colors.orange,
+  ),
+  tooltip: categoria['active'] == true
+      ? 'Desactivar'
+      : 'Activar',
+  onPressed: () async {
+    final id = categoria['id']?.toString();
+    if (id == null) return;
+
+    await provider.toggleCategoria(
+      id,
+      !(categoria['active'] == true),
+    );
+  },
+),
+                              IconButton(
                                 icon:
                                     const Icon(Icons.edit, color: Colors.blue),
                                 tooltip: 'Editar categoría',

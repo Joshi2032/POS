@@ -61,6 +61,23 @@ class CategoriasProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> toggleCategoria(String id, bool active) async {
+  _setLoading(true);
+  _clearError();
+
+  try {
+    await _repository.toggleActive(id, active);
+    await cargarCategorias();
+    return true;
+  } catch (e) {
+    _errorMessage = e.toString();
+    notifyListeners();
+    return false;
+  } finally {
+    _setLoading(false);
+  }
+}
+
   Future<bool> deleteCategoria(String id) async {
     _setLoading(true);
     _clearError();
