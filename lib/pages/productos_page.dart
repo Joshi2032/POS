@@ -91,28 +91,56 @@ class _ProductosView extends StatelessWidget {
                                         '${producto.category} | Stock: ${producto.stock} ${producto.unit}'),
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                            '\$${producto.price.toStringAsFixed(2)}',
-                                            style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold)),
-                                        IconButton(
-                                          icon: const Icon(Icons.edit,
-                                              color: Colors.blue),
-                                          onPressed: () =>
-                                              _mostrarDialogoFormulario(
-                                                  context, producto),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete,
-                                              color: Colors.red),
-                                          onPressed: () => provider
-                                              .deleteProducto(producto.id),
-                                        ),
-                                      ],
-                                    ),
+                                     children: [
+  Text(
+    '\$${producto.price.toStringAsFixed(2)}',
+    style: const TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+
+  IconButton(
+    icon: Icon(
+      producto.active
+          ? Icons.visibility
+          : Icons.visibility_off,
+      color: producto.active
+          ? Colors.green
+          : Colors.orange,
+    ),
+    tooltip: producto.active
+        ? 'Desactivar'
+        : 'Activar',
+    onPressed: () async {
+      await provider.toggleProducto(
+        producto.id,
+        !producto.active,
+      );
+    },
+  ),
+
+  IconButton(
+    icon: const Icon(
+      Icons.edit,
+      color: Colors.blue,
+    ),
+    onPressed: () =>
+        _mostrarDialogoFormulario(
+            context, producto),
+  ),
+
+  IconButton(
+    icon: const Icon(
+      Icons.delete,
+      color: Colors.red,
+    ),
+    onPressed: () =>
+        provider.deleteProducto(producto.id),
+  ),
+],
                                   ),
+                                  )
                                 );
                               },
                             ),
@@ -338,6 +366,7 @@ class _ProductosView extends StatelessWidget {
                           categoryId: uuidCategoria,
                           price: double.tryParse(precioCtrl.text) ?? 0.0,
                           stock: int.tryParse(stockCtrl.text) ?? 0,
+                          active: productoExistente?.active ?? true,
                           unit: unidadCtrl.text,
                           recipeId: uuidReceta, // Vinculamos la receta
                         );

@@ -85,6 +85,23 @@ class ProductosProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> toggleProducto(String id, bool active) async {
+  _setLoading(true);
+  _clearError();
+
+  try {
+    await _repository.toggleActive(id, active);
+    await cargarDatosCompletos();
+    return true;
+  } catch (e) {
+    _errorMessage = e.toString();
+    notifyListeners();
+    return false;
+  } finally {
+    _setLoading(false);
+  }
+}
+
   Future<bool> addProducto(Producto producto) async {
     _setLoading(true);
     _clearError();

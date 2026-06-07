@@ -51,12 +51,23 @@ class ProductoRepository {
     try {
       // El JOIN para traer el nombre de la categoría
       final response =
-          await _client.from('products').select('*, categories(name)');
+    await _client.from('products').select('*, active, categories(name)');
       return (response as List).map((json) => Producto.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Error al obtener productos: $e');
     }
   }
+
+  Future<void> toggleActive(String id, bool active) async {
+  try {
+    await _client
+        .from('products')
+        .update({'active': active})
+        .eq('id', id);
+  } catch (e) {
+    throw Exception('Error al cambiar estado del producto: $e');
+  }
+}
 
   Future<void> create(Producto product) async {
     try {
