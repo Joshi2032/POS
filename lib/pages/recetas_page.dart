@@ -237,7 +237,7 @@ class _RecetasViewState extends State<_RecetasView> {
                       Expanded(
                         flex: 1,
                         child: DropdownButtonFormField<String>(
-                          value: unidadAUsar,
+                          initialValue: unidadAUsar,
                           decoration: const InputDecoration(border: OutlineInputBorder()),
                           items: dropDownItems.map((u) {
                             return DropdownMenuItem(

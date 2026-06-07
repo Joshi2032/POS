@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../repositories/producto_repository.dart';
 import '../repositories/mesa_repository.dart';
+import '../repositories/combo_repository.dart'; // AGREGADO
 import '../models/product.dart'; // Asegúrate que esta ruta sea correcta
 import '../models/cart_item.dart';
 import '../models/mesa.dart';
@@ -10,8 +11,13 @@ enum OrderType { dineIn, takeaway }
 class TomarOrdenProvider extends ChangeNotifier {
   final ProductoRepository _productoRepository;
   final MesaRepository _mesaRepository;
+  final ComboRepository _comboRepository; // AGREGADO
 
-  TomarOrdenProvider(this._productoRepository, this._mesaRepository) {
+  TomarOrdenProvider(
+    this._productoRepository, 
+    this._mesaRepository, 
+    this._comboRepository, // AGREGADO
+  ) {
     cargarProductos();
     cargarMesas();
   }
@@ -72,8 +78,16 @@ class TomarOrdenProvider extends ChangeNotifier {
   double get total =>
       _cart.fold(0.0, (sum, item) => sum + (item.qty * item.product.price));
 
+  // CORREGIDO: Evitamos la duplicación de la categoría 'Combos'
   List<String> get categories {
     final cats = _products.map((p) => p.category).toSet().toList();
+    
+    // Si por alguna razón la lista de combos está vacía, agregamos la categoría manualmente,
+    // pero si ya existen combos cargados, evitamos duplicarla.
+    if (!cats.contains('Combos')) {
+      cats.add('Combos');
+    }
+    
     return ['Todos', ...cats];
   }
 
@@ -96,10 +110,36 @@ class TomarOrdenProvider extends ChangeNotifier {
 
   Future<void> cargarProductos() async {
     try {
-      _products = await _productoRepository.getAll();
+      // 1. Cargamos los productos normales
+      final productosDB = await _productoRepository.getAll();
+      
+      // 2. Cargamos los combos
+      final combosDB = await _comboRepository.getAll();
+
+      // 3. Convertimos los ComboItem a Producto para que el carrito los entienda
+      final combosConvertidos = combosDB.map((combo) {
+        return Producto(
+          id: combo.id, 
+          name: combo.title,             // El título del combo pasa a ser el nombre
+          description: combo.subtitle,   // El subtítulo pasa a ser la descripción
+          price: combo.price,
+          category: 'Combos',            // Forzamos la categoría para los filtros
+          
+          stock: 999,
+          unit: 'combo',
+          active: true,
+          // NOTA: Si tu clase "Producto" en 'models/product.dart' requiere obligatoriamente 
+          // campos como 'imageUrl', 'active', etc., agrégalos aquí. 
+          // Por ejemplo: imageUrl: '', active: true
+        );
+      }).toList();
+
+      // 4. Unimos ambas listas
+      _products = [...productosDB, ...combosConvertidos];
+      
       notifyListeners();
     } catch (e) {
-      debugPrint('Error cargando productos: $e');
+      debugPrint('Error cargando productos y combos: $e');
     }
   }
 
@@ -158,7 +198,6 @@ class TomarOrdenProvider extends ChangeNotifier {
   }
 
   void addToCart(Producto product) {
-    // CORRECCIÓN: Comparamos IDs como strings para evitar errores de tipo int/string
     final index = _cart.indexWhere(
         (item) => item.product.id.toString() == product.id.toString());
     if (index == -1) {
@@ -176,7 +215,6 @@ class TomarOrdenProvider extends ChangeNotifier {
 
   void decrement(CartItem item) {
     if (item.qty <= 1) {
-      // CORRECCIÓN: Comparamos ID como String
       _cart.removeWhere(
           (entry) => entry.product.id.toString() == item.product.id.toString());
     } else {

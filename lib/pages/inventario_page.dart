@@ -144,7 +144,9 @@ class _InventarioViewState extends State<_InventarioView> {
 
                     if (mounted) {
                       if (success) {
-                        Navigator.pop(dialogContext);
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                        }
                       } else {
                         // MEJORA: Muestra un SnackBar si Supabase rechaza la petición
                         ScaffoldMessenger.of(context).showSnackBar(

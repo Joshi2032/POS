@@ -219,6 +219,7 @@ Future<void> main() async {
           create: (context) => TomarOrdenProvider(
             context.read<ProductoRepository>(),
             context.read<MesaRepository>(),
+            context.read<ComboRepository>(), // <-- ¡Esta es la línea que faltaba!
           ),
         ),
 
