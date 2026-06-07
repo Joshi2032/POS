@@ -327,24 +327,35 @@ class _CartSection extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                      orderType == OrderType.dineIn
-                          ? 'Mesa $selectedTable'
-                          : 'Para Llevar',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: textColor)),
-                  Text(
-                      orderType == OrderType.dineIn
-                          ? 'Servicio en Mesa'
-                          : 'Recoger en Cocina',
-                      style: TextStyle(fontSize: 12, color: textSubColor)),
-                ],
+              // 1. Añadimos el widget Expanded aquí
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        orderType == OrderType.dineIn
+                            ? 'Mesa $selectedTable'
+                            : 'Para Llevar',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: textColor),
+                        // 2. Añadimos ellipsis para que no rompa el diseño
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1, // Garantiza que no baje a la siguiente línea
+                    ),
+                    Text(
+                        orderType == OrderType.dineIn
+                            ? 'Servicio en Mesa'
+                            : 'Recoger en Cocina',
+                        style: TextStyle(fontSize: 12, color: textSubColor),
+                        overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              // Un pequeño margen de separación
+              const SizedBox(width: 12),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

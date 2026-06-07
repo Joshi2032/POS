@@ -30,15 +30,22 @@ class _ProductosView extends StatelessWidget {
           ),
         ],
       ),
-      body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : provider.hasError
-              ? Center(
-                  child: Text(
-                      provider.errorMessage ?? 'Error al cargar productos'))
-              : Column(
-                  children: [
-                    Padding(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 720;
+          final horizontalPadding = isNarrow ? 12.0 : 16.0;
+
+          return provider.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : provider.hasError
+                  ? Center(
+                      child: Text(
+                          provider.errorMessage ?? 'Error al cargar productos'))
+                  : Padding(
+                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                      child: Column(
+                        children: [
+                          Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: TextField(
                         decoration: InputDecoration(
@@ -146,7 +153,10 @@ class _ProductosView extends StatelessWidget {
                             ),
                     ),
                   ],
-                ),
+                        ),
+                      );
+        },
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _mostrarDialogoFormulario(context, null),
         label: const Text('Nuevo Producto'),
@@ -228,35 +238,46 @@ class _ProductosView extends StatelessWidget {
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: precioCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Precio (\$)',
-                              prefixText: '\$',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 16),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isNarrowField = constraints.maxWidth < 520;
+                        final fieldWidth = isNarrowField
+                            ? double.infinity
+                            : (constraints.maxWidth - 12) / 2;
+                        return Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            SizedBox(
+                              width: fieldWidth,
+                              child: TextField(
+                                controller: precioCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Precio (\$)',
+                                  prefixText: '\$',
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 16),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
                             ),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: stockCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Stock',
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 16),
+                            SizedBox(
+                              width: fieldWidth,
+                              child: TextField(
+                                controller: stockCtrl,
+                                decoration: const InputDecoration(
+                                  labelText: 'Stock',
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 16),
+                                ),
+                                keyboardType: TextInputType.number,
+                              ),
                             ),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                   ),
                   Padding(

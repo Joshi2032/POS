@@ -176,288 +176,352 @@ class _MesasViewState extends State<_MesasView> {
 
     final provider = Provider.of<MesasProvider>(context, listen: true);
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalPadding = screenWidth < 700 ? 16.0 : 32.0;
+    final verticalPadding = screenWidth < 700 ? 12.0 : 20.0;
+    final isNarrow = screenWidth < 760;
+    final isVeryNarrow = screenWidth < 520;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // HEADER
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: SectionHeader(
-                    title: '🪑 Configuración de Mesas', // Icono añadido
-                    subtitle: '${provider.mesas.length} mesas configuradas',
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding,
+            vertical: verticalPadding,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // HEADER
+              if (isNarrow) ...[
+                SectionHeader(
+                  title: '🪑 Configuración de Mesas',
+                  subtitle: '${provider.mesas.length} mesas configuradas',
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _abrirModalAgregarEditar(provider),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 16),
+                    ),
+                    child: const Text('+ Nueva Mesa',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 ),
-                const SizedBox(width: 16),
-                ElevatedButton(
-                  onPressed: () => _abrirModalAgregarEditar(provider),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
-                  ),
-                  child: const Text('+ Nueva Mesa',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                )
+              ] else ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: SectionHeader(
+                        title: '🪑 Configuración de Mesas',
+                        subtitle: '${provider.mesas.length} mesas configuradas',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    ElevatedButton(
+                      onPressed: () => _abrirModalAgregarEditar(provider),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 16),
+                      ),
+                      child: const Text('+ Nueva Mesa',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                    )
+                  ],
+                ),
               ],
-            ),
-            const SizedBox(height: 32),
-            
-            // KPI CARDS
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildKpiCard('Libres', provider.libres, const Color(0xFF2FFF7A)),
-                const SizedBox(width: 20),
-                _buildKpiCard('Ocupadas', provider.ocupadas, primaryColor),
-                const SizedBox(width: 20),
-                _buildKpiCard('Por cobrar', provider.porCobrar, primaryColor), // Ajustado al naranja de la imagen
-              ],
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 28),
 
-            // FILTROS (CHIPS)
-            Wrap(
-              spacing: 12,
-              children: provider.filtros.map((f) {
-                final isActive = provider.filtroSeleccionado == f;
-                return InkWell(
-                  onTap: () => provider.setFiltro(f),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 22, vertical: 10),
-                    decoration: BoxDecoration(
-                        color: isActive ? primaryColor : darkBgColor, // Naranja o gris oscuro
+              // KPI CARDS
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _buildKpiCard('Libres', provider.libres, const Color(0xFF2FFF7A), maxWidth: isVeryNarrow ? double.infinity : 180),
+                  _buildKpiCard('Ocupadas', provider.ocupadas, primaryColor, maxWidth: isVeryNarrow ? double.infinity : 180),
+                  _buildKpiCard('Por cobrar', provider.porCobrar, primaryColor, maxWidth: isVeryNarrow ? double.infinity : 180),
+                ],
+              ),
+              const SizedBox(height: 32),
+
+              // FILTROS (CHIPS)
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: provider.filtros.map((f) {
+                  final isActive = provider.filtroSeleccionado == f;
+                  return InkWell(
+                    onTap: () => provider.setFiltro(f),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 22, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isActive ? primaryColor : darkBgColor,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                             color: isActive ? primaryColor : Colors.transparent),
-                    ),
-                    child: Text(
-                      f,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: isActive ? Colors.white : Colors.white70,
                       ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 24),
-
-            // LISTADO DE ÁREAS Y MESAS
-            Expanded(
-              child: ListView(
-                children: provider.areas
-                    .where((area) =>
-                        provider.filtroSeleccionado == 'Todas' ||
-                        provider.filtroSeleccionado == area)
-                    .map((area) {
-                  final mesasEnArea =
-                      provider.mesas.where((m) => m.area == area).toList();
-                  if (mesasEnArea.isEmpty) return const SizedBox.shrink();
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 24, bottom: 16),
-                        child: Text(
-                          area,
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: primaryTextColor),
+                      child: Text(
+                        f,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: isActive ? Colors.white : Colors.white70,
                         ),
                       ),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final availableWidth = constraints.maxWidth;
-                          final cardWidth = 280.0;
-                          final spacing = 16.0;
-                          final columns = ((availableWidth + spacing) / (cardWidth + spacing)).floor();
-                          final adjustedCardWidth = (availableWidth - (spacing * (columns > 0 ? columns - 1 : 0))) / (columns > 0 ? columns : 1);
-
-                          return GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: columns > 0 ? columns : 1,
-                              childAspectRatio: adjustedCardWidth / 200,
-                              crossAxisSpacing: spacing,
-                              mainAxisSpacing: spacing,
-                            ),
-                            itemCount: mesasEnArea.length,
-                            itemBuilder: (context, index) {
-                              final mesa = mesasEnArea[index];
-                              final isOcupada = mesa.estado == 'Ocupada';
-                              
-                              return AppCard(
-                                padding: const EdgeInsets.all(16),
-                                child: Stack(
-                                  children: [
-                                    // Contenido principal
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Badge de estado + Botones
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                              decoration: BoxDecoration(
-                                                color: primaryColor,
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                mesa.estado,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                            Row(
-                                              children: [
-                                                IconButton(
-                                                  icon: const Icon(Icons.edit, size: 18),
-                                                  color: primaryColor,
-                                                  onPressed: () => _abrirModalAgregarEditar(provider, mesa: mesa),
-                                                  padding: EdgeInsets.zero,
-                                                  constraints: const BoxConstraints(),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                IconButton(
-                                                  icon: const Icon(Icons.delete, size: 18),
-                                                  color: Colors.redAccent,
-                                                  onPressed: isOcupada
-                                                      ? () {
-                                                          ScaffoldMessenger.of(context).showSnackBar(
-                                                            const SnackBar(
-                                                              content: Text('No puedes eliminar una mesa ocupada.'),
-                                                              backgroundColor: Colors.redAccent,
-                                                            ),
-                                                          );
-                                                        }
-                                                      : () {
-                                                          showDialog(
-                                                            context: context,
-                                                            builder: (context) => AlertDialog(
-                                                              title: const Text('Eliminar mesa'),
-                                                              content: Text('Se eliminará ${mesa.nombre}'),
-                                                              actions: [
-                                                                TextButton(
-                                                                  onPressed: () => Navigator.pop(context),
-                                                                  child: const Text('Cancelar'),
-                                                                ),
-                                                                TextButton(
-                                                                  onPressed: () async {
-                                                                    await provider.removeMesa(mesa.id);
-                                                                    if (context.mounted) {
-                                                                      Navigator.pop(context);
-                                                                    }
-                                                                  },
-                                                                  child: const Text('Confirmar', style: TextStyle(color: Colors.red)),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          );
-                                                        },
-                                                  padding: EdgeInsets.zero,
-                                                  constraints: const BoxConstraints(),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 12),
-                                        // Nombre de la mesa
-                                        Text(
-                                          mesa.nombre,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 18,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        // Capacidad
-                                        Text(
-                                          '${mesa.capacidad} personas',
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        // Área
-                                        Text(
-                                          mesa.area,
-                                          style: TextStyle(
-                                            color: primaryColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      )
-                    ],
+                    ),
                   );
                 }).toList(),
               ),
-            )
-          ],
+              const SizedBox(height: 24),
+
+              // LISTADO DE ÁREAS Y MESAS
+              Expanded(
+                child: ListView(
+                  children: provider.areas
+                      .where((area) =>
+                          provider.filtroSeleccionado == 'Todas' ||
+                          provider.filtroSeleccionado == area)
+                      .map((area) {
+                    final mesasEnArea =
+                        provider.mesas.where((m) => m.area == area).toList();
+                    if (mesasEnArea.isEmpty) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 24, bottom: 16),
+                          child: Text(
+                            area,
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: primaryTextColor),
+                          ),
+                        ),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final cardMax = isVeryNarrow ? 280.0 : 260.0;
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate:
+                                  SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: cardMax,
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 16,
+                                childAspectRatio: 1.05,
+                              ),
+                              itemCount: mesasEnArea.length,
+                              itemBuilder: (context, index) {
+                                final mesa = mesasEnArea[index];
+                                final isOcupada = mesa.estado == 'Ocupada';
+
+                                return AppCard(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: primaryColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              mesa.estado,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.edit,
+                                                  size: 18,
+                                                ),
+                                                color: primaryColor,
+                                                onPressed: () => _abrirModalAgregarEditar(
+                                                    provider,
+                                                    mesa: mesa),
+                                                padding: EdgeInsets.zero,
+                                                constraints:
+                                                    const BoxConstraints(),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.delete,
+                                                  size: 18,
+                                                ),
+                                                color: Colors.redAccent,
+                                                onPressed: isOcupada
+                                                    ? () {
+                                                        ScaffoldMessenger.of(
+                                                                context)
+                                                            .showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                                'No puedes eliminar una mesa ocupada.'),
+                                                            backgroundColor:
+                                                                Colors.redAccent,
+                                                          ),
+                                                        );
+                                                      }
+                                                    : () {
+                                                        showDialog(
+                                                          context: context,
+                                                          builder: (context) =>
+                                                              AlertDialog(
+                                                            title: const Text(
+                                                                'Eliminar mesa'),
+                                                            content: Text(
+                                                                'Se eliminará ${mesa.nombre}'),
+                                                            actions: [
+                                                              TextButton(
+                                                                onPressed: () =>
+                                                                    Navigator.pop(
+                                                                        context),
+                                                                child: const Text(
+                                                                    'Cancelar'),
+                                                              ),
+                                                              TextButton(
+                                                                onPressed: () async {
+                                                                  await provider
+                                                                      .removeMesa(
+                                                                          mesa.id);
+                                                                  if (context.mounted) {
+                                                                    Navigator.pop(
+                                                                        context);
+                                                                  }
+                                                                },
+                                                                child: const Text(
+                                                                  'Confirmar',
+                                                                  style: TextStyle(
+                                                                      color:
+                                                                          Colors.red),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      },
+                                                padding: EdgeInsets.zero,
+                                                constraints:
+                                                    const BoxConstraints(),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        mesa.nombre,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '${mesa.capacidad} personas',
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        mesa.area,
+                                        style: TextStyle(
+                                          color: primaryColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        )
+                      ],
+                    );
+                  }).toList(),
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
   }
+
   // WIDGET KPI MEJORADO (Fondo oscuro, texto adaptado)
-  Widget _buildKpiCard(String label, int value, Color color) {
-    return Expanded(
+  Widget _buildKpiCard(String label, int value, Color color,
+      {double? maxWidth}) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: 140,
+        maxWidth: maxWidth ?? double.infinity,
+      ),
       child: Container(
+        width: maxWidth,
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A), // Fondo bien oscuro para la tarjeta
-            border: Border.all(color: color, width: 1.0), // Borde fino
-            borderRadius: BorderRadius.circular(12), // Bordes redondeados
+          color: const Color(0xFF1A1A1A),
+          border: Border.all(color: color, width: 1.0),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           children: [
             Text(
               value.toString(),
               style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: color,
-                  height: 1.0),
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                color: color,
+                height: 1.0,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               label,
               style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white), // Texto en blanco/gris claro
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             )
           ],
         ),
