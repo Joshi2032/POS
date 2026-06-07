@@ -45,6 +45,8 @@ import 'providers/tomar_orden_provider.dart';
 import 'providers/inventario_provider.dart';
 import 'providers/movimiento_caja_provider.dart';
 import 'providers/recipe_provider.dart';
+import 'repositories/auth_repository.dart';
+import 'providers/auth_provider.dart';
 
 Future<String?> _findEnvFile() async {
   final candidates = <File>[];
@@ -148,6 +150,7 @@ Future<void> main() async {
         Provider(create: (_) => EmpleadoRepository(SupabaseService.client)),
         Provider(create: (_) => NominaPagoRepository(SupabaseService.client)),
         Provider(create: (_) => RecipeRepository(SupabaseService.client)),
+        Provider(create: (_) => AuthRepository()),
 
         // ==========================================
         // 3. PROVIDERS REFACTORIZADOS (Conexión a BD)
@@ -205,6 +208,10 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (context) => RecipeProvider(context.read<RecipeRepository>()),
         ),
+        ChangeNotifierProvider(
+          create: (context) => AuthProvider(context.read<AuthRepository>()),
+        ),
+        
         ChangeNotifierProvider(
           create: (context) => DashboardProvider(
             context.read<OrdenRepository>(),

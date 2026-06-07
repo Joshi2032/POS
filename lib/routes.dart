@@ -20,6 +20,7 @@ import 'pages/gastos_page.dart';
 import 'pages/nominas_page.dart';
 import 'pages/historial_cortes_page.dart';
 import 'pages/ajustes_page.dart';
+import 'pages/login_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey =
@@ -27,8 +28,12 @@ final GlobalKey<NavigatorState> _shellNavigatorKey =
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/dashboard',
+  initialLocation: '/login',
   routes: [
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginPage(),
+    ),
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) {
@@ -80,6 +85,7 @@ final GoRouter appRouter = GoRouter(
             builder: (context, state) => const HistorialCortesPage()),
         GoRoute(
             path: '/ajustes', builder: (context, state) => const AjustesPage()),
+            
       ],
     ),
   ],
