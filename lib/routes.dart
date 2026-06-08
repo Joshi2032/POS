@@ -28,7 +28,7 @@ final GlobalKey<NavigatorState> _shellNavigatorKey =
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/login',
+  initialLocation: '/login', // por si josue ta wey y no sabe donde cambiar para que inicie en el login o la dashboard
   routes: [
     GoRoute(
       path: '/login',

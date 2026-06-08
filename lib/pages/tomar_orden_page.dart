@@ -333,17 +333,15 @@ class _CartSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                        orderType == OrderType.dineIn
-                            ? 'Mesa $selectedTable'
-                            : 'Para Llevar',
-                        style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: textColor),
-                        // 2. Añadimos ellipsis para que no rompa el diseño
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1, // Garantiza que no baje a la siguiente línea
-                    ),
+  orderType == OrderType.dineIn
+      ? 'Mesa ${context.read<TomarOrdenProvider>().selectedTableName}'
+      : 'Para Llevar',
+  style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    color: textColor,
+  ),
+),
                     Text(
                         orderType == OrderType.dineIn
                             ? 'Servicio en Mesa'

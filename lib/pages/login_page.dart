@@ -1,14 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 
-class LoginPage extends StatelessWidget {
+import '../providers/auth_provider.dart';
+
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final emailCtrl = TextEditingController();
+  final passwordCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    emailCtrl.dispose();
+    passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Definición de colores basados en tu imagen
+    final auth = context.watch<AuthProvider>();
+
     const Color backgroundColor = Color(0xFF121212);
     const Color cardColor = Color(0xFF1E1E1E);
-    const Color accentColor = Color(0xFFFF5722); // Naranja
+    const Color accentColor = Color(0xFFFF5722);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -18,15 +38,23 @@ class LoginPage extends StatelessWidget {
           child: Card(
             color: cardColor,
             elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(32),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.local_fire_department, color: accentColor, size: 40),
+                  const Icon(
+                    Icons.local_fire_department,
+                    color: accentColor,
+                    size: 40,
+                  ),
+
                   const SizedBox(height: 16),
+
                   const Text(
                     "La Brasa",
                     textAlign: TextAlign.center,
@@ -34,10 +62,11 @@ class LoginPage extends StatelessWidget {
                       color: Colors.white,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      fontFamily: 'serif',
                     ),
                   ),
+
                   const SizedBox(height: 8),
+
                   const Text(
                     "PARRILLA & GRILL",
                     textAlign: TextAlign.center,
@@ -48,33 +77,89 @@ class LoginPage extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+
                   const SizedBox(height: 32),
-                  
-                  // Campo Correo
-                  const Text("Correo electrónico", style: TextStyle(color: Colors.white70)),
+
+                  const Text(
+                    "Correo electrónico",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+
                   const SizedBox(height: 8),
-                  _buildTextField(hintText: "correo@labraza.com"),
-                  
+
+                  _buildTextField(
+                    controller: emailCtrl,
+                    hintText: "correo@labrasa.com",
+                  ),
+
                   const SizedBox(height: 20),
-                  
-                  // Campo Contraseña
-                  const Text("Contraseña", style: TextStyle(color: Colors.white70)),
+
+                  const Text(
+                    "Contraseña",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+
                   const SizedBox(height: 8),
-                  _buildTextField(hintText: "********", obscureText: true),
-                  
-                  const SizedBox(height: 32),
-                  
-                  // Botón Entrar
+
+                  _buildTextField(
+                    controller: passwordCtrl,
+                    hintText: "********",
+                    obscureText: true,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  if (auth.error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        auth.error!,
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: auth.isLoading
+                        ? null
+                        : () async {
+                            final routeContext = context;
+                            final ok = await auth.login(
+                              emailCtrl.text.trim(),
+                              passwordCtrl.text.trim(),
+                            );
+
+                            if (!mounted || !routeContext.mounted) return;
+
+                            if (ok) {
+                              routeContext.go('/dashboard');
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accentColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    child: const Text("Entrar", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                  )
+                    child: auth.isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            "Entrar",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
                 ],
               ),
             ),
@@ -84,9 +169,13 @@ class LoginPage extends StatelessWidget {
     );
   }
 
-  // Widget auxiliar para mantener los campos consistentes
-  Widget _buildTextField({required String hintText, bool obscureText = false}) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hintText,
+    bool obscureText = false,
+  }) {
     return TextField(
+      controller: controller,
       obscureText: obscureText,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
