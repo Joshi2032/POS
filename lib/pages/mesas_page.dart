@@ -36,7 +36,7 @@ class _MesasViewState extends State<_MesasView> {
   }
 
   void _abrirModalAgregarEditar(MesasProvider provider,
-      {Mesa? mesa, int? index}) {
+      {Mesa? mesa}) {
     if (mesa != null) {
       _nombreCtrl.text = mesa.nombre;
       _capacidadCtrl.text = mesa.capacidad.toString();

@@ -161,7 +161,7 @@ class _MenuSection extends StatelessWidget {
           if (orderType == OrderType.dineIn) ...[
             _buildChipsRow(context, 'Área:', areas, selectedArea,
                 (v) => context.read<TomarOrdenProvider>().setArea(v)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16), // Aumentado a 16 para mayor separación
             _buildChipsRow(context, 'Mesa:', currentTables, selectedTable,
                 (v) => context.read<TomarOrdenProvider>().setTable(v)),
             const SizedBox(height: 14),
@@ -283,6 +283,8 @@ class _MenuSection extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.bold))),
         Expanded(
             child: Wrap(
+                spacing: 10.0, // Separación horizontal entre chips
+                runSpacing: 8.0, // Separación vertical cuando brincan de línea
                 children: options
                     .map((opt) => ChoiceChip(
                         label: Text(opt),
@@ -333,21 +335,21 @@ class _CartSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-  orderType == OrderType.dineIn
-      ? 'Mesa ${context.read<TomarOrdenProvider>().selectedTableName}'
-      : 'Para Llevar',
-  style: TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-    color: textColor,
-  ),
-),
+                      orderType == OrderType.dineIn
+                          ? 'Mesa ${context.read<TomarOrdenProvider>().selectedTableName}'
+                          : 'Para Llevar',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
                     Text(
-                        orderType == OrderType.dineIn
-                            ? 'Servicio en Mesa'
-                            : 'Recoger en Cocina',
-                        style: TextStyle(fontSize: 12, color: textSubColor),
-                        overflow: TextOverflow.ellipsis,
+                      orderType == OrderType.dineIn
+                          ? 'Servicio en Mesa'
+                          : 'Recoger en Cocina',
+                      style: TextStyle(fontSize: 12, color: textSubColor),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
