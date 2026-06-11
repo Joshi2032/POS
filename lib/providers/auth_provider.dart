@@ -28,4 +28,21 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+  Future<bool> registrar(String email, String password) async {
+    isLoading = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      // Necesitarás tener esta función en tu AuthRepository como vimos antes
+      await _repository.registrarUsuario(email, password);
+      return true;
+    } catch (e) {
+      error = e.toString();
+      return false;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
 }
