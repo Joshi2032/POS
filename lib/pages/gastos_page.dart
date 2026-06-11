@@ -444,8 +444,9 @@ class _GastosViewState extends State<_GastosView> {
                 setState(() {
                   if (field == 'date') formState.date = val;
                   if (field == 'concept') formState.concept = val;
-                  if (field == 'amount')
+                  if (field == 'amount') {
                     formState.amount = double.tryParse(val) ?? 0.0;
+                  }
                   if (field == 'notes') formState.notes = val;
                 });
               },
@@ -948,7 +949,7 @@ class _Dropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
           labelText: label, border: const OutlineInputBorder()),
       items: items
