@@ -26,8 +26,6 @@ class _NominasViewState extends State<_NominasView> {
   final _money = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
 
   void _openEditor(NominasProvider provider, {NominaPago? nomina}) {
-    final idController = TextEditingController(
-        text: nomina?.id ?? 'NOM-${DateTime.now().millisecondsSinceEpoch}');
     final fechaController = TextEditingController(
         text:
             nomina?.fecha ?? DateTime.now().toIso8601String().split('T').first);
@@ -52,12 +50,6 @@ class _NominasViewState extends State<_NominasView> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
-                    controller: idController,
-                    decoration: const InputDecoration(
-                        labelText: 'ID', border: OutlineInputBorder()),
-                    readOnly: true),
-                const SizedBox(height: 12),
                 TextField(
                     controller: fechaController,
                     decoration: const InputDecoration(
@@ -129,7 +121,7 @@ class _NominasViewState extends State<_NominasView> {
                   foregroundColor: Colors.white),
               onPressed: () {
                 final nuevaNomina = NominaPago(
-                  id: idController.text,
+                  id: nomina?.id ?? '', // Mantiene el ID si se edita, o envía vacío si es nuevo para Supabase
                   fecha: fechaController.text,
                   empleadoNombre:
                       empleadoController.text, // <--- AQUÍ ESTÁ LA CORRECCIÓN
@@ -343,12 +335,13 @@ class _NominasViewState extends State<_NominasView> {
                           color: primaryTextColor,
                           fontWeight: FontWeight.w500)),
                   const SizedBox(width: 16),
-                  // En la lógica de paginación (abajo en el build):
+                  // En la lógica de paginación original tenías 2 botones de "Anterior", 
+                  // te recomiendo que el de aquí abajo sea "Siguiente" con la lógica currentPage + 1
                   OutlinedButton(
-                    onPressed: provider.currentPage > 1
-                        ? () => provider.changePage(provider.currentPage - 1)
+                    onPressed: provider.currentPage < provider.totalPages
+                        ? () => provider.changePage(provider.currentPage + 1)
                         : null,
-                    child: const Text('Anterior'),
+                    child: const Text('Siguiente'),
                   ),
                 ],
               ),
