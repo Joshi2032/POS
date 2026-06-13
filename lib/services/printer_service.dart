@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart'; // Soluciona el warning avoid_print
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 import '../models/restaurant_order.dart';
@@ -7,36 +8,35 @@ class PrinterService {
   static Future<bool> imprimirTicketCaja(RestaurantOrder orden) async {
     try {
       final profile = await CapabilityProfile.load();
-      // El Generador convierte tus comandos de diseño a lenguaje de la impresora
-      final generator = Generator(PaperSize.mm80, profile);
       
-      // Armamos los bytes manteniendo tu diseño original
+      // Papel de 58mm para que la impresora POS-58 lo procese correctamente
+      final generator = Generator(PaperSize.mm58, profile);
+      
       List<int> bytes = _armarDisenoTicket(generator, orden);
 
       var printerManager = PrinterManager.instance;
 
-      // Conectamos por USB. En Windows, si dejas VendorId y ProductId vacíos, 
-      // suele apuntar a la primera impresora térmica USB disponible.
+      // Volvemos a PrinterType.usb, en Windows este paquete lee automáticamente 
+      // el nombre de la impresora configurada en el sistema.
       await printerManager.connect(
         type: PrinterType.usb,
         model: UsbPrinterInput(
-          name: 'POS8810UE',
+          name: 'POS-58', // Debe ser el nombre exacto del panel de control
         )
       );
 
-      // Enviamos el ticket a imprimir
       bool success = await printerManager.send(type: PrinterType.usb, bytes: bytes);
       
-      // Nos desconectamos para no bloquear el puerto USB para futuras impresiones
       await printerManager.disconnect(type: PrinterType.usb);
       
       return success;
     } catch (e) {
+      // Reemplazamos print por debugPrint
+      debugPrint("Error de impresión: $e");
       return false;
     }
   }
 
-  // Se cambia NetworkPrinter por Generator, y devuelve un List<int>
   static List<int> _armarDisenoTicket(Generator generator, RestaurantOrder orden) {
     List<int> bytes = [];
 
