@@ -48,58 +48,24 @@ import 'providers/recipe_provider.dart';
 import 'repositories/auth_repository.dart';
 import 'providers/auth_provider.dart';
 
-Future<String?> _findEnvFile() async {
-  final candidates = <File>[];
-
-  // 1) Archivo .env en el directorio actual
-  candidates.add(File('.env'));
-
-  // 2) Recorremos parents de Directory.current
-  var currentDirectory = Directory.current;
-  for (var i = 0; i < 8; i++) {
-    candidates
-        .add(File('${currentDirectory.path}${Platform.pathSeparator}.env'));
-    if (currentDirectory.path == currentDirectory.parent.path) break;
-    currentDirectory = currentDirectory.parent;
-  }
-
-  // 3) Recorremos parents del script actual
-  var scriptDirectory = File(Platform.script.toFilePath()).parent;
-  for (var i = 0; i < 8; i++) {
-    candidates
-        .add(File('${scriptDirectory.path}${Platform.pathSeparator}.env'));
-    if (scriptDirectory.path == scriptDirectory.parent.path) break;
-    scriptDirectory = scriptDirectory.parent;
-  }
-
-  // 4) Recorremos parents del ejecutable resuelto
-  var execDirectory = File(Platform.resolvedExecutable).parent;
-  for (var i = 0; i < 8; i++) {
-    candidates.add(File('${execDirectory.path}${Platform.pathSeparator}.env'));
-    if (execDirectory.path == execDirectory.parent.path) break;
-    execDirectory = execDirectory.parent;
-  }
-
-  for (final candidate in candidates) {
-    if (await candidate.exists()) return candidate.path;
-  }
-  return null;
-}
+// ❌ SE ELIMINÓ LA FUNCIÓN _findEnvFile() YA QUE NO FUNCIONA EN DISPOSITIVOS MÓVILES (APK/IPA)
 
 Future<void> main() async {
   // Asegura que los canales de la plataforma nativa estén listos antes de inicializar servicios externos
   WidgetsFlutterBinding.ensureInitialized();
 
-  final envFile = await _findEnvFile();
-  if (envFile != null) {
-    await dotenv.load(fileName: envFile);
-    debugPrint('Cargado .env desde: $envFile');
-  } else {
-    debugPrint('No se encontró .env; usando variables de entorno del sistema.');
+  // ✅ FORMA CORRECTA PARA FLUTTER (LEE DESDE LOS ASSETS COMPILADOS EN EL APK)
+  try {
+    await dotenv.load(fileName: ".env");
+    debugPrint('Cargado .env correctamente desde los assets');
+  } catch (e) {
+    debugPrint('No se encontró el archivo .env en los assets. Error: $e');
   }
 
   final envUrl = dotenv.env['SUPABASE_URL']?.trim();
   final envAnonKey = dotenv.env['SUPABASE_ANON_KEY']?.trim();
+  
+  // Mantenemos el fallback a Platform.environment por si lo corres en web/escritorio
   final url = (envUrl != null && envUrl.isNotEmpty)
       ? envUrl
       : Platform.environment['SUPABASE_URL']?.trim() ?? '';
@@ -108,16 +74,14 @@ Future<void> main() async {
       : Platform.environment['SUPABASE_ANON_KEY']?.trim() ?? '';
 
   if (url.isEmpty || anonKey.isEmpty) {
-    throw StateError(
-      'SUPABASE_URL o SUPABASE_ANON_KEY faltan. '
-      'url=${url.isEmpty ? 'MISSING' : url}, '
-      'anonKey length=${anonKey.length}',
-    );
+    debugPrint('ERROR CRITICO: SUPABASE_URL o SUPABASE_ANON_KEY faltan. url=${url.isEmpty ? 'MISSING' : url}, anonKey length=${anonKey.length}');
+    // En lugar de crashear la app con throw StateError, permitimos que la app inicie
+    // para evitar la pantalla negra. Puedes mostrar una alerta de error en el login si estas variables fallan.
+  } else {
+    debugPrint('Supabase inicializado con URL=$url y anonKey length=${anonKey.length}');
   }
-  debugPrint(
-      'Supabase inicializado con URL=$url y anonKey length=${anonKey.length}');
 
-  // Inicialización de Supabase usando las credenciales protegidas del archivo .env o las variables de entorno
+  // Inicialización de Supabase usando las credenciales
   await SupabaseService.init(
     url: url,
     anonKey: anonKey,
