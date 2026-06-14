@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/ajustes_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../providers/auth_provider.dart';
 
 class AjustesPage extends StatelessWidget {
   const AjustesPage({super.key});
@@ -103,6 +105,26 @@ class _AjustesView extends StatelessWidget {
                                   Text('Guardado')
                                 ])
                           : const Text('Guardar Cambios'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.logout),
+                label: const Text('Cerrar sesión'),
+                onPressed: () async {
+                  await context.read<AuthProvider>().logout();
+
+                  if (context.mounted) {
+                    context.go('/login');
+                  }
+                },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(16),
                 ),
               ),
             ),

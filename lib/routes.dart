@@ -21,6 +21,7 @@ import 'pages/nominas_page.dart';
 import 'pages/historial_cortes_page.dart';
 import 'pages/ajustes_page.dart';
 import 'pages/login_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey =
@@ -28,7 +29,25 @@ final GlobalKey<NavigatorState> _shellNavigatorKey =
 
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/login', // por si josue ta wey y no sabe donde cambiar para que inicie en el login o la dashboard
+  initialLocation: '/login',
+
+  redirect: (context, state) {
+    final session = Supabase.instance.client.auth.currentSession;
+
+    final isLoggedIn = session != null;
+    final isLoginPage = state.uri.path == '/login';
+
+    if (!isLoggedIn && !isLoginPage) {
+      return '/login';
+    }
+
+    if (isLoggedIn && isLoginPage) {
+      return '/dashboard';
+    }
+
+    return null;
+  }, // por si josue ta wey y no sabe donde cambiar para que inicie en el login o la dashboard
+  
   routes: [
     GoRoute(
       path: '/login',
