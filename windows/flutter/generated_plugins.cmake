@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   charset_converter
+  flutter_pos_printer_platform_image_3
   url_launcher_windows
 )
 

@@ -8,6 +8,7 @@
 
 #include <app_links/app_links_plugin_c_api.h>
 #include <charset_converter/charset_converter_plugin.h>
+#include <flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_plugin.h>
 #include <url_launcher_windows/url_launcher_windows.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
@@ -15,6 +16,8 @@ void RegisterPlugins(flutter::PluginRegistry* registry) {
       registry->GetRegistrarForPlugin("AppLinksPluginCApi"));
   CharsetConverterPluginRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("CharsetConverterPlugin"));
+  FlutterPosPrinterPlatformPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FlutterPosPrinterPlatformPlugin"));
   UrlLauncherWindowsRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("UrlLauncherWindows"));
 }

@@ -23,23 +23,12 @@ class _GastosView extends StatefulWidget {
 
 class _GastosViewState extends State<_GastosView> {
   final List<String> categorias = [
-    'Todos',
-    'Renta',
-    'Servicios',
-    'Insumos',
-    'Mantenimiento',
-    'Publicidad',
-    'Impuestos',
-    'General'
+    'Todos', 'Renta', 'Servicios', 'Insumos',
+    'Mantenimiento', 'Publicidad', 'Impuestos', 'General',
   ];
   final List<String> formCategories = [
-    'General',
-    'Insumos',
-    'Servicios',
-    'Renta',
-    'Mantenimiento',
-    'Publicidad',
-    'Impuestos'
+    'General', 'Insumos', 'Servicios', 'Renta',
+    'Mantenimiento', 'Publicidad', 'Impuestos',
   ];
   final List<String> formMethods = ['Efectivo', 'Tarjeta', 'Transferencia'];
 
@@ -103,16 +92,15 @@ class _GastosViewState extends State<_GastosView> {
     if (_formKey.currentState == null || !_formKey.currentState!.validate()) {
       return;
     }
-
     if (formState.concept.trim().isEmpty ||
         formState.date.trim().isEmpty ||
         formState.amount <= 0) {
       setState(() => modalError = 'Completa fecha, concepto y monto válido.');
       return;
     }
-
     if (editingId != null) {
-      UiUtils.showConfirmDialog(context, 'Actualizar Gasto',
+      UiUtils.showConfirmDialog(
+          context, 'Actualizar Gasto',
           '¿Actualizar el gasto ${formState.concept}?', () {
         provider.actualizarGasto(editingId!, formState);
         UiUtils.showToast(context, 'Gasto actualizado', color: Colors.green);
@@ -120,8 +108,8 @@ class _GastosViewState extends State<_GastosView> {
       });
     } else {
       UiUtils.showConfirmDialog(
-          context, 'Registrar Gasto', '¿Registrar gasto ${formState.concept}?',
-          () {
+          context, 'Registrar Gasto',
+          '¿Registrar gasto ${formState.concept}?', () {
         provider.crearGasto(formState);
         UiUtils.showToast(context, 'Gasto registrado', color: Colors.green);
         cerrarModal();
@@ -139,306 +127,518 @@ class _GastosViewState extends State<_GastosView> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width > 900;
     final provider = context.watch<GastosProvider>();
 
     return Scaffold(
       body: Stack(
         children: [
           SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Text('💸 ', style: TextStyle(fontSize: 26)),
-                              Text('Gastos y Egresos',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                          Text(
-                              '${provider.filteredGastos.length} de ${provider.totalGastosLength} gastos',
-                              style: const TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            foregroundColor: Colors.white),
-                        onPressed: abrirModal,
-                        child: const Text('+ Registrar Gasto'),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 25),
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Buscar gasto, método o categoría...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onChanged: provider.onSearch,
-                  ),
-                  const SizedBox(height: 25),
-                  GridView.count(
-                    crossAxisCount: isDesktop ? 2 : 1,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: isDesktop ? 3.5 : 4.0,
-                    children: [
-                      _buildStatCard(
-                          'Gastos este mes',
-                          Formatters.money(provider.totalThisMonth),
-                          '↘',
-                          Colors.red.shade900),
-                      _buildStatCard(
-                          'Total acumulado',
-                          Formatters.money(provider.totalAccumulated),
-                          '\$',
-                          Colors.blueGrey.shade800),
-                    ],
-                  ),
-                  const SizedBox(height: 25),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: categorias.map((categoria) {
-                      final isActive = provider.selectedCategory == categoria;
-                      return ChoiceChip(
-                        label: Text(categoria),
-                        selected: isActive,
-                        onSelected: (_) =>
-                            provider.seleccionarCategoria(categoria),
-                        selectedColor:
-                            Theme.of(context).primaryColor.withAlpha(50),
-                        labelStyle: TextStyle(
-                            color: isActive
-                                ? Theme.of(context).primaryColor
-                                : Colors.grey.shade700,
-                            fontWeight:
-                                isActive ? FontWeight.bold : FontWeight.normal),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  Card(
-                    clipBehavior: Clip.antiAlias,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(
-                              Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest),
-                          columns: const [
-                            DataColumn(
-                                label: Text('Fecha',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold))),
-                            DataColumn(
-                                label: Text('Concepto',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold))),
-                            DataColumn(
-                                label: Text('Categoría',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold))),
-                            DataColumn(
-                                label: Text('Método',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold))),
-                            DataColumn(
-                                label: Text('Monto',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold))),
-                            DataColumn(
-                                label: Text('',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold))),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final w = constraints.maxWidth;
+                final hPad = w < 480 ? 16.0 : 20.0;
+                final isCompact = w < 600;
+                final isWide = w >= 900;
+
+                return CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: EdgeInsets.fromLTRB(hPad, hPad, hPad, 0),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+
+                          // ── HEADER ──────────────────────────────────────
+                          if (isCompact) ...[
+                            _HeaderTitle(
+                              filteredCount: provider.filteredGastos.length,
+                              totalCount: provider.totalGastosLength,
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: _BotonRegistrar(onTap: abrirModal),
+                            ),
+                          ] else ...[
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: _HeaderTitle(
+                                    filteredCount:
+                                        provider.filteredGastos.length,
+                                    totalCount: provider.totalGastosLength,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                _BotonRegistrar(onTap: abrirModal),
+                              ],
+                            ),
                           ],
-                          rows: provider.paginatedGastos.map((g) {
-                            return DataRow(cells: [
-                              DataCell(Text(g.date)),
-                              DataCell(Text(g.concept,
+
+                          const SizedBox(height: 20),
+
+                          // ── BUSCADOR ─────────────────────────────────────
+                          TextField(
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Buscar gasto, método o categoría...',
+                              prefixIcon: const Icon(Icons.search),
+                              border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onChanged: provider.onSearch,
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // ── STAT CARDS ───────────────────────────────────
+                          // IntrinsicHeight evita el ratio fijo que rompe en móvil
+                          isWide
+                              ? IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Expanded(
+                                        child: _StatCard(
+                                          label: 'Gastos este mes',
+                                          value: Formatters.money(
+                                              provider.totalThisMonth),
+                                          icon: '↘',
+                                          color: Colors.red.shade900,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: _StatCard(
+                                          label: 'Total acumulado',
+                                          value: Formatters.money(
+                                              provider.totalAccumulated),
+                                          icon: '\$',
+                                          color: Colors.blueGrey.shade800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : Column(
+                                  children: [
+                                    _StatCard(
+                                      label: 'Gastos este mes',
+                                      value: Formatters.money(
+                                          provider.totalThisMonth),
+                                      icon: '↘',
+                                      color: Colors.red.shade900,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _StatCard(
+                                      label: 'Total acumulado',
+                                      value: Formatters.money(
+                                          provider.totalAccumulated),
+                                      icon: '\$',
+                                      color: Colors.blueGrey.shade800,
+                                    ),
+                                  ],
+                                ),
+
+                          const SizedBox(height: 20),
+
+                          // ── CHIPS DE CATEGORÍA ───────────────────────────
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: categorias.map((cat) {
+                              final isActive =
+                                  provider.selectedCategory == cat;
+                              return ChoiceChip(
+                                label: Text(cat),
+                                selected: isActive,
+                                onSelected: (_) =>
+                                    provider.seleccionarCategoria(cat),
+                                selectedColor: Theme.of(context)
+                                    .primaryColor
+                                    .withAlpha(50),
+                                labelStyle: TextStyle(
+                                  color: isActive
+                                      ? Theme.of(context).primaryColor
+                                      : Colors.grey.shade700,
+                                  fontWeight: isActive
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // ── TABLA / CARDS ────────────────────────────────
+                          if (provider.paginatedGastos.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 32),
+                              child: Center(
+                                child: Text('Sin gastos registrados',
+                                    style: TextStyle(color: Colors.grey)),
+                              ),
+                            )
+                          else if (isCompact)
+                            // En móvil: lista de cards en lugar de DataTable
+                            Column(
+                              children: provider.paginatedGastos.map((g) {
+                                return _GastoCard(
+                                  gasto: g,
+                                  onEditar: () => abrirEditar(g),
+                                  onEliminar: () =>
+                                      eliminarGastoConfirmado(provider, g),
+                                );
+                              }).toList(),
+                            )
+                          else
+                            // En tablet/escritorio: DataTable con scroll horizontal
+                            Card(
+                              clipBehavior: Clip.antiAlias,
+                              child: SizedBox(
+                                width: double.infinity,
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: DataTable(
+                                    headingRowColor:
+                                        WidgetStateProperty.all(
+                                      Theme.of(context)
+                                          .colorScheme
+                                          .surfaceContainerHighest,
+                                    ),
+                                    columns: const [
+                                      DataColumn(
+                                          label: Text('Fecha',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Concepto',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Categoría',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Método',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(
+                                          label: Text('Monto',
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold))),
+                                      DataColumn(label: Text('')),
+                                    ],
+                                    rows: provider.paginatedGastos.map((g) {
+                                      return DataRow(cells: [
+                                        DataCell(Text(g.date)),
+                                        DataCell(Text(g.concept,
+                                            style: const TextStyle(
+                                                fontWeight:
+                                                    FontWeight.w500))),
+                                        DataCell(Text(g.category)),
+                                        DataCell(
+                                            Text(g.method ?? 'N/A')),
+                                        DataCell(Text(
+                                            Formatters.money(g.amount),
+                                            style: const TextStyle(
+                                                fontWeight:
+                                                    FontWeight.bold))),
+                                        DataCell(Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  abrirEditar(g),
+                                              child:
+                                                  const Text('Editar'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  eliminarGastoConfirmado(
+                                                      provider, g),
+                                              child: const Text(
+                                                  'Eliminar',
+                                                  style: TextStyle(
+                                                      color: Colors.red)),
+                                            ),
+                                          ],
+                                        )),
+                                      ]);
+                                    }).toList(),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                          const SizedBox(height: 14),
+
+                          // ── PAGINACIÓN ───────────────────────────────────
+                          if (provider.totalPages > 1)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_back_ios,
+                                      size: 16),
+                                  onPressed: provider.currentPage == 1
+                                      ? null
+                                      : () => provider.changePage(
+                                          provider.currentPage - 1),
+                                ),
+                                Text(
+                                  'Página ${provider.currentPage} de ${provider.totalPages}',
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w500))),
-                              DataCell(Text(g.category)),
-                              DataCell(Text(g.method ?? 'N/A'),),
-                              DataCell(Text(Formatters.money(g.amount),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold))),
-                              DataCell(Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  TextButton(
-                                      onPressed: () => abrirEditar(g),
-                                      child: const Text('Editar')),
-                                  TextButton(
-                                      onPressed: () =>
-                                          eliminarGastoConfirmado(provider, g),
-                                      child: const Text('Eliminar',
-                                          style: TextStyle(color: Colors.red))),
-                                ],
-                              )),
-                            ]);
-                          }).toList(),
-                        ),
+                                      fontWeight: FontWeight.w500),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_forward_ios,
+                                      size: 16),
+                                  onPressed: provider.currentPage ==
+                                          provider.totalPages
+                                      ? null
+                                      : () => provider.changePage(
+                                          provider.currentPage + 1),
+                                ),
+                              ],
+                            ),
+
+                          const SizedBox(height: 24),
+                        ]),
                       ),
                     ),
-                  ),
-                  if (provider.paginatedGastos.isEmpty)
-                    Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.all(32),
-                      child: const Text('Sin gastos registrados',
-                          style: TextStyle(color: Colors.grey)),
-                    ),
-                  const SizedBox(height: 15),
-                  if (provider.totalPages > 1)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios, size: 16),
-                          onPressed: provider.currentPage == 1
-                              ? null
-                              : () =>
-                                  provider.changePage(provider.currentPage - 1),
-                        ),
-                        Text(
-                            'Página ${provider.currentPage} de ${provider.totalPages}',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w500)),
-                        IconButton(
-                          icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onPressed: provider.currentPage == provider.totalPages
-                              ? null
-                              : () =>
-                                  provider.changePage(provider.currentPage + 1),
-                        ),
-                      ],
-                    )
-                ],
-              ),
+                  ],
+                );
+              },
             ),
           ),
+
+          // ── MODAL ────────────────────────────────────────────────────────
           if (showModal) ...[
             GestureDetector(
               onTap: cerrarModal,
               child: Container(color: Colors.black54),
             ),
-            Center(
-              child: Card(
-                margin: const EdgeInsets.all(20),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: Container(
-                  width: isDesktop ? 500 : double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  child: SingleChildScrollView(
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                  editingId != null
-                                      ? 'Editar Gasto'
-                                      : 'Registrar Gasto',
-                                  style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold)),
-                              IconButton(
-                                  icon: const Icon(Icons.close),
-                                  onPressed: cerrarModal),
-                            ],
-                          ),
-                          const Divider(),
-                          if (modalError.isNotEmpty) ...[
-                            Text(modalError,
-                                style: const TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w500)),
-                            const SizedBox(height: 10),
-                          ],
-                          _buildFormFields(),
-                          const SizedBox(height: 25),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              OutlinedButton(
-                                  onPressed: cerrarModal,
-                                  child: const Text('Cancelar')),
-                              const SizedBox(width: 12),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        Theme.of(context).primaryColor,
-                                    foregroundColor: Colors.white),
-                                onPressed: () => guardarGasto(provider),
-                                child: const Text('Guardar Gasto'),
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+            _GastoModal(
+              editingId: editingId,
+              formKey: _formKey,
+              formState: formState,
+              modalError: modalError,
+              formCategories: formCategories,
+              formMethods: formMethods,
+              onCerrar: cerrarModal,
+              onGuardar: () =>
+                  guardarGasto(context.read<GastosProvider>()),
+              onCategoryChanged: (val) =>
+                  setState(() => formState.category = val ?? 'General'),
+              onMethodChanged: (val) =>
+                  setState(() => formState.method = val ?? 'Efectivo'),
+              onFormChanged: (field, val) {
+                setState(() {
+                  if (field == 'date') formState.date = val;
+                  if (field == 'concept') formState.concept = val;
+                  if (field == 'amount') {
+                    formState.amount = double.tryParse(val) ?? 0.0;
+                  }
+                  if (field == 'notes') formState.notes = val;
+                });
+              },
             ),
-          ]
+          ],
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatCard(String label, String value, String icon, Color color) {
+// ── WIDGETS AUXILIARES ──────────────────────────────────────────────────────
+
+class _HeaderTitle extends StatelessWidget {
+  const _HeaderTitle(
+      {required this.filteredCount, required this.totalCount});
+  final int filteredCount;
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text('💸 ', style: TextStyle(fontSize: 24)),
+            Flexible(
+              child: Text(
+                'Gastos y Egresos',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        Text(
+          '$filteredCount de $totalCount gastos',
+          style: const TextStyle(color: Colors.grey, fontSize: 13),
+        ),
+      ],
+    );
+  }
+}
+
+class _BotonRegistrar extends StatelessWidget {
+  const _BotonRegistrar({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8)),
+      ),
+      onPressed: onTap,
+      child: const Text('+ Registrar Gasto',
+          style: TextStyle(fontWeight: FontWeight.bold)),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+  final String label;
+  final String value;
+  final String icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
     return Card(
       color: color,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         child: Row(
           children: [
             Text(icon,
                 style: const TextStyle(
                     color: Colors.white38,
-                    fontSize: 32,
+                    fontSize: 30,
                     fontWeight: FontWeight.bold)),
             const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label,
+                      style: const TextStyle(
+                          color: Colors.white70, fontSize: 13)),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Card de gasto para vista móvil (reemplaza la fila del DataTable)
+class _GastoCard extends StatelessWidget {
+  const _GastoCard({
+    required this.gasto,
+    required this.onEditar,
+    required this.onEliminar,
+  });
+  final Gasto gasto;
+  final VoidCallback onEditar;
+  final VoidCallback onEliminar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Concepto + monto
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(label,
-                    style:
-                        const TextStyle(color: Colors.white70, fontSize: 13)),
-                const SizedBox(height: 4),
-                Text(value,
+                Expanded(
+                  child: Text(
+                    gasto.concept,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold)),
+                        fontWeight: FontWeight.bold, fontSize: 15),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  Formatters.money(gasto.amount),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.red),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // Fecha · Categoría · Método
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                _InfoChip(Icons.calendar_today, gasto.date),
+                _InfoChip(Icons.label_outline, gasto.category),
+                _InfoChip(
+                    Icons.payment, gasto.method ?? 'N/A'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Acciones
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: onEditar,
+                  child: const Text('Editar'),
+                ),
+                TextButton(
+                  onPressed: onEliminar,
+                  child: const Text('Eliminar',
+                      style: TextStyle(color: Colors.red)),
+                ),
               ],
             ),
           ],
@@ -446,91 +646,316 @@ class _GastosViewState extends State<_GastosView> {
       ),
     );
   }
+}
 
-  Widget _buildFormFields() {
-    return Column(
+class _InfoChip extends StatelessWidget {
+  const _InfoChip(this.icon, this.label);
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                initialValue: formState.date,
-                decoration: const InputDecoration(
-                    labelText: 'Fecha (YYYY-MM-DD)',
-                    border: OutlineInputBorder()),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Requerido' : null,
-                onChanged: (val) => formState.date = val,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                initialValue: formState.concept,
-                decoration: const InputDecoration(
-                    labelText: 'Concepto',
-                    hintText: 'Concepto del gasto',
-                    border: OutlineInputBorder()),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Requerido' : null,
-                onChanged: (val) => formState.concept = val,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: formState.category,
-                decoration: const InputDecoration(
-                    labelText: 'Categoría', border: OutlineInputBorder()),
-                items: formCategories
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (val) =>
-                    setState(() => formState.category = val ?? 'General'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: formState.method,
-                decoration: const InputDecoration(
-                    labelText: 'Método', border: OutlineInputBorder()),
-                items: formMethods
-                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                    .toList(),
-                onChanged: (val) =>
-                    setState(() => formState.method = val ?? 'Efectivo'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          initialValue: formState.amount == 0.0 ? '' : '${formState.amount}',
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-              labelText: 'Monto',
-              hintText: '0.00',
-              border: OutlineInputBorder()),
-          validator: (v) =>
-              v == null || double.tryParse(v) == null || double.parse(v) <= 0
-                  ? 'Monto no válido'
-                  : null,
-          onChanged: (val) => formState.amount = double.tryParse(val) ?? 0.0,
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          initialValue: formState.notes,
-          maxLines: 4,
-          decoration: const InputDecoration(
-              labelText: 'Notas', border: OutlineInputBorder()),
-          onChanged: (val) => formState.notes = val,
-        ),
+        Icon(icon, size: 13, color: Colors.grey),
+        const SizedBox(width: 3),
+        Text(label,
+            style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
+    );
+  }
+}
+
+// ── MODAL ────────────────────────────────────────────────────────────────────
+
+class _GastoModal extends StatelessWidget {
+  const _GastoModal({
+    required this.editingId,
+    required this.formKey,
+    required this.formState,
+    required this.modalError,
+    required this.formCategories,
+    required this.formMethods,
+    required this.onCerrar,
+    required this.onGuardar,
+    required this.onCategoryChanged,
+    required this.onMethodChanged,
+    required this.onFormChanged,
+  });
+
+  final String? editingId;
+  final GlobalKey<FormState> formKey;
+  final GastoForm formState;
+  final String modalError;
+  final List<String> formCategories;
+  final List<String> formMethods;
+  final VoidCallback onCerrar;
+  final VoidCallback onGuardar;
+  final ValueChanged<String?> onCategoryChanged;
+  final ValueChanged<String?> onMethodChanged;
+  final void Function(String field, String val) onFormChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final h = MediaQuery.of(context).size.height;
+    final isWide = w > 600;
+    final isVeryNarrow = w < 400;
+
+    return Center(
+      child: Card(
+        margin: EdgeInsets.all(isWide ? 20 : 12),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
+          width: isWide ? 500 : w - 24,
+          constraints: BoxConstraints(maxHeight: h * 0.90),
+          padding: EdgeInsets.all(isWide ? 24 : 18),
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Título + cerrar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        editingId != null
+                            ? 'Editar Gasto'
+                            : 'Registrar Gasto',
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: onCerrar,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  if (modalError.isNotEmpty) ...[
+                    Text(modalError,
+                        style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Fecha + Concepto
+                  if (isVeryNarrow) ...[
+                    _Field(
+                      label: 'Fecha (YYYY-MM-DD)',
+                      initialValue: formState.date,
+                      onChanged: (v) => onFormChanged('date', v),
+                      validator: (v) =>
+                          v == null || v.trim().isEmpty
+                              ? 'Requerido'
+                              : null,
+                    ),
+                    const SizedBox(height: 12),
+                    _Field(
+                      label: 'Concepto',
+                      hint: 'Concepto del gasto',
+                      initialValue: formState.concept,
+                      onChanged: (v) => onFormChanged('concept', v),
+                      validator: (v) =>
+                          v == null || v.trim().isEmpty
+                              ? 'Requerido'
+                              : null,
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _Field(
+                            label: 'Fecha (YYYY-MM-DD)',
+                            initialValue: formState.date,
+                            onChanged: (v) => onFormChanged('date', v),
+                            validator: (v) =>
+                                v == null || v.trim().isEmpty
+                                    ? 'Requerido'
+                                    : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _Field(
+                            label: 'Concepto',
+                            hint: 'Concepto del gasto',
+                            initialValue: formState.concept,
+                            onChanged: (v) =>
+                                onFormChanged('concept', v),
+                            validator: (v) =>
+                                v == null || v.trim().isEmpty
+                                    ? 'Requerido'
+                                    : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  const SizedBox(height: 14),
+
+                  // Categoría + Método
+                  if (isVeryNarrow) ...[
+                    _Dropdown(
+                      label: 'Categoría',
+                      value: formState.category,
+                      items: formCategories,
+                      onChanged: onCategoryChanged,
+                    ),
+                    const SizedBox(height: 12),
+                    _Dropdown(
+                      label: 'Método',
+                      value: formState.method,
+                      items: formMethods,
+                      onChanged: onMethodChanged,
+                    ),
+                  ] else ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _Dropdown(
+                            label: 'Categoría',
+                            value: formState.category,
+                            items: formCategories,
+                            onChanged: onCategoryChanged,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _Dropdown(
+                            label: 'Método',
+                            value: formState.method,
+                            items: formMethods,
+                            onChanged: onMethodChanged,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  const SizedBox(height: 14),
+
+                  // Monto
+                  TextFormField(
+                    initialValue: formState.amount == 0.0
+                        ? ''
+                        : '${formState.amount}',
+                    keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true),
+                    decoration: const InputDecoration(
+                        labelText: 'Monto',
+                        hintText: '0.00',
+                        border: OutlineInputBorder()),
+                    validator: (v) =>
+                        v == null ||
+                                double.tryParse(v) == null ||
+                                double.parse(v) <= 0
+                            ? 'Monto no válido'
+                            : null,
+                    onChanged: (v) => onFormChanged('amount', v),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Notas
+                  TextFormField(
+                    initialValue: formState.notes,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                        labelText: 'Notas',
+                        border: OutlineInputBorder()),
+                    onChanged: (v) => onFormChanged('notes', v),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // Botones
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      OutlinedButton(
+                          onPressed: onCerrar,
+                          child: const Text('Cancelar')),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white),
+                        onPressed: onGuardar,
+                        child: const Text('Guardar Gasto'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Field extends StatelessWidget {
+  const _Field({
+    required this.label,
+    required this.initialValue,
+    required this.onChanged,
+    this.hint,
+    this.validator,
+  });
+  final String label;
+  final String initialValue;
+  final String? hint;
+  final ValueChanged<String> onChanged;
+  final FormFieldValidator<String>? validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      initialValue: initialValue,
+      decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          border: const OutlineInputBorder()),
+      validator: validator,
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _Dropdown extends StatelessWidget {
+  const _Dropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+  final String label;
+  final String value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      decoration: InputDecoration(
+          labelText: label, border: const OutlineInputBorder()),
+      items: items
+          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+          .toList(),
+      onChanged: onChanged,
     );
   }
 }

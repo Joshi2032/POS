@@ -3,14 +3,16 @@ import 'package:provider/provider.dart';
 
 // Providers
 import '../providers/ordenes_provider.dart';
+import '../providers/caja_provider.dart';
 
 // Modelos
 import '../models/restaurant_order.dart';
+import '../ui_models/cash_order.dart';
 
 // Servicios y UI
 import '../services/printer_service.dart';
 import '../widgets/app_widgets.dart';
-import '../widgets/layout_widgets.dart'; // Agregamos la importación para EmptyState
+import '../widgets/layout_widgets.dart';
 
 class CajaPage extends StatefulWidget {
   const CajaPage({super.key});
@@ -23,7 +25,6 @@ class _CajaPageState extends State<CajaPage> {
   @override
   void initState() {
     super.initState();
-    // Refrescamos las órdenes pendientes cuando entramos a la caja
     Future.microtask(() {
       if (mounted) {
         context.read<OrdenesProvider>().cargarOrdenes();
@@ -36,7 +37,6 @@ class _CajaPageState extends State<CajaPage> {
     final ordenesProvider = context.watch<OrdenesProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // FIX: Cambiamos .ordenes a .orders según tu OrdenesProvider
     final ordenesPendientes = ordenesProvider.orders
         .where((o) => o.status != 'paid' && o.status != 'cancelled')
         .toList();
@@ -158,9 +158,29 @@ class _CajaPageState extends State<CajaPage> {
   }
 
   void _abrirModalCobro(BuildContext context, RestaurantOrder orden) {
-    String metodoPago = 'cash'; // cash, card, transfer
+    final cajaProvider = context.read<CajaProvider>();
+    
+    final cashOrder = cajaProvider.pendingOrders.firstWhere(
+      (co) => co.id == orden.id,
+      orElse: () => CashOrder(
+        id: orden.id,
+        label: orden.orderNumber,
+        time: orden.time,
+        status: orden.status,
+        itemsCount: orden.items.length,
+        items: [],
+        total: orden.totalAmount,
+      ),
+    );
+    
+    cajaProvider.selectOrder(cashOrder);
+    
+    String metodoPago = 'cash'; 
+    cajaProvider.setPaymentMethod('Efectivo');
+    
     final TextEditingController montoRecibidoCtrl =
         TextEditingController(text: orden.totalAmount.toStringAsFixed(2));
+    cajaProvider.setReceivedAmount(montoRecibidoCtrl.text);
 
     showDialog(
       context: context,
@@ -205,8 +225,10 @@ class _CajaPageState extends State<CajaPage> {
                           child: ChoiceChip(
                             label: const Text('Efectivo'),
                             selected: metodoPago == 'cash',
-                            onSelected: (val) =>
-                                setModalState(() => metodoPago = 'cash'),
+                            onSelected: (val) {
+                                setModalState(() => metodoPago = 'cash');
+                                cajaProvider.setPaymentMethod('Efectivo');
+                            },
                             selectedColor: Theme.of(context).primaryColor,
                             labelStyle: TextStyle(
                                 color:
@@ -218,8 +240,10 @@ class _CajaPageState extends State<CajaPage> {
                           child: ChoiceChip(
                             label: const Text('Tarjeta'),
                             selected: metodoPago == 'card',
-                            onSelected: (val) =>
-                                setModalState(() => metodoPago = 'card'),
+                            onSelected: (val) {
+                                setModalState(() => metodoPago = 'card');
+                                cajaProvider.setPaymentMethod('Tarjeta');
+                            },
                             selectedColor: Theme.of(context).primaryColor,
                             labelStyle: TextStyle(
                                 color:
@@ -231,8 +255,10 @@ class _CajaPageState extends State<CajaPage> {
                           child: ChoiceChip(
                             label: const Text('Transf.'),
                             selected: metodoPago == 'transfer',
-                            onSelected: (val) =>
-                                setModalState(() => metodoPago = 'transfer'),
+                            onSelected: (val) {
+                                setModalState(() => metodoPago = 'transfer');
+                                cajaProvider.setPaymentMethod('Transferencia');
+                            },
                             selectedColor: Theme.of(context).primaryColor,
                             labelStyle: TextStyle(
                                 color: metodoPago == 'transfer'
@@ -254,7 +280,10 @@ class _CajaPageState extends State<CajaPage> {
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8)),
                         ),
-                        onChanged: (val) => setModalState(() {}),
+                        onChanged: (val) {
+                            setModalState(() {});
+                            cajaProvider.setReceivedAmount(val);
+                        },
                       ),
                       const SizedBox(height: 16),
                       Container(
@@ -286,7 +315,10 @@ class _CajaPageState extends State<CajaPage> {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
+                onPressed: () {
+                    cajaProvider.closeSelectedOrderPanel();
+                    Navigator.pop(dialogContext);
+                },
                 child: const Text('Cancelar'),
               ),
               ElevatedButton(
@@ -305,49 +337,55 @@ class _CajaPageState extends State<CajaPage> {
                     return;
                   }
 
+                  // 1. CAPTURAR DEPENDENCIAS ANTES DEL ASYNC/AWAIT
+                  final ordenesProvider = context.read<OrdenesProvider>();
+                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+
                   showDialog(
                       context: context,
                       barrierDismissible: false,
                       builder: (_) =>
                           const Center(child: CircularProgressIndicator()));
 
-                  final ordenesProvider = context.read<OrdenesProvider>();
+                  // 2. EJECUTAR OPERACIONES ASÍNCRONAS
+                  final bool exito = await cajaProvider.chargeSelectedOrder();
+                  await ordenesProvider.cambiarEstadoOrden(orden.id, 'paid');
 
-                  // FIX: Cambiamos a .cambiarEstadoOrden según tu OrdenesProvider
-                  final bool exito = await ordenesProvider.cambiarEstadoOrden(
-                      orden.id, 'paid');
+                  // 3. VERIFICAR SI LA VISTA SIGUE EN PANTALLA
+                  if (!context.mounted) return; 
 
-                  if (context.mounted) Navigator.pop(context);
+                  Navigator.pop(context); // Cierra loader
 
-                  if (exito && context.mounted) {
+                  if (exito) {
                     bool printSuccess =
                         await PrinterService.imprimirTicketCaja(orden);
 
-                    if (context.mounted) {
-                      if (printSuccess) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content:
-                                  Text('Cobro exitoso e imprimiendo ticket...'),
-                              backgroundColor: Colors.green),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'Cobro exitoso, pero revisa la impresora (Sin conexión).'),
-                              backgroundColor: Colors.orange),
-                        );
-                      }
+                    // 4. VERIFICAR DE NUEVO TRAS IMPRESIÓN ASÍNCRONA
+                    if (!context.mounted) return; 
 
-                      Navigator.pop(dialogContext);
-                      ordenesProvider.cargarOrdenes();
+                    if (printSuccess) {
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                            content:
+                                Text('Cobro exitoso e imprimiendo ticket...'),
+                            backgroundColor: Colors.green),
+                      );
+                    } else {
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(
+                            content: Text(
+                                'Cobro exitoso, pero revisa la impresora (Sin conexión).'),
+                            backgroundColor: Colors.orange),
+                      );
                     }
-                  } else if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+
+                    Navigator.pop(dialogContext); // Cierra modal
+                  } else {
+                    scaffoldMessenger.showSnackBar(
                       SnackBar(
-                          content: Text(ordenesProvider.errorMessage ??
-                              'Hubo un error al guardar el pago.'),
+                          content: Text(cajaProvider.cashError.isNotEmpty 
+                              ? cajaProvider.cashError 
+                              : 'Hubo un error al guardar el pago en la base de datos.'),
                           backgroundColor: Colors.red),
                     );
                   }
