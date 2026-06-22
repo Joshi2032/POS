@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/ordenes_provider.dart' hide RestaurantOrder, OrderStatus, ServiceType;
+import '../providers/ordenes_provider.dart';
 import '../providers/tomar_orden_provider.dart';
 
 import '../models/order_item.dart';

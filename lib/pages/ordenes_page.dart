@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/restaurant_order.dart';
-import '../providers/ordenes_provider.dart' hide RestaurantOrder, OrderStatus, ServiceType;
+import '../providers/ordenes_provider.dart';
 import '../utils/formatters.dart';
 import '../utils/ui_utils.dart';
 
