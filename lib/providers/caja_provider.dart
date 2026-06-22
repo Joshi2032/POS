@@ -1,189 +1,163 @@
-import 'package:flutter/material.dart';
-import '../ui_models/cash_order.dart';
-import '../ui_models/cash_item.dart';
-import '../repositories/caja_repository.dart';
-import 'ordenes_provider.dart';
-import '../models/restaurant_order.dart';
+import 'order_item.dart';
 
-class CajaProvider extends ChangeNotifier {
-  final CajaRepository _repository;
-  final OrdenesProvider _ordenesProvider;
+typedef OrderStatus = String;
+typedef ServiceType = String;
 
-  CajaProvider(this._repository, this._ordenesProvider) {
-    _inicializarDatos();
-  }
+class RestaurantOrder {
+  final String id;
+  final String orderNumber;
+  final String? tableId; // UUID relacional de la mesa
+  final String tableOrCustomer; // Nombre descriptivo para la UI
+  final String time;
+  final OrderStatus status;
+  final ServiceType serviceType;
+  final List<OrderItem> items;
+  final double totalAmount;
+  final String? notes;
 
-  final List<String> paymentMethods = ['Efectivo', 'Tarjeta', 'Transferencia'];
+  RestaurantOrder({
+    required this.id,
+    required this.orderNumber,
+    this.tableId,
+    required this.tableOrCustomer,
+    required this.time,
+    required this.status,
+    required this.serviceType,
+    required this.items,
+    required this.totalAmount,
+    this.notes,
+  });
 
-  double _totalInCash = 0.0;
-
-  String? _selectedOrderId;
-  CashOrder? _selectedOrder;
-  String _selectedMethod = 'Efectivo';
-  double _receivedAmount = 0.0;
-  String _cashError = '';
-
-  // --- ESTADOS CENTRALIZADOS DE RED Y FLUJO ---
-  bool _isLoading = false;
-  String? _errorMessage;
-
-  // --- GETTERS (Exactamente idénticos a los que necesita tu UI original) ---
-  List<CashOrder> get pendingOrders => _ordenesProvider.orders
-      .where((o) => o.status == 'pendiente' || o.status == 'preparando')
-      .map(_mapRestaurantToCashOrder)
-      .toList();
-
-  List<CashOrder> get paidToday => _ordenesProvider.orders
-      .where((o) => o.status == 'pagada')
-      .map(_mapRestaurantToCashOrder)
-      .toList();
-  double get totalInCash => _totalInCash;
-  String? get selectedOrderId => _selectedOrderId;
-  CashOrder? get selectedOrder => _selectedOrder;
-  String get selectedMethod => _selectedMethod;
-  double get orderSubtotal => _selectedOrder?.total ?? 0.0;
-  String get cashError => _cashError;
-  int get paidTodayCount => paidToday.length;
-
-  bool get isLoading => _isLoading;
-  String? get errorMessage => _errorMessage;
-  bool get hasError => _errorMessage != null;
-
-  double get changeDue {
-    if (_selectedOrder == null || _receivedAmount < _selectedOrder!.total) {
-      return 0.0;
-    }
-    return _receivedAmount - _selectedOrder!.total;
-  }
-
-  // --- LÓGICA DE DATOS ASÍNCRONA ROBUSTA ---
-  Future<void> _inicializarDatos() async {
-    _setLoading(true);
-    _clearError();
-    try {
-      _totalInCash = await _repository.obtenerTotalEnCaja();
-    } catch (e) {
-      _errorMessage = e.toString();
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Método público para forzar la recarga desde la pantalla si fuera necesario
-  Future<void> recargarCaja() => _inicializarDatos();
-
-  void selectOrder(CashOrder order) {
-    _selectedOrderId = order.id;
-    _selectedOrder = order;
-    _receivedAmount = 0.0;
-    _cashError = '';
-    notifyListeners();
-  }
-
-  void closeSelectedOrderPanel() {
-    _selectedOrderId = null;
-    _selectedOrder = null;
-    _cashError = '';
-    notifyListeners();
-  }
-
-  void agregarCuentaPorCobrar(CashOrder nuevaCuenta) {
-    // Prefer crear la orden mediante OrdenesProvider para mantener la fuente de verdad
-    // Nota: mapping completo de CashOrder->RestaurantOrder requiere más datos; aquí
-    // se asume que la UI crea las órdenes mediante `OrdenesProvider.insertarNuevaComanda`.
-    // Como fallback local, insertamos en la UI temporalmente y notificamos.
-    _pendingOrdersInsertFallback(nuevaCuenta);
-  }
-
-  void _pendingOrdersInsertFallback(CashOrder nuevaCuenta) {
-    // Insertar de forma local temporal si la UI no usa OrdenesProvider directamente
-    // (esta función mantiene retrocompatibilidad hasta migrar por completo la UI)
-    // -> NOTA: No se persiste en servidor aquí.
-    // Creamos un CashOrder temporal y notificamos.
-    _pendingOrdersInternalInsert(nuevaCuenta);
-  }
-
-  // Método privado para simulación local (no persistente)
-  final List<CashOrder> _pendingOrdersInternal = [];
-  void _pendingOrdersInternalInsert(CashOrder c) {
-    _pendingOrdersInternal.insert(0, c);
-    notifyListeners();
-  }
-
-  void setPaymentMethod(String m) {
-    _selectedMethod = m;
-    _cashError = '';
-    notifyListeners();
-  }
-
-  void setReceivedAmount(String val) {
-    _receivedAmount = double.tryParse(val) ?? 0.0;
-    _cashError = '';
-    notifyListeners();
-  }
-
-  // Tipo de retorno bool síncrono para satisfacer el "if" de caja_page.dart (Línea 491)
-  Future<bool> chargeSelectedOrder() async {
-    if (_selectedOrder == null) return false;
-    if (_selectedMethod == 'Efectivo' &&
-        _receivedAmount < _selectedOrder!.total) {
-      _cashError = 'Monto recibido insuficiente.';
-      notifyListeners();
-      return false;
+  factory RestaurantOrder.fromJson(Map<String, dynamic> json) {
+    List<OrderItem> parsedItems = [];
+    if (json['order_items'] != null) {
+      parsedItems = (json['order_items'] as List<dynamic>)
+          .map((i) => OrderItem(
+                productName: i['product_name'] ?? '',
+                quantity: i['quantity'] ?? 1,
+                // AQUÍ ESTÁ LA CORRECCIÓN: Agregamos unitPrice
+                unitPrice: (i['unit_price'] as num?)?.toDouble() ?? 0.0,
+                total: (i['total_price'] as num?)?.toDouble() ?? (i['total'] as num?)?.toDouble() ?? 0.0,
+              ))
+          .toList();
+    } else if (json['items'] != null) {
+      parsedItems = (json['items'] as List<dynamic>)
+          .map((item) => OrderItem.fromJson(item as Map<String, dynamic>))
+          .toList();
     }
 
-    // Operación ahora espera la confirmación del servidor y sincroniza el estado
-    _setLoading(true);
-    _cashError = '';
-
-    final String orderId = _selectedOrder!.id;
-    final String metodo = _selectedMethod;
-    final double total = _selectedOrder!.total;
-
-    try {
-      await _repository.registrarCobro(orderId, metodo, total);
-
-      // Re-sincronizar órdenes y totales desde las fuentes canónicas
-      await _ordenesProvider.cargarOrdenes();
-      _totalInCash = await _repository.obtenerTotalEnCaja();
-
-      closeSelectedOrderPanel();
-      _setLoading(false);
-      notifyListeners();
-      return true;
-    } catch (e) {
-      debugPrint('Error asíncrono en Supabase Caja: $e');
-      _cashError = 'Error al cobrar la orden: ${e.toString()}';
-      _setLoading(false);
-      notifyListeners();
-      return false;
+    // Traducción de estados de la BD (Inglés) a la UI (Español)
+    String statusDb = json['status']?.toString() ?? 'pending';
+    String statusUi = 'pendiente';
+    switch (statusDb.toLowerCase()) {
+      case 'preparing': statusUi = 'preparando'; break;
+      case 'ready': statusUi = 'lista'; break;
+      case 'delivered': statusUi = 'entregada'; break;
+      case 'paid': statusUi = 'pagada'; break;
+      case 'cancelled': statusUi = 'cancelada'; break;
+      default: statusUi = 'pendiente';
     }
+
+    // Traducción del tipo de servicio
+    String typeDb = json['order_type']?.toString() ?? 'dine_in';
+    String typeUi = typeDb == 'takeout' ? 'para llevar' : 'comedor';
+
+    // Resolver el nombre legible de la mesa (ej. "A4") a partir del embed
+    // restaurant_tables(name) que ahora pide OrdenRepository. Supabase/
+    // PostgREST puede devolver este embed como un Map (relación 1:1) o
+    // como una List de un elemento (relación 1:N), según cómo esté
+    // declarada la foreign key, así que contemplamos ambos casos.
+    String? nombreMesa;
+    final tablaEmbed = json['restaurant_tables'];
+    if (tablaEmbed is Map<String, dynamic>) {
+      nombreMesa = tablaEmbed['name']?.toString();
+    } else if (tablaEmbed is List && tablaEmbed.isNotEmpty) {
+      final primero = tablaEmbed.first;
+      if (primero is Map<String, dynamic>) {
+        nombreMesa = primero['name']?.toString();
+      }
+    }
+
+    // Prioridad para tableOrCustomer:
+    // 1. Nombre real de la mesa resuelto vía join (ej. "A4")
+    // 2. Un tableOrCustomer ya armado explícitamente (ej. al crear la orden
+    //    desde tomar_orden_page.dart, que ya arma "Mesa A4 (Área Salón)")
+    // 3. 'Sin mesa' como respaldo final si no hay mesa asociada
+    // OJO: ya NO usamos table_id (UUID) como texto a mostrar, porque eso
+    // es lo que causaba que el ticket impreso mostrara un UUID o "Sin mesa"
+    // en vez del nombre real de la mesa.
+    final tableOrCustomerResuelto = (nombreMesa != null && nombreMesa.isNotEmpty)
+        ? nombreMesa
+        : json['tableOrCustomer']?.toString() ?? 'Sin mesa';
+
+    return RestaurantOrder(
+      id: json['id']?.toString() ?? '',
+      orderNumber: json['order_number']?.toString() ?? json['orderNumber']?.toString() ?? '',
+      tableId: json['table_id']?.toString(),
+      tableOrCustomer: tableOrCustomerResuelto,
+      time: json['created_at']?.toString() ?? json['time']?.toString() ?? '',
+      status: statusUi,
+      serviceType: typeUi,
+      items: parsedItems,
+      totalAmount: (json['total'] as num?)?.toDouble() ?? (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
+      notes: json['notes']?.toString(),
+    );
   }
 
-  // --- MÉTODOS AUXILIARES ---
-  void _setLoading(bool value) {
-    _isLoading = value;
-    notifyListeners();
+  Map<String, dynamic> toJson() {
+    // Traducción de la UI (Español) a la BD (Inglés) para aprobar las restricciones CHECK
+    String statusDb = 'pending';
+    switch (status.toLowerCase()) {
+      case 'preparando': statusDb = 'preparing'; break;
+      case 'lista': statusDb = 'ready'; break;
+      case 'entregada': statusDb = 'delivered'; break;
+      case 'pagada': statusDb = 'paid'; break;
+      case 'cancelada': statusDb = 'cancelled'; break;
+    }
+
+    String typeDb = serviceType.toLowerCase().contains('llevar') ? 'takeout' : 'dine_in';
+
+    return {
+      'id': id.isEmpty ? null : id,
+      'order_number': orderNumber,
+      'order_type': typeDb,
+      'status': statusDb,
+      'subtotal': totalAmount,
+      'total': totalAmount,
+      'table_id': tableId,
+      'notes': notes,
+      'waiter_id': null,
+      'payment_method': null,
+      'paid_at': null,
+      'discount_id': null,
+      'discount_amount': 0,
+      'tip': 0,
+    };
   }
 
-  void _clearError() {
-    _errorMessage = null;
+  RestaurantOrder copyWith({
+    String? id,
+    String? orderNumber,
+    String? tableId,
+    String? tableOrCustomer,
+    String? time,
+    OrderStatus? status,
+    ServiceType? serviceType,
+    List<OrderItem>? items,
+    double? totalAmount,
+    String? notes,
+  }) {
+    return RestaurantOrder(
+      id: id ?? this.id,
+      orderNumber: orderNumber ?? this.orderNumber,
+      tableId: tableId ?? this.tableId,
+      tableOrCustomer: tableOrCustomer ?? this.tableOrCustomer,
+      time: time ?? this.time,
+      status: status ?? this.status,
+      serviceType: serviceType ?? this.serviceType,
+      items: items ?? this.items,
+      totalAmount: totalAmount ?? this.totalAmount,
+      notes: notes ?? this.notes,
+    );
   }
-}
-
-CashOrder _mapRestaurantToCashOrder(RestaurantOrder o) {
-  final items = o.items
-      .map((it) =>
-          CashItem(name: it.productName, qty: it.quantity, price: it.unitPrice))
-      .toList();
-
-  return CashOrder(
-    id: o.id,
-    label: o.orderNumber.isNotEmpty ? o.orderNumber : o.tableOrCustomer,
-    time: o.time,
-    status: o.status,
-    itemsCount: o.items.length,
-    items: items,
-    total: o.totalAmount,
-  );
 }

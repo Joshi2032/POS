@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/ordenes_provider.dart';
-import '../providers/caja_provider.dart';
+import '../providers/ordenes_provider.dart' hide RestaurantOrder, OrderStatus, ServiceType;
 import '../providers/tomar_orden_provider.dart';
 
 import '../models/order_item.dart';
 import '../models/restaurant_order.dart';
 import '../models/cart_item.dart';
-import '../ui_models/cash_item.dart';
-import '../ui_models/cash_order.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Breakpoints centralizados
@@ -557,10 +554,6 @@ class _CartSection extends StatelessWidget {
             ))
         .toList();
 
-    final cajaItems = cart
-        .map((c) => CashItem(name: c.product.name, qty: c.qty, price: c.product.price))
-        .toList();
-
     final nuevaOrden = RestaurantOrder(
       id: '',
       orderNumber: idComanda,
@@ -576,8 +569,6 @@ class _CartSection extends StatelessWidget {
 
     final ordenesProvider =
         Provider.of<OrdenesProvider>(context, listen: false);
-    final cajaProvider =
-        Provider.of<CajaProvider>(context, listen: false);
     final router = GoRouter.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
@@ -595,15 +586,11 @@ class _CartSection extends StatelessWidget {
       return;
     }
 
-    cajaProvider.agregarCuentaPorCobrar(CashOrder(
-      id: idComanda,
-      label: identificador,
-      time: hora,
-      status: 'Pendiente',
-      itemsCount: itemsCount,
-      items: cajaItems,
-      total: total,
-    ));
+    // NOTA: ya no se llama a CajaProvider.agregarCuentaPorCobrar() aquí.
+    // insertarNuevaComanda() arriba ya hace cargarOrdenes() internamente,
+    // y CajaProvider.pendingOrders lee directamente de OrdenesProvider, así
+    // que la orden recién creada ya aparece en caja sin necesidad de este
+    // paso extra (que además insertaba en una lista que nadie llegaba a leer).
 
     provider.sendOrder();
 

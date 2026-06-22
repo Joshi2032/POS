@@ -164,19 +164,25 @@ class PrinterService {
     bytes += generator.hr();
 
     // 2. Datos de la orden (Mesa / Mesero, Folio, Personas / Orden)
-    // TODO: reemplazar 'MESERO_FIJO' y 'PERSONAS_FIJO' cuando se agreguen
+    // orden.tableOrCustomer ya trae el nombre real de la mesa (ej. "A4") o
+    // el identificador armado al crear la orden (ej. "Mesa A4 (Área Salón)"),
+    // resuelto en RestaurantOrder.fromJson() vía join con restaurant_tables.
+    // TODO: reemplazar 'meseroFijo' y 'personasFijo' cuando se agreguen
     // los campos correspondientes (mesero, numero de personas) a RestaurantOrder.
-    const String _meseroFijo = '-'; // <-- placeholder temporal
-    const String _personasFijo = '-'; // <-- placeholder temporal
+    // Nota: orders.waiter_id ya existe en la base de datos (FK a auth.users),
+    // así que la infraestructura para el mesero real ya está lista del lado
+    // del servidor; solo falta conectarla en el modelo y el flujo de Flutter.
+    const String meseroFijo = '-'; // <-- placeholder temporal
+    const String personasFijo = '-'; // <-- placeholder temporal
 
     final mesaTexto = 'MESA: ${_limpiarTexto(orden.tableOrCustomer)}';
-    final meseroTexto = 'MESERO: $_meseroFijo';
+    final meseroTexto = 'MESERO: $meseroFijo';
     bytes += generator.text(_filaDosColumnas(mesaTexto, meseroTexto));
 
     bytes += generator.text('FOLIO: ${orden.orderNumber}', styles: const PosStyles(align: PosAlign.center));
     bytes += generator.text(_formatearFecha(DateTime.now()), styles: const PosStyles(align: PosAlign.center));
 
-    final personasTexto = 'PERSONAS: $_personasFijo';
+    final personasTexto = 'PERSONAS: $personasFijo';
     final ordenTexto = 'ORDEN: ${orden.orderNumber}';
     bytes += generator.text(_filaDosColumnas(personasTexto, ordenTexto));
 
@@ -187,19 +193,19 @@ class PrinterService {
     // más si el monto tiene 4+ dígitos) y la descripción ocupa lo que
     // sobra, de forma que la suma siempre dé exactamente 32 caracteres
     // sin desbordar el papel, sin importar qué tan grande sea el total.
-    const int _anchoCant = 4;
+    const int anchoCant = 4;
 
-    String _filaProducto(String cant, String desc, String importe) {
+    String filaProducto(String cant, String desc, String importe) {
       final anchoImporte = importe.length > 7 ? importe.length : 7;
-      final anchoDesc = _anchoPapel - _anchoCant - 1 - anchoImporte - 1;
-      final cantPad = cant.padRight(_anchoCant);
+      final anchoDesc = _anchoPapel - anchoCant - 1 - anchoImporte - 1;
+      final cantPad = cant.padRight(anchoCant);
       final descPad = _truncar(desc, anchoDesc).padRight(anchoDesc);
       final importePad = importe.padLeft(anchoImporte);
       return '$cantPad $descPad $importePad';
     }
 
     bytes += generator.text(
-      _filaProducto('CANT', 'DESCRIPCION', 'IMPORTE'),
+      filaProducto('CANT', 'DESCRIPCION', 'IMPORTE'),
       styles: const PosStyles(bold: true),
     );
 
@@ -208,21 +214,16 @@ class PrinterService {
       final cantTexto = '${item.quantity}';
       final importeTexto = '\$${item.total.toStringAsFixed(2)}';
       final anchoImporte = importeTexto.length > 7 ? importeTexto.length : 7;
-      final anchoDescDisponible = _anchoPapel - _anchoCant - 1 - anchoImporte - 1;
+      final anchoDescDisponible = _anchoPapel - anchoCant - 1 - anchoImporte - 1;
 
       if (nombreLimpio.length <= anchoDescDisponible) {
-        // Cabe todo en una sola línea: cantidad, descripción e importe juntos.
-        bytes += generator.text(_filaProducto(cantTexto, nombreLimpio, importeTexto));
+        bytes += generator.text(filaProducto(cantTexto, nombreLimpio, importeTexto));
       } else {
-        // No cabe: la cantidad y el importe se quedan en la primera línea
-        // junto con lo que sí cabe del nombre; el resto del nombre pasa
-        // a una segunda línea alineada bajo la columna de descripción,
-        // sin repetir texto.
         final primeraParte = nombreLimpio.substring(0, anchoDescDisponible);
         final segundaParte = nombreLimpio.substring(anchoDescDisponible).trim();
-        bytes += generator.text(_filaProducto(cantTexto, primeraParte, importeTexto));
+        bytes += generator.text(filaProducto(cantTexto, primeraParte, importeTexto));
         bytes += generator.text(
-          ''.padRight(_anchoCant + 1) + _truncar(segundaParte, anchoDescDisponible),
+          ''.padRight(anchoCant + 1) + _truncar(segundaParte, anchoDescDisponible),
         );
       }
     }
@@ -269,6 +270,110 @@ class PrinterService {
       _filaDosColumnas('20% WOW!:', '\$${(orden.totalAmount * 0.20).toStringAsFixed(2)}'),
       styles: const PosStyles(bold: true),
     );
+
+    bytes += generator.feed(3);
+    bytes += generator.cut();
+
+    return bytes;
+  }
+
+  /// Variante rápida: igual que [imprimirTicketCaja] pero sin necesitar
+  /// un objeto RestaurantOrder completo. Útil para pantallas donde solo
+  /// tienes mesa, mesero, una lista de líneas ya formateadas y el total.
+  /// Reutiliza la misma impresora (USB, POS-58, papel 58mm) y el mismo
+  /// formato a 32 caracteres que el resto del ticket, para que ambos
+  /// métodos impriman con apariencia idéntica.
+  static Future<bool> imprimirTicketRapido({
+    required String ticketContent,
+    String? nombreMesa,
+    String? nombreMesero,
+    double total = 0.0,
+  }) async {
+    try {
+      final profile = await CapabilityProfile.load();
+      final generator = Generator(PaperSize.mm58, profile);
+
+      List<int> bytes = _armarDisenoTicketRapido(
+        generator,
+        ticketContent: ticketContent,
+        nombreMesa: nombreMesa,
+        nombreMesero: nombreMesero,
+        total: total,
+      );
+
+      var printerManager = PrinterManager.instance;
+
+      await printerManager.connect(
+        type: PrinterType.usb,
+        model: UsbPrinterInput(
+          name: 'POS-58',
+        )
+      );
+
+      bool success = await printerManager.send(type: PrinterType.usb, bytes: bytes);
+
+      await printerManager.disconnect(type: PrinterType.usb);
+
+      return success;
+    } catch (e) {
+      debugPrint("Error de impresión: $e");
+      return false;
+    }
+  }
+
+  static List<int> _armarDisenoTicketRapido(
+    Generator generator, {
+    required String ticketContent,
+    String? nombreMesa,
+    String? nombreMesero,
+    required double total,
+  }) {
+    List<int> bytes = [];
+
+    bytes += generator.reset();
+
+    // 1. Encabezado fiscal (mismo encabezado que el ticket de caja completo)
+    bytes += generator.text(_nombreNegocio,
+        styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+        ));
+    bytes += generator.text(_razonSocial, styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text(_rfc, styles: const PosStyles(align: PosAlign.center));
+
+    bytes += generator.hr();
+
+    // 2. Mesa / Mesero (si vienen vacíos, se omite esa línea)
+    if (nombreMesa != null && nombreMesa.isNotEmpty) {
+      bytes += generator.text(
+        'MESA: ${_limpiarTexto(nombreMesa)}',
+        styles: const PosStyles(bold: true),
+      );
+    }
+    if (nombreMesero != null && nombreMesero.isNotEmpty) {
+      bytes += generator.text('ATENDIDO POR: ${_limpiarTexto(nombreMesero)}');
+    }
+
+    bytes += generator.hr();
+
+    // 3. Contenido libre del ticket (ya formateado por quien llama)
+    bytes += generator.text(_limpiarTexto(ticketContent));
+
+    bytes += generator.hr();
+
+    // 4. Total (mismo formato de 32 caracteres que el resto del ticket)
+    bytes += generator.text(
+      _filaDosColumnas('TOTAL:', '\$${total.toStringAsFixed(2)}'),
+      styles: const PosStyles(bold: true),
+    );
+    bytes += generator.text(
+      'SON: ${_montoEnLetras(total)}',
+      styles: const PosStyles(align: PosAlign.left),
+    );
+
+    bytes += generator.emptyLines(1);
+    bytes += generator.text('GRACIAS POR SU PREFERENCIA', styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.text('ESTE NO ES UN COMPROBANTE FISCAL', styles: const PosStyles(align: PosAlign.center, bold: true));
 
     bytes += generator.feed(3);
     bytes += generator.cut();

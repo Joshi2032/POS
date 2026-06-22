@@ -8,18 +8,41 @@ class CajaRepository {
 
   CajaRepository(this._client);
 
+  // Offset fijo de México zona Centro (America/Mexico_City) respecto a UTC.
+  // México eliminó el horario de verano desde 2022 (excepto franja fronteriza
+  // norte), así que este offset es constante todo el año: UTC-6.
+  static const Duration _offsetMexicoCentro = Duration(hours: -6);
+
+  /// Retorna el inicio del día de "hoy" en hora de México, expresado en UTC.
+  /// Nota: se separó en un método simple en vez de retornar un Record (tupla)
+  /// para mantener compatibilidad con Dart 2.18+. Records requieren Dart >=3.0.
+  DateTime _inicioDiaHoyEnUtc() {
+    final ahoraUtc = DateTime.now().toUtc();
+    final ahoraMexico = ahoraUtc.add(_offsetMexicoCentro);
+    final inicioDiaMexico = DateTime.utc(
+      ahoraMexico.year,
+      ahoraMexico.month,
+      ahoraMexico.day,
+    );
+    return inicioDiaMexico.subtract(_offsetMexicoCentro);
+  }
+
   // Obtener el saldo total actual en la caja registradora (Sumando las órdenes en efectivo de hoy)
   Future<double> obtenerTotalEnCaja() async {
     try {
-      final hoy = DateTime.now().toIso8601String().substring(0, 10);
-      
-      // Buscamos todas las órdenes pagadas HOY en EFECTIVO
+      final inicioUtc = _inicioDiaHoyEnUtc();
+      final finUtc = inicioUtc.add(const Duration(days: 1));
+
+      // Buscamos todas las órdenes pagadas HOY (en hora de México) en EFECTIVO.
+      // Usamos un rango [inicioUtc, finUtc) en vez de solo gte, para no
+      // arrastrar ventas del día siguiente si el corte se hace tarde.
       final response = await _client
           .from('orders')
           .select('total')
           .eq('status', 'paid')
           .eq('payment_method', 'cash')
-          .gte('paid_at', hoy);
+          .gte('paid_at', inicioUtc.toIso8601String())
+          .lt('paid_at', finUtc.toIso8601String());
 
       double totalEfectivo = 0.0;
       
@@ -34,6 +57,17 @@ class CajaRepository {
       debugPrint('Advertencia: No se pudo calcular el saldo de caja: $e');
       return 0.0;
     }
+  }
+
+  /// Fecha de "hoy" en hora de México (YYYY-MM-DD), para columnas de tipo
+  /// `date` como `cash_movements.date`. Usa el mismo offset fijo que
+  /// [_rangoDeHoyEnUtc] para que ambas columnas queden consistentes entre sí.
+  String _fechaDeHoyMexico() {
+    final ahoraMexico = DateTime.now().toUtc().add(_offsetMexicoCentro);
+    final anio = ahoraMexico.year.toString().padLeft(4, '0');
+    final mes = ahoraMexico.month.toString().padLeft(2, '0');
+    final dia = ahoraMexico.day.toString().padLeft(2, '0');
+    return '$anio-$mes-$dia';
   }
 
   // Registrar un cobro de orden directamente en la base de datos
@@ -63,7 +97,9 @@ class CajaRepository {
           'concept': 'Cobro de Orden #$orderId',
           'type': 'Ingreso',
           'amount': total,
-          'date': DateTime.now().toIso8601String().substring(0, 10),
+          // Fecha en hora de México (no la del dispositivo), para que
+          // coincida con el rango usado en obtenerTotalEnCaja().
+          'date': _fechaDeHoyMexico(),
         });
       } catch (e) {
         debugPrint('Advertencia: Tabla cash_movements falló: $e');

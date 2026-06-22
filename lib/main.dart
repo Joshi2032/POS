@@ -26,7 +26,7 @@ import 'repositories/recipe_repository.dart';
 
 // --- Providers ---
 import 'providers/ajustes_provider.dart';
-import 'providers/caja_provider.dart';
+import 'providers/caja_provider.dart' hide RestaurantOrder;
 import 'providers/combos_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/empleados_provider.dart';
@@ -34,7 +34,7 @@ import 'providers/gastos_provider.dart';
 import 'providers/historial_cortes_provider.dart';
 import 'providers/mesas_provider.dart';
 import 'providers/nominas_provider.dart';
-import 'providers/ordenes_provider.dart';
+import 'providers/ordenes_provider.dart' hide RestaurantOrder, OrderStatus, ServiceType;
 import 'providers/productos_provider.dart';
 import 'providers/categorias_provider.dart';
 import 'providers/provider_payment.dart';

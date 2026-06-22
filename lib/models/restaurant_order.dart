@@ -62,11 +62,39 @@ class RestaurantOrder {
     String typeDb = json['order_type']?.toString() ?? 'dine_in';
     String typeUi = typeDb == 'takeout' ? 'para llevar' : 'comedor';
 
+    // Resolver el nombre legible de la mesa (ej. "A4") a partir del embed
+    // restaurant_tables(name) que ahora pide OrdenRepository. Supabase/
+    // PostgREST puede devolver este embed como un Map (relación 1:1) o
+    // como una List de un elemento (relación 1:N), según cómo esté
+    // declarada la foreign key, así que contemplamos ambos casos.
+    String? nombreMesa;
+    final tablaEmbed = json['restaurant_tables'];
+    if (tablaEmbed is Map<String, dynamic>) {
+      nombreMesa = tablaEmbed['name']?.toString();
+    } else if (tablaEmbed is List && tablaEmbed.isNotEmpty) {
+      final primero = tablaEmbed.first;
+      if (primero is Map<String, dynamic>) {
+        nombreMesa = primero['name']?.toString();
+      }
+    }
+
+    // Prioridad para tableOrCustomer:
+    // 1. Nombre real de la mesa resuelto vía join (ej. "A4")
+    // 2. Un tableOrCustomer ya armado explícitamente (ej. al crear la orden
+    //    desde tomar_orden_page.dart, que ya arma "Mesa A4 (Área Salón)")
+    // 3. 'Sin mesa' como respaldo final si no hay mesa asociada
+    // OJO: ya NO usamos table_id (UUID) como texto a mostrar, porque eso
+    // es lo que causaba que el ticket impreso mostrara un UUID o "Sin mesa"
+    // en vez del nombre real de la mesa.
+    final tableOrCustomerResuelto = (nombreMesa != null && nombreMesa.isNotEmpty)
+        ? nombreMesa
+        : json['tableOrCustomer']?.toString() ?? 'Sin mesa';
+
     return RestaurantOrder(
       id: json['id']?.toString() ?? '',
       orderNumber: json['order_number']?.toString() ?? json['orderNumber']?.toString() ?? '',
       tableId: json['table_id']?.toString(),
-      tableOrCustomer: json['table_id']?.toString() ?? json['tableOrCustomer']?.toString() ?? 'Sin mesa',
+      tableOrCustomer: tableOrCustomerResuelto,
       time: json['created_at']?.toString() ?? json['time']?.toString() ?? '',
       status: statusUi,
       serviceType: typeUi,

@@ -11,8 +11,14 @@ class OrdenRepository {
   // READ: Obtener las órdenes activas (ej: que no estén completadas o archivadas)
   Future<List<RestaurantOrder>> getOrdenesActivas() async {
     try {
-      // Usamos un select relacional si tu tabla tiene una llave foránea con order_items
-      final response = await _client.from('orders').select('*, order_items(*)');
+      // Usamos un select relacional si tu tabla tiene una llave foránea con order_items.
+      // También traemos restaurant_tables(name) para poder mostrar el nombre real
+      // de la mesa (ej. "A4") en vez del UUID crudo de table_id al imprimir o
+      // listar órdenes. Requiere que exista la foreign key orders.table_id ->
+      // restaurant_tables.id en Supabase para que el embed funcione.
+      final response = await _client
+          .from('orders')
+          .select('*, order_items(*), restaurant_tables(name)');
 
       return (response as List)
           .map((json) => RestaurantOrder.fromJson(json))
@@ -26,7 +32,11 @@ class OrdenRepository {
     try {
       // ✅ EL SECRETO ESTÁ EN EL SELECT: '*, order_items(*)'
       // Esto le dice a Supabase: "Trae la orden Y TODOS sus artículos"
-      final response = await _client.from('orders').select('*, order_items(*)');
+      // También pedimos restaurant_tables(name) para resolver el nombre
+      // legible de la mesa (ver nota en getOrdenesActivas).
+      final response = await _client
+          .from('orders')
+          .select('*, order_items(*), restaurant_tables(name)');
       final List<dynamic> ordenesData = response as List<dynamic>;
 
       debugPrint('✅ ORDEN_REPO: Respuesta de Supabase: $ordenesData');

@@ -1,234 +1,163 @@
-import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'order_item.dart';
 
-import '../models/restaurant_order.dart';
-import '../repositories/orden_repository.dart';
-import 'base_provider.dart';
+typedef OrderStatus = String;
+typedef ServiceType = String;
 
-class OrdenesProvider extends BaseProvider {
-  final OrdenRepository _repository;
-  final int pageSize = 6;
+class RestaurantOrder {
+  final String id;
+  final String orderNumber;
+  final String? tableId; // UUID relacional de la mesa
+  final String tableOrCustomer; // Nombre descriptivo para la UI
+  final String time;
+  final OrderStatus status;
+  final ServiceType serviceType;
+  final List<OrderItem> items;
+  final double totalAmount;
+  final String? notes;
 
-  List<RestaurantOrder> _orders = [];
-  String _searchQuery = '';
-  String _selectedFilterStatus = 'Todos';
-  String _selectedFilterService = 'Todos';
-  int _currentPage = 1;
+  RestaurantOrder({
+    required this.id,
+    required this.orderNumber,
+    this.tableId,
+    required this.tableOrCustomer,
+    required this.time,
+    required this.status,
+    required this.serviceType,
+    required this.items,
+    required this.totalAmount,
+    this.notes,
+  });
 
-  bool _showModal = false;
-  RestaurantOrder? _selectedOrderForModal;
-
-  OrdenesProvider(this._repository) : super() {
-    cargarOrdenes();
-    // In absence of a Realtime subscription, poll periodically as a safe fallback
-    _startPolling();
-    _initRealtimeSubscription();
-  }
-
-  Timer? _pollTimer;
-
-  void _startPolling() {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
-      try {
-        await cargarOrdenes();
-      } catch (_) {}
-    });
-  }
-
-  dynamic _ordersChannel;
-
-  void _initRealtimeSubscription() {
-    try {
-      final channel = Supabase.instance.client.channel('orders-channel');
-
-      channel.on(RealtimeListenTypes.postgresChanges,
-          ChannelFilter(event: '*', schema: 'public', table: 'orders'),
-          (payload, [ref]) {
-        // Any change on orders -> reload
-        cargarOrdenes();
-      });
-
-      channel.subscribe();
-      _ordersChannel = channel;
-
-      // If subscription established, cancel polling fallback
-      _pollTimer?.cancel();
-    } catch (e) {
-      debugPrint('Realtime subscription failed: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    try {
-      if (_ordersChannel != null) {
-        _ordersChannel.unsubscribe();
-      }
-    } catch (_) {}
-    super.dispose();
-  }
-
-  // --- GETTERS (Exactamente como los necesita tu UI original) ---
-  List<RestaurantOrder> get orders => _orders;
-  String get searchQuery => _searchQuery;
-  String get selectedFilterStatus => _selectedFilterStatus;
-  String get selectedFilterService => _selectedFilterService;
-  int get currentPage => _currentPage;
-  bool get showModal => _showModal;
-  RestaurantOrder? get selectedOrderForModal => _selectedOrderForModal;
-
-  List<RestaurantOrder> get filteredOrders {
-    return _orders.where((order) {
-      final matchesSearch = order.orderNumber
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase()) ||
-          order.id.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          order.tableOrCustomer
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase());
-
-      final matchesStatus = _selectedFilterStatus == 'Todos' ||
-          order.status.toLowerCase() == _selectedFilterStatus.toLowerCase();
-
-      final matchesService = _selectedFilterService == 'Todos' ||
-          order.serviceType.toLowerCase() ==
-              _selectedFilterService.toLowerCase();
-
-      return matchesSearch && matchesStatus && matchesService;
-    }).toList();
-  }
-
-  List<RestaurantOrder> get paginatedOrders {
-    final list = filteredOrders;
-    final start = (_currentPage - 1) * pageSize;
-    if (start >= list.length) return [];
-    return list.sublist(start,
-        (start + pageSize) > list.length ? list.length : (start + pageSize));
-  }
-
-  int get totalPages =>
-      (filteredOrders.length / pageSize).ceil().clamp(1, 999999);
-
-  // Condicionales basadas estrictamente en las propiedades de tus modelos
-  int get activeOrdersCount => _orders
-      .where((o) => o.status == 'pendiente' || o.status == 'preparando')
-      .length;
-  int get readyOrdersCount => _orders.where((o) => o.status == 'lista').length;
-
-  // --- CONTROLES DE INTERFAZ ---
-  void onSearchChange(String val) {
-    _searchQuery = val;
-    _currentPage = 1;
-    notifyListeners();
-  }
-
-  void onStatusFilterChange(String val) {
-    _selectedFilterStatus = val;
-    _currentPage = 1;
-    notifyListeners();
-  }
-
-  void onServiceFilterChange(String val) {
-    _selectedFilterService = val;
-    _currentPage = 1;
-    notifyListeners();
-  }
-
-  void goToPage(int page) {
-    if (page >= 1 && page <= totalPages) {
-      _currentPage = page;
-      notifyListeners();
-    }
-  }
-
-  void abrirDetalleModal(RestaurantOrder order) {
-    _selectedOrderForModal = order;
-    _showModal = true;
-    notifyListeners();
-  }
-
-  void cerrarModal() {
-    _showModal = false;
-    _selectedOrderForModal = null;
-    notifyListeners();
-  }
-
-  // ==========================================
-  // CONEXIÓN A SUPABASE MEDIANTE BASE_PROVIDER
-  // ==========================================
-
-  Future<void> cargarOrdenes() async {
-    await ejecutarOperacion(() async {
-      _orders = await _repository.getOrdenesActivas();
-    });
-  }
-
-  Future<void> insertarNuevaComanda(RestaurantOrder nuevaOrden) async {
-    await ejecutarOperacion(() async {
-      final itemsMap = nuevaOrden.items
-          .map((i) => {
-                'product_name': i.productName,
-                'product_id': i.productId,
-                'quantity': i.quantity,
-                'unit_price': i.unitPrice,
-                'total': i.total,
-              })
+  factory RestaurantOrder.fromJson(Map<String, dynamic> json) {
+    List<OrderItem> parsedItems = [];
+    if (json['order_items'] != null) {
+      parsedItems = (json['order_items'] as List<dynamic>)
+          .map((i) => OrderItem(
+                productName: i['product_name'] ?? '',
+                quantity: i['quantity'] ?? 1,
+                // AQUÍ ESTÁ LA CORRECCIÓN: Agregamos unitPrice
+                unitPrice: (i['unit_price'] as num?)?.toDouble() ?? 0.0,
+                total: (i['total_price'] as num?)?.toDouble() ?? (i['total'] as num?)?.toDouble() ?? 0.0,
+              ))
           .toList();
-
-      await _repository.crearOrden(nuevaOrden, itemsMap);
-      await cargarOrdenes(); // Re-sincroniza el listado activo
-    });
-  }
-
-  Future<bool> cambiarEstadoOrden(String id, String nuevoEstado) async {
-    bool exito = false;
-    await ejecutarOperacion(() async {
-      // Mapear estados desde la UI (es: 'preparando', 'pagada')
-      // al valor que espera la base de datos (en inglés: 'preparing', 'paid').
-      final estadoDb = _mapEstadoUiToDb(nuevoEstado);
-      debugPrint(
-          'ORDENES_PROVIDER: cambiarEstadoOrden(id=$id, nuevoEstado=$nuevoEstado) -> estadoDb=$estadoDb');
-      await _repository.actualizarEstado(id, estadoDb);
-      await cargarOrdenes();
-
-      // Mantiene la actualización reactiva del modal si el usuario lo tiene abierto
-      if (_selectedOrderForModal?.id == id) {
-        final idx = _orders.indexWhere((o) => o.id == id);
-        if (idx != -1) {
-          _selectedOrderForModal = _orders[idx];
-        }
-      }
-      exito = true;
-    });
-    return exito;
-  }
-
-  String _mapEstadoUiToDb(String estado) {
-    final e = estado.toLowerCase();
-    switch (e) {
-      case 'preparando':
-        return 'preparing';
-      case 'lista':
-        return 'ready';
-      case 'entregada':
-        return 'delivered';
-      case 'pagada':
-        return 'paid';
-      case 'cancelada':
-        return 'cancelled';
-      case 'pendiente':
-        return 'pending';
-      default:
-        // Si ya se pasó un estado en inglés, lo devolvemos tal cual si es válido
-        if (['pending', 'preparing', 'ready', 'delivered', 'paid', 'cancelled']
-            .contains(e)) {
-          return e;
-        }
-        // Fallback seguro
-        return 'pending';
+    } else if (json['items'] != null) {
+      parsedItems = (json['items'] as List<dynamic>)
+          .map((item) => OrderItem.fromJson(item as Map<String, dynamic>))
+          .toList();
     }
+
+    // Traducción de estados de la BD (Inglés) a la UI (Español)
+    String statusDb = json['status']?.toString() ?? 'pending';
+    String statusUi = 'pendiente';
+    switch (statusDb.toLowerCase()) {
+      case 'preparing': statusUi = 'preparando'; break;
+      case 'ready': statusUi = 'lista'; break;
+      case 'delivered': statusUi = 'entregada'; break;
+      case 'paid': statusUi = 'pagada'; break;
+      case 'cancelled': statusUi = 'cancelada'; break;
+      default: statusUi = 'pendiente';
+    }
+
+    // Traducción del tipo de servicio
+    String typeDb = json['order_type']?.toString() ?? 'dine_in';
+    String typeUi = typeDb == 'takeout' ? 'para llevar' : 'comedor';
+
+    // Resolver el nombre legible de la mesa (ej. "A4") a partir del embed
+    // restaurant_tables(name) que ahora pide OrdenRepository. Supabase/
+    // PostgREST puede devolver este embed como un Map (relación 1:1) o
+    // como una List de un elemento (relación 1:N), según cómo esté
+    // declarada la foreign key, así que contemplamos ambos casos.
+    String? nombreMesa;
+    final tablaEmbed = json['restaurant_tables'];
+    if (tablaEmbed is Map<String, dynamic>) {
+      nombreMesa = tablaEmbed['name']?.toString();
+    } else if (tablaEmbed is List && tablaEmbed.isNotEmpty) {
+      final primero = tablaEmbed.first;
+      if (primero is Map<String, dynamic>) {
+        nombreMesa = primero['name']?.toString();
+      }
+    }
+
+    // Prioridad para tableOrCustomer:
+    // 1. Nombre real de la mesa resuelto vía join (ej. "A4")
+    // 2. Un tableOrCustomer ya armado explícitamente (ej. al crear la orden
+    //    desde tomar_orden_page.dart, que ya arma "Mesa A4 (Área Salón)")
+    // 3. 'Sin mesa' como respaldo final si no hay mesa asociada
+    // OJO: ya NO usamos table_id (UUID) como texto a mostrar, porque eso
+    // es lo que causaba que el ticket impreso mostrara un UUID o "Sin mesa"
+    // en vez del nombre real de la mesa.
+    final tableOrCustomerResuelto = (nombreMesa != null && nombreMesa.isNotEmpty)
+        ? nombreMesa
+        : json['tableOrCustomer']?.toString() ?? 'Sin mesa';
+
+    return RestaurantOrder(
+      id: json['id']?.toString() ?? '',
+      orderNumber: json['order_number']?.toString() ?? json['orderNumber']?.toString() ?? '',
+      tableId: json['table_id']?.toString(),
+      tableOrCustomer: tableOrCustomerResuelto,
+      time: json['created_at']?.toString() ?? json['time']?.toString() ?? '',
+      status: statusUi,
+      serviceType: typeUi,
+      items: parsedItems,
+      totalAmount: (json['total'] as num?)?.toDouble() ?? (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
+      notes: json['notes']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    // Traducción de la UI (Español) a la BD (Inglés) para aprobar las restricciones CHECK
+    String statusDb = 'pending';
+    switch (status.toLowerCase()) {
+      case 'preparando': statusDb = 'preparing'; break;
+      case 'lista': statusDb = 'ready'; break;
+      case 'entregada': statusDb = 'delivered'; break;
+      case 'pagada': statusDb = 'paid'; break;
+      case 'cancelada': statusDb = 'cancelled'; break;
+    }
+
+    String typeDb = serviceType.toLowerCase().contains('llevar') ? 'takeout' : 'dine_in';
+
+    return {
+      'id': id.isEmpty ? null : id,
+      'order_number': orderNumber,
+      'order_type': typeDb,
+      'status': statusDb,
+      'subtotal': totalAmount,
+      'total': totalAmount,
+      'table_id': tableId,
+      'notes': notes,
+      'waiter_id': null,
+      'payment_method': null,
+      'paid_at': null,
+      'discount_id': null,
+      'discount_amount': 0,
+      'tip': 0,
+    };
+  }
+
+  RestaurantOrder copyWith({
+    String? id,
+    String? orderNumber,
+    String? tableId,
+    String? tableOrCustomer,
+    String? time,
+    OrderStatus? status,
+    ServiceType? serviceType,
+    List<OrderItem>? items,
+    double? totalAmount,
+    String? notes,
+  }) {
+    return RestaurantOrder(
+      id: id ?? this.id,
+      orderNumber: orderNumber ?? this.orderNumber,
+      tableId: tableId ?? this.tableId,
+      tableOrCustomer: tableOrCustomer ?? this.tableOrCustomer,
+      time: time ?? this.time,
+      status: status ?? this.status,
+      serviceType: serviceType ?? this.serviceType,
+      items: items ?? this.items,
+      totalAmount: totalAmount ?? this.totalAmount,
+      notes: notes ?? this.notes,
+    );
   }
 }

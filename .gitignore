@@ -46,3 +46,9 @@ app.*.map.json
 
 # Credenciales y variables de entorno
 .env
+
+# Artefactos generados por el CLI de Supabase (no deben versionarse: pueden
+# contener referencias al proyecto vinculado, como el project-ref y la URL
+# del pooler de la base de datos).
+supabase/.temp/
+supabase/.branches/
