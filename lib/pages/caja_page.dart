@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 // Providers
-import '../providers/ordenes_provider.dart';
-import '../providers/caja_provider.dart';
+import '../providers/ordenes_provider.dart' hide RestaurantOrder, OrderStatus, ServiceType;
+import '../providers/caja_provider.dart' hide RestaurantOrder;
 
 // Modelos
 import '../models/restaurant_order.dart';

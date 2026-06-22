@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
-import '../providers/ordenes_provider.dart';
+import '../providers/ordenes_provider.dart' hide RestaurantOrder, OrderStatus, ServiceType;
 import '../providers/tomar_orden_provider.dart';
+import '../providers/auth_provider.dart';
 
 import '../models/order_item.dart';
 import '../models/restaurant_order.dart';
@@ -565,6 +566,8 @@ class _CartSection extends StatelessWidget {
       items: cocinaItems,
       totalAmount: total,
       notes: provider.notes.isNotEmpty ? provider.notes : null,
+      // Nombre del mesero tomado del perfil del usuario logueado.
+      waiterName: context.read<AuthProvider>().nombreUsuario,
     );
 
     final ordenesProvider =

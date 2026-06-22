@@ -6,14 +6,19 @@ typedef ServiceType = String;
 class RestaurantOrder {
   final String id;
   final String orderNumber;
-  final String? tableId; // UUID relacional de la mesa
-  final String tableOrCustomer; // Nombre descriptivo para la UI
+  final String? tableId;
+  final String tableOrCustomer;
   final String time;
   final OrderStatus status;
   final ServiceType serviceType;
   final List<OrderItem> items;
   final double totalAmount;
   final String? notes;
+  /// Nombre del mesero/empleado que tomó la orden.
+  /// Se guarda en memoria al crear la orden desde tomar_orden_page y se
+  /// imprime en el ticket. No viene de la BD al recargar (waiter_id FK no
+  /// hace join automático al nombre), pero sí se pasa al crearlo.
+  final String? waiterName;
 
   RestaurantOrder({
     required this.id,
@@ -26,6 +31,7 @@ class RestaurantOrder {
     required this.items,
     required this.totalAmount,
     this.notes,
+    this.waiterName,
   });
 
   factory RestaurantOrder.fromJson(Map<String, dynamic> json) {
@@ -101,6 +107,9 @@ class RestaurantOrder {
       items: parsedItems,
       totalAmount: (json['total'] as num?)?.toDouble() ?? (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
       notes: json['notes']?.toString(),
+      // waiterName no viene en el JSON de Supabase (requeriría join con profiles),
+      // pero se puede pasar directamente al crear la orden desde la UI.
+      waiterName: json['waiterName']?.toString(),
     );
   }
 
@@ -146,6 +155,7 @@ class RestaurantOrder {
     List<OrderItem>? items,
     double? totalAmount,
     String? notes,
+    String? waiterName,
   }) {
     return RestaurantOrder(
       id: id ?? this.id,
@@ -158,6 +168,7 @@ class RestaurantOrder {
       items: items ?? this.items,
       totalAmount: totalAmount ?? this.totalAmount,
       notes: notes ?? this.notes,
+      waiterName: waiterName ?? this.waiterName,
     );
   }
 }

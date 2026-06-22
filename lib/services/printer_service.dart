@@ -1,397 +1,838 @@
-import 'package:flutter/foundation.dart';
-import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
-import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+
+import '../providers/ordenes_provider.dart' hide RestaurantOrder, OrderStatus, ServiceType;
+import '../providers/tomar_orden_provider.dart';
+import '../providers/auth_provider.dart';
+
+import '../models/order_item.dart';
 import '../models/restaurant_order.dart';
+import '../models/cart_item.dart';
 
-class PrinterService {
+// ─────────────────────────────────────────────────────────────────────────────
+// Breakpoints centralizados
+// ─────────────────────────────────────────────────────────────────────────────
+class _BP {
+  // < tablet: layout de una columna + FAB para ver carrito
+  static const double tablet = 700;
+  // >= desktop: layout de dos columnas fijas (menú | carrito)
+  static const double desktop = 1100;
+}
 
-  // ---------------------------------------------------------------------
-  // DATOS FISCALES DEL NEGOCIO (editar aquí si cambian)
-  // ---------------------------------------------------------------------
-  static const String _nombreNegocio = 'ZAPATA COCINA DE BRASA';
-  static const String _razonSocial = 'J. JESUS LEON PEREZ';
-  static const String _rfc = 'RFC: LEPJ920408QA6';
-  static const String _direccionFiscal =
-      'RAMON LOPEZ NUM. 28 DEGOLLADO JALISCO\nDE GOLLADO JALISCO MEXICO CP 47980';
-  static const String _sucursal =
-      'SUCURSAL: CARRETERA FEDERAL 90 IRAPUATO-\nGUADALAJARA KM 84+880 PENJAMO GUANAJUATO\nPENJAMO GUANAJUATO CP 36910';
+// =============================================================================
+// PAGE
+// =============================================================================
+class TomarOrdenPage extends StatelessWidget {
+  const TomarOrdenPage({super.key});
 
-  static Future<bool> imprimirTicketCaja(RestaurantOrder orden) async {
-    try {
-      final profile = await CapabilityProfile.load();
-      // Usamos el perfil 58mm. Asegúrate que la impresora esté configurada físicamente para esto.
-      final generator = Generator(PaperSize.mm58, profile);
+  String _fmt(double v) => '\$${v.toStringAsFixed(2)} MXN';
 
-      List<int> bytes = _armarDisenoTicket(generator, orden);
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark ? const Color(0xFF13131A) : Colors.grey[50];
 
-      var printerManager = PrinterManager.instance;
+    return Scaffold(
+      backgroundColor: scaffoldBg,
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final w = constraints.maxWidth;
 
-      await printerManager.connect(
-        type: PrinterType.usb,
-        model: UsbPrinterInput(
-          name: 'POS-58',
-        )
-      );
+            // ── Desktop: dos columnas fijas ──────────────────────────────
+            if (w >= _BP.desktop) {
+              return Row(
+                children: [
+                  const Expanded(
+                      flex: 7,
+                      child: _MenuSection(layout: _Layout.desktop)),
+                  VerticalDivider(
+                    width: 1,
+                    color: isDark
+                        ? const Color(0xFF2D2D44)
+                        : Colors.grey[300],
+                  ),
+                  const SizedBox(
+                      width: 380,
+                      child: _CartSection(layout: _Layout.desktop)),
+                ],
+              );
+            }
 
-      bool success = await printerManager.send(type: PrinterType.usb, bytes: bytes);
+            // ── Tablet: dos columnas más compactas ───────────────────────
+            if (w >= _BP.tablet) {
+              return Row(
+                children: [
+                  const Expanded(
+                      flex: 6,
+                      child: _MenuSection(layout: _Layout.tablet)),
+                  VerticalDivider(
+                    width: 1,
+                    color: isDark
+                        ? const Color(0xFF2D2D44)
+                        : Colors.grey[300],
+                  ),
+                  const Expanded(
+                      flex: 4,
+                      child: _CartSection(layout: _Layout.tablet)),
+                ],
+              );
+            }
 
-      await printerManager.disconnect(type: PrinterType.usb);
+            // ── Móvil: una columna + FAB ─────────────────────────────────
+            return const _MenuSection(layout: _Layout.mobile);
+          },
+        ),
+      ),
 
-      return success;
-    } catch (e) {
-      debugPrint("Error de impresión: $e");
-      return false;
-    }
-  }
+      // FAB solo en móvil
+      floatingActionButton: Builder(builder: (ctx) {
+        final w = MediaQuery.of(ctx).size.width;
+        if (w >= _BP.tablet) return const SizedBox.shrink();
 
-  /// Ancho útil del papel de 58mm con fuente normal (Font A, sin negritas
-  /// extra-anchas). Es el número real de caracteres por línea que la
-  /// impresora puede colocar; las columnas de Generator.row() se calculan
-  /// como fracciones de 12, pero NO garantizan caracteres exactos, por eso
-  /// para texto libre armamos las líneas nosotros mismos con este ancho.
-  static const int _anchoPapel = 32;
+        final total =
+            ctx.select<TomarOrdenProvider, double>((p) => p.total);
+        final count =
+            ctx.select<TomarOrdenProvider, int>((p) => p.itemsCount);
 
-  /// Junta dos textos en una sola línea: [izquierda] pegado al borde
-  /// izquierdo y [derecha] pegado al borde derecho, rellenando con
-  /// espacios en medio. Si no caben los dos en una línea, [derecha] se
-  /// manda a una segunda línea ya truncada/recortada para no romper el
-  /// diseño con saltos de línea inesperados.
-  static String _filaDosColumnas(String izquierda, String derecha) {
-    final espacioDisponible = _anchoPapel - izquierda.length - derecha.length;
-    if (espacioDisponible >= 1) {
-      return izquierda + ' ' * espacioDisponible + derecha;
-    }
-    // No caben en una sola línea: ponemos derecha alineada a la derecha
-    // en su propia línea, debajo de izquierda, para que nunca se vea
-    // partida a la mitad de una palabra.
-    final relleno = _anchoPapel - derecha.length;
-    final espacios = relleno > 0 ? ' ' * relleno : '';
-    return '$izquierda\n$espacios$derecha';
-  }
-
-  /// Trunca un texto a un ancho máximo, agregando "." si se recorta,
-  /// para que nunca se desborde ni se parta a la mitad de una palabra
-  /// en columnas estrechas como la de cantidad o descripción.
-  static String _truncar(String texto, int maxAncho) {
-    if (texto.length <= maxAncho) return texto;
-    if (maxAncho <= 1) return texto.substring(0, maxAncho);
-    return '${texto.substring(0, maxAncho - 1)}.';
-  }
-
-  /// Quita acentos y caracteres especiales para máxima compatibilidad
-  /// con impresoras térmicas que no soportan UTF-8 correctamente.
-  static String _limpiarTexto(String texto) {
-    return texto
-        .replaceAll('á', 'a').replaceAll('é', 'e').replaceAll('í', 'i')
-        .replaceAll('ó', 'o').replaceAll('ú', 'u')
-        .replaceAll('Á', 'A').replaceAll('É', 'E').replaceAll('Í', 'I')
-        .replaceAll('Ó', 'O').replaceAll('Ú', 'U')
-        .replaceAll('ñ', 'n').replaceAll('Ñ', 'N');
-  }
-
-  /// Convierte un monto a texto en letras (pesos mexicanos), igual que la
-  /// línea "SON: ___" de los comprobantes.
-  static String _montoEnLetras(double monto) {
-    final pesos = monto.floor();
-    final centavos = ((monto - pesos) * 100).round();
-
-    if (pesos == 0) {
-      return 'CERO PESOS ${centavos.toString().padLeft(2, '0')}/100 M.N.';
-    }
-
-    final letras = _numeroALetras(pesos).toUpperCase();
-    return '$letras PESOS ${centavos.toString().padLeft(2, '0')}/100 M.N.';
-  }
-
-  static String _numeroALetras(int n) {
-    if (n == 0) return 'cero';
-
-    const unidades = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve'];
-    const especiales = ['diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciseis', 'diecisiete', 'dieciocho', 'diecinueve'];
-    const decenas = ['', '', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
-    const centenas = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
-
-    String convertirGrupo(int num) {
-      if (num == 0) return '';
-      if (num == 100) return 'cien';
-      if (num < 10) return unidades[num];
-      if (num < 20) return especiales[num - 10];
-      if (num < 30 && num > 20) return 'veinti${unidades[num - 20]}';
-      if (num < 100) {
-        final d = num ~/ 10;
-        final u = num % 10;
-        return u == 0 ? decenas[d] : '${decenas[d]} y ${unidades[u]}';
-      }
-      final c = num ~/ 100;
-      final resto = num % 100;
-      return resto == 0 ? centenas[c] : '${centenas[c]} ${convertirGrupo(resto)}';
-    }
-
-    if (n < 1000) return convertirGrupo(n);
-
-    if (n < 1000000) {
-      final miles = n ~/ 1000;
-      final resto = n % 1000;
-      final prefijoMiles = miles == 1 ? 'mil' : '${convertirGrupo(miles)} mil';
-      return resto == 0 ? prefijoMiles : '$prefijoMiles ${convertirGrupo(resto)}';
-    }
-
-    // Suficiente para tickets de restaurante; no se esperan montos > 999,999
-    return n.toString();
-  }
-
-  static List<int> _armarDisenoTicket(Generator generator, RestaurantOrder orden) {
-    List<int> bytes = [];
-
-    bytes += generator.reset();
-
-    // 1. Encabezado fiscal (Centrado)
-    bytes += generator.text(_nombreNegocio,
-        styles: const PosStyles(
-          align: PosAlign.center,
-          bold: true,
-        ));
-    bytes += generator.text(_razonSocial, styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.text(_rfc, styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.text('');
-    for (var linea in _direccionFiscal.split('\n')) {
-      bytes += generator.text(_limpiarTexto(linea), styles: const PosStyles(align: PosAlign.center));
-    }
-    for (var linea in _sucursal.split('\n')) {
-      bytes += generator.text(_limpiarTexto(linea), styles: const PosStyles(align: PosAlign.center));
-    }
-
-    bytes += generator.hr();
-
-    // 2. Datos de la orden (Mesa / Mesero, Folio, Personas / Orden)
-    // orden.tableOrCustomer ya trae el nombre real de la mesa (ej. "A4") o
-    // el identificador armado al crear la orden (ej. "Mesa A4 (Área Salón)"),
-    // resuelto en RestaurantOrder.fromJson() vía join con restaurant_tables.
-    // TODO: reemplazar 'meseroFijo' y 'personasFijo' cuando se agreguen
-    // los campos correspondientes (mesero, numero de personas) a RestaurantOrder.
-    // Nota: orders.waiter_id ya existe en la base de datos (FK a auth.users),
-    // así que la infraestructura para el mesero real ya está lista del lado
-    // del servidor; solo falta conectarla en el modelo y el flujo de Flutter.
-    const String meseroFijo = '-'; // <-- placeholder temporal
-    const String personasFijo = '-'; // <-- placeholder temporal
-
-    final mesaTexto = 'MESA: ${_limpiarTexto(orden.tableOrCustomer)}';
-    final meseroTexto = 'MESERO: $meseroFijo';
-    bytes += generator.text(_filaDosColumnas(mesaTexto, meseroTexto));
-
-    bytes += generator.text('FOLIO: ${orden.orderNumber}', styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.text(_formatearFecha(DateTime.now()), styles: const PosStyles(align: PosAlign.center));
-
-    final personasTexto = 'PERSONAS: $personasFijo';
-    final ordenTexto = 'ORDEN: ${orden.orderNumber}';
-    bytes += generator.text(_filaDosColumnas(personasTexto, ordenTexto));
-
-    bytes += generator.hr();
-
-    // 3. Tabla de Productos
-    // El ancho del importe se calcula dinámicamente (mínimo 7 caracteres,
-    // más si el monto tiene 4+ dígitos) y la descripción ocupa lo que
-    // sobra, de forma que la suma siempre dé exactamente 32 caracteres
-    // sin desbordar el papel, sin importar qué tan grande sea el total.
-    const int anchoCant = 4;
-
-    String filaProducto(String cant, String desc, String importe) {
-      final anchoImporte = importe.length > 7 ? importe.length : 7;
-      final anchoDesc = _anchoPapel - anchoCant - 1 - anchoImporte - 1;
-      final cantPad = cant.padRight(anchoCant);
-      final descPad = _truncar(desc, anchoDesc).padRight(anchoDesc);
-      final importePad = importe.padLeft(anchoImporte);
-      return '$cantPad $descPad $importePad';
-    }
-
-    bytes += generator.text(
-      filaProducto('CANT', 'DESCRIPCION', 'IMPORTE'),
-      styles: const PosStyles(bold: true),
-    );
-
-    for (var item in orden.items) {
-      String nombreLimpio = _limpiarTexto(item.productName).toUpperCase();
-      final cantTexto = '${item.quantity}';
-      final importeTexto = '\$${item.total.toStringAsFixed(2)}';
-      final anchoImporte = importeTexto.length > 7 ? importeTexto.length : 7;
-      final anchoDescDisponible = _anchoPapel - anchoCant - 1 - anchoImporte - 1;
-
-      if (nombreLimpio.length <= anchoDescDisponible) {
-        bytes += generator.text(filaProducto(cantTexto, nombreLimpio, importeTexto));
-      } else {
-        final primeraParte = nombreLimpio.substring(0, anchoDescDisponible);
-        final segundaParte = nombreLimpio.substring(anchoDescDisponible).trim();
-        bytes += generator.text(filaProducto(cantTexto, primeraParte, importeTexto));
-        bytes += generator.text(
-          ''.padRight(anchoCant + 1) + _truncar(segundaParte, anchoDescDisponible),
+        return FloatingActionButton.extended(
+          backgroundColor: Theme.of(ctx).primaryColor,
+          onPressed: () => _openMobileCart(ctx),
+          icon: const Icon(Icons.shopping_cart, color: Colors.white),
+          label: Text(
+            '${_fmt(total)} ($count)',
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         );
-      }
-    }
-
-    bytes += generator.emptyLines(1);
-
-    // 4. Total
-    bytes += generator.text(
-      _filaDosColumnas('TOTAL:', '\$${orden.totalAmount.toStringAsFixed(2)}'),
-      styles: const PosStyles(bold: true),
+      }),
     );
-
-    // 5. Total en letras ("SON: ...")
-    bytes += generator.text(
-      'SON: ${_montoEnLetras(orden.totalAmount)}',
-      styles: const PosStyles(align: PosAlign.left),
-    );
-
-    bytes += generator.emptyLines(1);
-
-    // 6. Pie de comprobante
-    bytes += generator.text('GRACIAS POR SU PREFERENCIA', styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.text('ESTE NO ES UN COMPROBANTE FISCAL', styles: const PosStyles(align: PosAlign.center, bold: true));
-
-    bytes += generator.hr();
-
-    // 7. Propina voluntaria (en filas, igual que el ticket físico)
-    bytes += generator.text(
-      'LA PROPINA NO INCLUIDA, DEPENDE DEL MESERO; USTED DECIDE',
-      styles: const PosStyles(align: PosAlign.center),
-    );
-    bytes += generator.emptyLines(1);
-    bytes += generator.text('PROPINA VOLUNTARIA', styles: const PosStyles(align: PosAlign.center, bold: true));
-
-    bytes += generator.text(
-      _filaDosColumnas('10% BIEN:', '\$${(orden.totalAmount * 0.10).toStringAsFixed(2)}'),
-      styles: const PosStyles(bold: true),
-    );
-    bytes += generator.text(
-      _filaDosColumnas('15% MUY BIEN:', '\$${(orden.totalAmount * 0.15).toStringAsFixed(2)}'),
-      styles: const PosStyles(bold: true),
-    );
-    bytes += generator.text(
-      _filaDosColumnas('20% WOW!:', '\$${(orden.totalAmount * 0.20).toStringAsFixed(2)}'),
-      styles: const PosStyles(bold: true),
-    );
-
-    bytes += generator.feed(3);
-    bytes += generator.cut();
-
-    return bytes;
   }
 
-  /// Variante rápida: igual que [imprimirTicketCaja] pero sin necesitar
-  /// un objeto RestaurantOrder completo. Útil para pantallas donde solo
-  /// tienes mesa, mesero, una lista de líneas ya formateadas y el total.
-  /// Reutiliza la misma impresora (USB, POS-58, papel 58mm) y el mismo
-  /// formato a 32 caracteres que el resto del ticket, para que ambos
-  /// métodos impriman con apariencia idéntica.
-  static Future<bool> imprimirTicketRapido({
-    required String ticketContent,
-    String? nombreMesa,
-    String? nombreMesero,
-    double total = 0.0,
-  }) async {
-    try {
-      final profile = await CapabilityProfile.load();
-      final generator = Generator(PaperSize.mm58, profile);
+  void _openMobileCart(BuildContext context) {
+    final provider = context.read<TomarOrdenProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-      List<int> bytes = _armarDisenoTicketRapido(
-        generator,
-        ticketContent: ticketContent,
-        nombreMesa: nombreMesa,
-        nombreMesero: nombreMesero,
-        total: total,
-      );
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor:
+          isDark ? const Color(0xFF1E1E2D) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => ChangeNotifierProvider.value(
+        value: provider,
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.80,
+          child: const _CartSection(layout: _Layout.mobile),
+        ),
+      ),
+    );
+  }
+}
 
-      var printerManager = PrinterManager.instance;
+// ─────────────────────────────────────────────────────────────────────────────
+// Enum de layout para comunicar contexto a los widgets hijos
+// ─────────────────────────────────────────────────────────────────────────────
+enum _Layout { mobile, tablet, desktop }
 
-      await printerManager.connect(
-        type: PrinterType.usb,
-        model: UsbPrinterInput(
-          name: 'POS-58',
-        )
-      );
+// =============================================================================
+// SECCIÓN MENÚ
+// =============================================================================
+class _MenuSection extends StatelessWidget {
+  final _Layout layout;
+  const _MenuSection({required this.layout});
 
-      bool success = await printerManager.send(type: PrinterType.usb, bytes: bytes);
+  bool get _isCompact => layout == _Layout.mobile;
 
-      await printerManager.disconnect(type: PrinterType.usb);
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<TomarOrdenProvider>();
 
-      return success;
-    } catch (e) {
-      debugPrint("Error de impresión: $e");
-      return false;
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final textSubColor =
+        isDark ? Colors.white60 : Colors.grey[600];
+    final searchFill =
+        isDark ? const Color(0xFF1E1E2D) : Colors.grey[100];
+    final cardBg = isDark ? const Color(0xFF1E1E2D) : Colors.white;
+
+    final hPad = _isCompact ? 14.0 : 18.0;
+
+    return Padding(
+      padding: EdgeInsets.all(hPad),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          // ── Título ───────────────────────────────────────────────────
+          Text(
+            'Tomar Orden',
+            style: TextStyle(
+              fontSize: _isCompact ? 22 : 26,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          Text(
+            'Registra los productos del cliente',
+            style: TextStyle(color: textSubColor, fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Tipo de orden ─────────────────────────────────────────────
+          Row(
+            children: [
+              _TypeButton(
+                  label: 'Comer Aquí',
+                  type: OrderType.dineIn,
+                  layout: layout),
+              const SizedBox(width: 8),
+              _TypeButton(
+                  label: 'Para Llevar',
+                  type: OrderType.takeaway,
+                  layout: layout),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // ── Área + Mesa (solo Comer Aquí) ─────────────────────────────
+          if (provider.orderType == OrderType.dineIn) ...[
+            _ChipsRow(
+              label: 'Área:',
+              options: provider.areas,
+              selected: provider.selectedArea,
+              onSelected: (v) =>
+                  context.read<TomarOrdenProvider>().setArea(v),
+            ),
+            const SizedBox(height: 12),
+            _ChipsRow(
+              label: 'Mesa:',
+              options: provider.currentTables,
+              selected: provider.selectedTableName,
+              onSelected: (v) =>
+                  context.read<TomarOrdenProvider>().setTable(v),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // ── Buscador ──────────────────────────────────────────────────
+          TextField(
+            style: TextStyle(color: textColor),
+            decoration: InputDecoration(
+              hintText: 'Buscar producto...',
+              hintStyle: TextStyle(
+                  color: isDark ? Colors.white38 : Colors.grey),
+              prefixIcon: Icon(Icons.search,
+                  color: isDark ? Colors.white38 : Colors.grey),
+              filled: true,
+              fillColor: searchFill,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onChanged: (v) =>
+                context.read<TomarOrdenProvider>().setSearchTerm(v),
+          ),
+          const SizedBox(height: 12),
+
+          // ── Chips de categoría ────────────────────────────────────────
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: provider.categories.map((cat) {
+                final sel = provider.selectedCategory == cat;
+                return Padding(
+                  padding:
+                      const EdgeInsets.only(right: 8, bottom: 4),
+                  child: ChoiceChip(
+                    label: Text(cat,
+                        style: TextStyle(fontSize: _isCompact ? 12 : 13)),
+                    selected: sel,
+                    selectedColor: Theme.of(context).primaryColor,
+                    backgroundColor: cardBg,
+                    labelStyle: TextStyle(
+                        color: sel ? Colors.white : textColor),
+                    onSelected: (_) => context
+                        .read<TomarOrdenProvider>()
+                        .setCategory(cat),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // ── Lista de productos ────────────────────────────────────────
+          Expanded(
+            child: provider.visibleProducts.isEmpty
+                ? Center(
+                    child: Text('No hay productos encontrados.',
+                        style: TextStyle(color: textSubColor)))
+                : ListView.builder(
+                    itemCount: provider.visibleProducts.length,
+                    itemBuilder: (ctx, i) {
+                      final p = provider.visibleProducts[i];
+                      return Card(
+                        color: cardBg,
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 4),
+                        child: ListTile(
+                          contentPadding:
+                              EdgeInsets.symmetric(
+                                  horizontal: _isCompact ? 12 : 16,
+                                  vertical: 4),
+                          title: Text(p.name,
+                              style: TextStyle(
+                                  color: textColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: _isCompact ? 13 : 14)),
+                          subtitle: Text(p.description,
+                              style: TextStyle(
+                                  color: textSubColor,
+                                  fontSize: _isCompact ? 11 : 12),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                          trailing: Text(
+                            '\$${p.price.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              color:
+                                  Theme.of(ctx).primaryColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: _isCompact ? 13 : 14,
+                            ),
+                          ),
+                          onTap: () => context
+                              .read<TomarOrdenProvider>()
+                              .addToCart(p),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+
+          // Espacio para el FAB en móvil
+          if (_isCompact) const SizedBox(height: 72),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// SECCIÓN CARRITO
+// =============================================================================
+class _CartSection extends StatelessWidget {
+  final _Layout layout;
+  const _CartSection({required this.layout});
+
+  bool get _isMobile => layout == _Layout.mobile;
+
+  String _fmt(double v) => '\$${v.toStringAsFixed(2)}';
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final textSubColor = isDark ? Colors.white60 : Colors.grey;
+    final cardBg = isDark ? const Color(0xFF1E1E2D) : Colors.white;
+    final countBg =
+        isDark ? const Color(0xFF232334) : Colors.grey[200];
+
+    final provider = context.watch<TomarOrdenProvider>();
+    final orderType = provider.orderType;
+    final cart = provider.cart;
+    final total = provider.total;
+    final itemsCount = provider.itemsCount;
+    final selectedArea = provider.selectedArea;
+    final selectedTable = provider.selectedTable;
+
+    return Column(
+      children: [
+        // ── Cabecera del carrito ──────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      orderType == OrderType.dineIn
+                          ? 'Mesa ${provider.selectedTableName}'
+                          : 'Para Llevar',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textColor),
+                    ),
+                    Text(
+                      orderType == OrderType.dineIn
+                          ? 'Servicio en Mesa'
+                          : 'Recoger en Cocina',
+                      style:
+                          TextStyle(fontSize: 11, color: textSubColor),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: countBg,
+                    borderRadius: BorderRadius.circular(12)),
+                child: Text('$itemsCount Items',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: textColor)),
+              ),
+              // Botón cerrar solo en el bottom-sheet móvil
+              if (_isMobile)
+                IconButton(
+                  icon: Icon(Icons.close, size: 20, color: textColor),
+                  onPressed: () => Navigator.pop(context),
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(),
+                ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+
+        // ── Items del carrito ─────────────────────────────────────────
+        Expanded(
+          child: cart.isEmpty
+              ? Center(
+                  child: Text('Elige productos a la izquierda',
+                      style: TextStyle(color: textSubColor),
+                      textAlign: TextAlign.center))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(10),
+                  itemCount: cart.length,
+                  itemBuilder: (ctx, i) {
+                    final item = cart[i];
+                    return _CartItemTile(
+                      item: item,
+                      isDark: isDark,
+                      textColor: textColor,
+                      cardBg: cardBg,
+                    );
+                  },
+                ),
+        ),
+        const Divider(height: 1),
+
+        // ── Footer: notas + total + botón ─────────────────────────────
+        Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            children: [
+              // Notas
+              TextField(
+                style: TextStyle(color: textColor, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Notas (ej: sin cebolla)...',
+                  hintStyle: TextStyle(
+                      color: isDark
+                          ? Colors.white38
+                          : Colors.grey[400],
+                      fontSize: 12),
+                  enabledBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                          color: isDark
+                              ? const Color(0xFF2D2D44)
+                              : Colors.grey)),
+                  focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                          color: Theme.of(context).primaryColor)),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 10),
+                ),
+                onChanged: (v) =>
+                    context.read<TomarOrdenProvider>().setNotes(v),
+              ),
+              const SizedBox(height: 12),
+
+              // Total
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Total Cuenta:',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: textColor)),
+                  Text(_fmt(total),
+                      style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: textColor)),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Botón enviar
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600],
+                    disabledBackgroundColor: isDark
+                        ? const Color(0xFF232334)
+                        : Colors.grey[300],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
+                  ),
+                  onPressed: cart.isEmpty
+                      ? null
+                      : () => _enviarOrden(
+                            context: context,
+                            provider: provider,
+                            orderType: orderType,
+                            selectedTable: selectedTable,
+                            selectedArea: selectedArea,
+                            cart: cart,
+                            total: total,
+                            itemsCount: itemsCount,
+                            isDark: isDark,
+                          ),
+                  child: const Text('Enviar a Cocina',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
-  static List<int> _armarDisenoTicketRapido(
-    Generator generator, {
-    required String ticketContent,
-    String? nombreMesa,
-    String? nombreMesero,
+  Future<void> _enviarOrden({
+    required BuildContext context,
+    required TomarOrdenProvider provider,
+    required OrderType orderType,
+    required String selectedTable,
+    required String selectedArea,
+    required List<CartItem> cart,
     required double total,
-  }) {
-    List<int> bytes = [];
+    required int itemsCount,
+    required bool isDark,
+  }) async {
+    final idComanda =
+        'CMD-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    final hora =
+        '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
 
-    bytes += generator.reset();
+    final identificador = orderType == OrderType.dineIn
+        ? 'Mesa ${provider.selectedTableName} (Área $selectedArea)'
+        : 'Para Llevar';
 
-    // 1. Encabezado fiscal (mismo encabezado que el ticket de caja completo)
-    bytes += generator.text(_nombreNegocio,
-        styles: const PosStyles(
-          align: PosAlign.center,
-          bold: true,
-        ));
-    bytes += generator.text(_razonSocial, styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.text(_rfc, styles: const PosStyles(align: PosAlign.center));
+    final tipoServicio =
+        orderType == OrderType.dineIn ? 'dine_in' : 'takeout';
 
-    bytes += generator.hr();
+    final cocinaItems = cart
+        .map((c) => OrderItem(
+              productName: c.product.name,
+              quantity: c.qty,
+              total: c.total,
+              productId: c.product.id,
+              unitPrice: c.product.price,
+            ))
+        .toList();
 
-    // 2. Mesa / Mesero (si vienen vacíos, se omite esa línea)
-    if (nombreMesa != null && nombreMesa.isNotEmpty) {
-      bytes += generator.text(
-        'MESA: ${_limpiarTexto(nombreMesa)}',
-        styles: const PosStyles(bold: true),
-      );
-    }
-    if (nombreMesero != null && nombreMesero.isNotEmpty) {
-      bytes += generator.text('ATENDIDO POR: ${_limpiarTexto(nombreMesero)}');
-    }
-
-    bytes += generator.hr();
-
-    // 3. Contenido libre del ticket (ya formateado por quien llama)
-    bytes += generator.text(_limpiarTexto(ticketContent));
-
-    bytes += generator.hr();
-
-    // 4. Total (mismo formato de 32 caracteres que el resto del ticket)
-    bytes += generator.text(
-      _filaDosColumnas('TOTAL:', '\$${total.toStringAsFixed(2)}'),
-      styles: const PosStyles(bold: true),
-    );
-    bytes += generator.text(
-      'SON: ${_montoEnLetras(total)}',
-      styles: const PosStyles(align: PosAlign.left),
+    final nuevaOrden = RestaurantOrder(
+      id: '',
+      orderNumber: idComanda,
+      tableId: orderType == OrderType.dineIn ? selectedTable : null,
+      tableOrCustomer: identificador,
+      time: hora,
+      status: 'pending',
+      serviceType: tipoServicio,
+      items: cocinaItems,
+      totalAmount: total,
+      notes: provider.notes.isNotEmpty ? provider.notes : null,
+      // Nombre del mesero tomado del perfil del usuario logueado.
+      waiterName: context.read<AuthProvider>().nombreUsuario,
     );
 
-    bytes += generator.emptyLines(1);
-    bytes += generator.text('GRACIAS POR SU PREFERENCIA', styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.text('ESTE NO ES UN COMPROBANTE FISCAL', styles: const PosStyles(align: PosAlign.center, bold: true));
+    final ordenesProvider =
+        Provider.of<OrdenesProvider>(context, listen: false);
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
-    bytes += generator.feed(3);
-    bytes += generator.cut();
+    await ordenesProvider.insertarNuevaComanda(nuevaOrden);
 
-    return bytes;
+    if (!context.mounted) return;
+
+    if (ordenesProvider.errorMessage != null) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(
+            'Error al guardar orden: ${ordenesProvider.errorMessage}'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ));
+      return;
+    }
+
+    // NOTA: ya no se llama a CajaProvider.agregarCuentaPorCobrar() aquí.
+    // insertarNuevaComanda() arriba ya hace cargarOrdenes() internamente,
+    // y CajaProvider.pendingOrders lee directamente de OrdenesProvider, así
+    // que la orden recién creada ya aparece en caja sin necesidad de este
+    // paso extra (que además insertaba en una lista que nadie llegaba a leer).
+
+    provider.sendOrder();
+
+    if (_isMobile && Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+
+    messenger.showSnackBar(SnackBar(
+      content: Text('Orden $idComanda creada exitosamente'),
+      backgroundColor: Colors.green,
+      duration: const Duration(seconds: 3),
+    ));
+
+    Future.delayed(const Duration(milliseconds: 150), () {
+      router.go('/ordenes');
+    });
   }
+}
 
-  static String _formatearFecha(DateTime fecha) {
-    final dia = fecha.day.toString().padLeft(2, '0');
-    final mes = fecha.month.toString().padLeft(2, '0');
-    final anio = fecha.year.toString();
+// =============================================================================
+// WIDGETS AUXILIARES
+// =============================================================================
 
-    int hora12 = fecha.hour % 12;
-    if (hora12 == 0) hora12 = 12;
-    final minuto = fecha.minute.toString().padLeft(2, '0');
-    final segundo = fecha.second.toString().padLeft(2, '0');
-    final ampm = fecha.hour >= 12 ? 'PM' : 'AM';
+/// Botón de tipo de orden (Comer Aquí / Para Llevar)
+class _TypeButton extends StatelessWidget {
+  const _TypeButton({
+    required this.label,
+    required this.type,
+    required this.layout,
+  });
+  final String label;
+  final OrderType type;
+  final _Layout layout;
 
-    return '$dia/$mes/$anio ${hora12.toString().padLeft(2, '0')}:$minuto:$segundo $ampm';
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSelected = context
+        .select<TomarOrdenProvider, bool>((p) => p.orderType == type);
+    final isCompact = layout == _Layout.mobile;
+
+    return Expanded(
+      child: ElevatedButton(
+        onPressed: () =>
+            context.read<TomarOrdenProvider>().setOrderType(type),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isSelected
+              ? Theme.of(context).primaryColor
+              : (isDark ? const Color(0xFF2D2D44) : Colors.grey[200]),
+          padding: EdgeInsets.symmetric(
+              vertical: isCompact ? 10 : 12),
+          elevation: 0,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: isCompact ? 13 : 14,
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.white70 : Colors.black87),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
   }
+}
+
+/// Fila de chips con label a la izquierda
+class _ChipsRow extends StatelessWidget {
+  const _ChipsRow({
+    required this.label,
+    required this.options,
+    required this.selected,
+    required this.onSelected,
+  });
+  final String label;
+  final List<String> options;
+  final String selected;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 46,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(label,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 13)),
+          ),
+        ),
+        Expanded(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: options
+                .map((opt) => ChoiceChip(
+                      label: Text(opt,
+                          style: const TextStyle(fontSize: 12)),
+                      selected: selected == opt,
+                      onSelected: (_) => onSelected(opt),
+                      materialTapTargetSize:
+                          MaterialTapTargetSize.shrinkWrap,
+                    ))
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Tile de un ítem en el carrito
+class _CartItemTile extends StatelessWidget {
+  const _CartItemTile({
+    required this.item,
+    required this.isDark,
+    required this.textColor,
+    required this.cardBg,
+  });
+  final CartItem item;
+  final bool isDark;
+  final Color textColor;
+  final Color cardBg;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor = isDark ? Colors.white60 : Colors.grey;
+
+    return Card(
+      elevation: 0,
+      color: cardBg,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+            color: isDark
+                ? const Color(0xFF2D2D44)
+                : Colors.grey[200]!),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            // Nombre + precio total
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    item.product.name,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: textColor),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '\$${item.total.toStringAsFixed(2)}',
+                  style: TextStyle(
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            // Controles cantidad + eliminar
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.remove_circle_outline,
+                          size: 20, color: iconColor),
+                      onPressed: () => context
+                          .read<TomarOrdenProvider>()
+                          .decrement(item),
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                    ),
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('${item.qty}',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: textColor)),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.add_circle_outline,
+                          size: 20, color: iconColor),
+                      onPressed: () => context
+                          .read<TomarOrdenProvider>()
+                          .increment(item),
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => context
+                      .read<TomarOrdenProvider>()
+                      .remove(item),
+                  style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize:
+                          MaterialTapTargetSize.shrinkWrap),
+                  child: const Text('Eliminar',
+                      style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Utilidad interna (mantiene compatibilidad con el código existente)
+class SWidth extends StatelessWidget {
+  final double width;
+  final Widget child;
+  const SWidth({super.key, required this.width, required this.child});
+
+  @override
+  Widget build(BuildContext context) =>
+      SizedBox(width: width, child: child);
 }
