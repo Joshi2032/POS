@@ -103,7 +103,22 @@ class MesasProvider extends ChangeNotifier {
   }
 
   Future<bool> removeMesa(dynamic id) => deleteMesa(id);
+Future<void> cambiarEstadoMesa(String id, String nuevoEstado) async {
+  try {
+    final mesa = _mesas.firstWhere((m) => m.id == id);
 
+    mesa.estado = nuevoEstado;
+
+    await _repository.update(id, mesa);
+
+    await cargarMesas();
+
+    notifyListeners();
+  } catch (e) {
+    _errorMessage = e.toString();
+    notifyListeners();
+  }
+}
   // --- CONTROL DE FILTROS DE INTERFAZ ---
   void setFiltro(String filtro) {
     _filtroSeleccionado = filtro;

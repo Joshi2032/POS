@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../providers/ordenes_provider.dart';
 import '../providers/caja_provider.dart';
+import '../providers/mesas_provider.dart';
 import '../providers/tomar_orden_provider.dart';
 
 import '../models/order_item.dart';
@@ -202,6 +203,40 @@ class _MenuSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
+          // NUEVO: Toggle para seleccionar el estado de la mesa
+            Row(
+              children: [
+                SizedBox(
+                  width: 46,
+                  child: Text('Tipo:', 
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)
+                  ),
+                ),
+                ChoiceChip(
+                  label: const Text('Nueva', style: TextStyle(fontSize: 12)),
+                  selected: !provider.isExistingTable,
+                  selectedColor: Theme.of(context).primaryColor,
+                  labelStyle: TextStyle(color: !provider.isExistingTable ? Colors.white : textColor),
+                  backgroundColor: cardBg,
+                  onSelected: (val) {
+                    if (val) context.read<TomarOrdenProvider>().setIsExistingTable(false);
+                  },
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Existente', style: TextStyle(fontSize: 12)),
+                  selected: provider.isExistingTable,
+                  selectedColor: Theme.of(context).primaryColor,
+                  labelStyle: TextStyle(color: provider.isExistingTable ? Colors.white : textColor),
+                  backgroundColor: cardBg,
+                  onSelected: (val) {
+                    if (val) context.read<TomarOrdenProvider>().setIsExistingTable(true);
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
           // ── Área + Mesa (solo Comer Aquí) ─────────────────────────────
           if (provider.orderType == OrderType.dineIn) ...[
             _ChipsRow(
@@ -282,36 +317,57 @@ class _MenuSection extends StatelessWidget {
                       final p = provider.visibleProducts[i];
                       return Card(
                         color: cardBg,
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 4),
-                        child: ListTile(
-                          contentPadding:
-                              EdgeInsets.symmetric(
-                                  horizontal: _isCompact ? 12 : 16,
-                                  vertical: 4),
-                          title: Text(p.name,
-                              style: TextStyle(
-                                  color: textColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: _isCompact ? 13 : 14)),
-                          subtitle: Text(p.description,
-                              style: TextStyle(
-                                  color: textSubColor,
-                                  fontSize: _isCompact ? 11 : 12),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                          trailing: Text(
-                            '\$${p.price.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color:
-                                  Theme.of(ctx).primaryColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: _isCompact ? 13 : 14,
-                            ),
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: _isCompact ? 12 : 16, vertical: 10),
+                          child: Row(
+                            children: [
+                              // Product info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(p.name,
+                                        style: TextStyle(
+                                            color: textColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: _isCompact ? 14 : 16)),
+                                    const SizedBox(height: 6),
+                                    Text(p.description,
+                                        style: TextStyle(
+                                            color: textSubColor,
+                                            fontSize: _isCompact ? 11 : 12),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(width: 12),
+
+                              // Price + add button
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('\$${p.price.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                          color: Theme.of(ctx).primaryColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: _isCompact ? 13 : 14)),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                        elevation: 0),
+                                    onPressed: () => context.read<TomarOrdenProvider>().addToCart(p),
+                                    icon: const Icon(Icons.add, size: 16),
+                                    label: const Text('Agregar', style: TextStyle(fontSize: 12)),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                          onTap: () => context
-                              .read<TomarOrdenProvider>()
-                              .addToCart(p),
                         ),
                       );
                     },
@@ -501,17 +557,37 @@ class _CartSection extends StatelessWidget {
                   ),
                   onPressed: cart.isEmpty
                       ? null
-                      : () => _enviarOrden(
+                      : () async {
+                          final confirmed = await showDialog<bool>(
                             context: context,
-                            provider: provider,
-                            orderType: orderType,
-                            selectedTable: selectedTable,
-                            selectedArea: selectedArea,
-                            cart: cart,
-                            total: total,
-                            itemsCount: itemsCount,
-                            isDark: isDark,
-                          ),
+                            builder: (dctx) => AlertDialog(
+                              title: const Text('Confirmar envío'),
+                              content: const Text('¿Enviar la orden a cocina?'),
+                              actions: [
+                                TextButton(
+                                    onPressed: () => Navigator.of(dctx).pop(false),
+                                    child: const Text('Cancelar')),
+                                ElevatedButton(
+                                    onPressed: () => Navigator.of(dctx).pop(true),
+                                    child: const Text('Confirmar')),
+                              ],
+                            ),
+                          );
+
+                          if (confirmed == true) {
+                            await _enviarOrden(
+                              context: context,
+                              provider: provider,
+                              orderType: orderType,
+                              selectedTable: selectedTable,
+                              selectedArea: selectedArea,
+                              cart: cart,
+                              total: total,
+                              itemsCount: itemsCount,
+                              isDark: isDark,
+                            );
+                          }
+                        },
                   child: const Text('Enviar a Cocina',
                       style: TextStyle(
                           fontSize: 15, fontWeight: FontWeight.bold)),
@@ -582,6 +658,15 @@ class _CartSection extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
 
     await ordenesProvider.insertarNuevaComanda(nuevaOrden);
+    if (orderType == OrderType.dineIn) {
+  final mesasProvider =
+      Provider.of<MesasProvider>(context, listen: false);
+
+  await mesasProvider.cambiarEstadoMesa(
+    selectedTable,
+    'Ocupada',
+  );
+}
 
     if (!context.mounted) return;
 

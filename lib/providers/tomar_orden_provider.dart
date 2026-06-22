@@ -27,6 +27,7 @@ class TomarOrdenProvider extends ChangeNotifier {
   final List<CartItem> _cart = [];
 
   OrderType _orderType = OrderType.dineIn;
+  bool _isExistingTable = false;
   String _selectedArea = '';
   String _selectedTableId = ''; // UUID de la mesa, no el nombre
   String _selectedCategory = 'Todos';
@@ -36,6 +37,7 @@ class TomarOrdenProvider extends ChangeNotifier {
   // Getters
   List<CartItem> get cart => _cart;
   OrderType get orderType => _orderType;
+  bool get isExistingTable => _isExistingTable;
   String get selectedArea => _selectedArea;
   String get selectedTable => _selectedTableId;
   String get selectedTableName {
@@ -160,6 +162,17 @@ class TomarOrdenProvider extends ChangeNotifier {
     }
   }
 
+  void setIsExistingTable(bool value) {
+    _isExistingTable = value;
+    if (currentTables.isNotEmpty) {
+      _selectedTableId = getTableIdByName(currentTables.first) ?? '';
+    } else {
+      _selectedTableId = '';
+    }
+    
+    notifyListeners();
+  }
+
   void setOrderType(OrderType type) {
     _orderType = type;
     notifyListeners();
@@ -168,8 +181,14 @@ class TomarOrdenProvider extends ChangeNotifier {
   void setArea(String area) {
     _selectedArea = area;
     final mesasEnArea = _mesas.where((m) => m.area == area).toList();
-    if (mesasEnArea.isNotEmpty) {
-      _selectedTableId = mesasEnArea.first.id;
+    // Selecciona la primera mesa libre dentro del área, si existe.
+    final libres = mesasEnArea
+        .where((m) => m.estado.toLowerCase() == 'libre')
+        .toList();
+    if (libres.isNotEmpty) {
+      _selectedTableId = libres.first.id;
+    } else {
+      _selectedTableId = '';
     }
     notifyListeners();
   }
