@@ -42,4 +42,22 @@ class AuthProvider extends ChangeNotifier {
     nombreUsuario = await _repository.obtenerNombreUsuario();
     notifyListeners();
   }
+
+Future<void> logout() async {
+  isLoading = true;
+  error = null;
+  notifyListeners();
+
+  try {
+    await _repository.logout();
+    nombreUsuario = null;
+  } catch (e) {
+    error = e.toString();
+    rethrow;
+  } finally {
+    isLoading = false;
+    notifyListeners();
+  }
+}
+
 }
