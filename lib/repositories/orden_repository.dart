@@ -8,21 +8,68 @@ class OrdenRepository {
   // Inyección del cliente de datos por constructor
   OrdenRepository(this._client);
 
+  // ─── helpers ────────────────────────────────────────────────────────────────
+
+  /// Dado un JSON de orden ya parseado por Supabase, inyecta el nombre del
+  /// mesero consultando directamente la tabla profiles.
+  /// Se llama DESPUÉS de cargar las órdenes para no bloquear la carga
+  /// principal si profiles falla (devuelve la orden sin nombre en ese caso).
+  Future<Map<String, String>> _obtenerNombresPorWaiterId(
+      List<String> waiterIds) async {
+    if (waiterIds.isEmpty) return {};
+    try {
+      // profiles.user_id es el UUID del auth.user, igual que orders.waiter_id.
+      // Esta query SÍ funciona porque es un select directo a profiles en public,
+      // sin necesitar cruzar el esquema privado auth.users como intermediario.
+      final response = await _client
+          .from('profiles')
+          .select('user_id, full_name')
+          .filter('user_id', 'in', '(${waiterIds.join(',')})');
+
+      final Map<String, String> mapa = {};
+      for (final row in (response as List)) {
+        final uid = row['user_id']?.toString();
+        final nombre = row['full_name']?.toString().trim();
+        if (uid != null && nombre != null && nombre.isNotEmpty) {
+          mapa[uid] = nombre;
+        }
+      }
+      return mapa;
+    } catch (e) {
+      debugPrint('ORDEN_REPO: No se pudieron resolver nombres de meseros: $e');
+      return {};
+    }
+  }
+
+  // ─── READ ────────────────────────────────────────────────────────────────────
+
   // READ: Obtener las órdenes activas (ej: que no estén completadas o archivadas)
   Future<List<RestaurantOrder>> getOrdenesActivas() async {
     try {
-      // Usamos un select relacional si tu tabla tiene una llave foránea con order_items.
-      // También traemos restaurant_tables(name) para poder mostrar el nombre real
-      // de la mesa (ej. "A4") en vez del UUID crudo de table_id al imprimir o
-      // listar órdenes. Requiere que exista la foreign key orders.table_id ->
-      // restaurant_tables.id en Supabase para que el embed funcione.
       final response = await _client
           .from('orders')
           .select('*, order_items(*), restaurant_tables(name)');
 
-      return (response as List)
-          .map((json) => RestaurantOrder.fromJson(json))
+      final List<dynamic> ordenesData = response as List;
+
+      // Recolectamos los waiter_ids no nulos para resolver sus nombres en batch.
+      final waiterIds = ordenesData
+          .map((o) => o['waiter_id']?.toString())
+          .whereType<String>()
+          .toSet()
           .toList();
+
+      final nombresMap = await _obtenerNombresPorWaiterId(waiterIds);
+
+      return ordenesData.map((json) {
+        // Inyectamos el nombre resuelto directamente en el mapa del JSON
+        // para que fromJson() lo encuentre bajo la clave 'waiterName'.
+        final uid = json['waiter_id']?.toString();
+        if (uid != null && nombresMap.containsKey(uid)) {
+          (json as Map<String, dynamic>)['waiterName'] = nombresMap[uid];
+        }
+        return RestaurantOrder.fromJson(json);
+      }).toList();
     } catch (e) {
       throw Exception('Error al obtener las órdenes de Supabase: $e');
     }
@@ -30,21 +77,29 @@ class OrdenRepository {
 
   Future<List<RestaurantOrder>> getAll() async {
     try {
-      // ✅ EL SECRETO ESTÁ EN EL SELECT: '*, order_items(*)'
-      // Esto le dice a Supabase: "Trae la orden Y TODOS sus artículos"
-      // También pedimos restaurant_tables(name) para resolver el nombre
-      // legible de la mesa (ver nota en getOrdenesActivas).
       final response = await _client
           .from('orders')
           .select('*, order_items(*), restaurant_tables(name)');
       final List<dynamic> ordenesData = response as List<dynamic>;
 
-      debugPrint('✅ ORDEN_REPO: Respuesta de Supabase: $ordenesData');
       debugPrint('✅ ORDEN_REPO: Cantidad de órdenes: ${ordenesData.length}');
+
+      // Batch lookup de nombres de meseros.
+      final waiterIds = ordenesData
+          .map((o) => o['waiter_id']?.toString())
+          .whereType<String>()
+          .toSet()
+          .toList();
+
+      final nombresMap = await _obtenerNombresPorWaiterId(waiterIds);
 
       return ordenesData.map((json) {
         debugPrint(
             '📄 ORDEN_REPO: Procesando orden: ${json['id']}, items: ${json['order_items']}');
+        final uid = json['waiter_id']?.toString();
+        if (uid != null && nombresMap.containsKey(uid)) {
+          (json as Map<String, dynamic>)['waiterName'] = nombresMap[uid];
+        }
         return RestaurantOrder.fromJson(json);
       }).toList();
     } catch (e) {

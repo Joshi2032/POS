@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _repository;
 
   AuthProvider(this._repository) {
-    // Intentar cargar el nombre del usuario si ya hay sesión activa
-    // (útil cuando la app se reinicia y la sesión persiste).
     _cargarNombreUsuario();
   }
 
@@ -14,20 +13,20 @@ class AuthProvider extends ChangeNotifier {
   String? error;
 
   /// Nombre completo del usuario logueado, leído de `profiles.full_name`.
-  /// Es null si no hay sesión o si el perfil no tiene nombre configurado.
   String? nombreUsuario;
 
-  Future<bool> login(
-    String email,
-    String password,
-  ) async {
+  /// UUID del usuario logueado (auth.users.id). Se usa como waiter_id al
+  /// crear órdenes, para que Supabase guarde la referencia y el nombre se
+  /// pueda recuperar después vía join con profiles.
+  String? get userId => Supabase.instance.client.auth.currentUser?.id;
+
+  Future<bool> login(String email, String password) async {
     isLoading = true;
     error = null;
     notifyListeners();
 
     try {
       await _repository.login(email, password);
-      // Cargar el nombre después del login exitoso.
       await _cargarNombreUsuario();
       return true;
     } catch (e) {

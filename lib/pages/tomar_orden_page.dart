@@ -566,7 +566,13 @@ class _CartSection extends StatelessWidget {
       items: cocinaItems,
       totalAmount: total,
       notes: provider.notes.isNotEmpty ? provider.notes : null,
-      // Nombre del mesero tomado del perfil del usuario logueado.
+      // UUID del usuario logueado → se guarda en orders.waiter_id en Supabase.
+      // Permite que al recargar la orden se resuelva el nombre del mesero
+      // vía join con profiles.
+      waiterId: context.read<AuthProvider>().userId,
+      // Nombre para mostrar inmediatamente en el ticket sin esperar a
+      // que Supabase devuelva el join (la orden recién creada se imprime
+      // antes de que se recargue desde el servidor).
       waiterName: context.read<AuthProvider>().nombreUsuario,
     );
 
