@@ -103,20 +103,52 @@ class MesasProvider extends ChangeNotifier {
   }
 
   Future<bool> removeMesa(dynamic id) => deleteMesa(id);
-Future<void> cambiarEstadoMesa(String id, String nuevoEstado) async {
+
+Future<bool> cambiarEstadoMesa(
+  String id,
+  String nuevoEstado,
+) async {
+  _clearError();
+
   try {
-    final mesa = _mesas.firstWhere((m) => m.id == id);
+    final index = _mesas.indexWhere(
+      (mesa) => mesa.id.toString() == id.toString(),
+    );
+
+    if (index == -1) {
+      await cargarMesas();
+    }
+
+    final refreshedIndex = _mesas.indexWhere(
+      (mesa) => mesa.id.toString() == id.toString(),
+    );
+
+    if (refreshedIndex == -1) {
+      throw Exception(
+        'No se encontró la mesa con id: $id',
+      );
+    }
+
+    final mesa = _mesas[refreshedIndex];
 
     mesa.estado = nuevoEstado;
 
-    await _repository.update(id, mesa);
+    await _repository.update(
+      mesa.id.toString(),
+      mesa,
+    );
 
     await cargarMesas();
 
-    notifyListeners();
+    return true;
   } catch (e) {
-    _errorMessage = e.toString();
+    _errorMessage =
+        'Error al cambiar estado de la mesa: $e';
+
+    debugPrint(_errorMessage);
     notifyListeners();
+
+    return false;
   }
 }
   // --- CONTROL DE FILTROS DE INTERFAZ ---

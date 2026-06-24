@@ -206,6 +206,27 @@ class OrdenesProvider extends BaseProvider {
     return exito;
   }
 
+  Future<RestaurantOrder?> obtenerOrdenActivaPorMesa(
+    String tableId) async {
+
+  return await _repository.obtenerOrdenActivaPorMesa(
+    tableId,
+  );
+}
+
+Future<void> agregarItemsAOrden(
+  String orderId,
+  List<Map<String,dynamic>> itemsMap,
+) async {
+
+  await _repository.agregarItemsAOrden(
+    orderId,
+    itemsMap,
+  );
+
+  await cargarOrdenes();
+}
+
   String _mapEstadoUiToDb(String estado) {
     final e = estado.toLowerCase();
     switch (e) {

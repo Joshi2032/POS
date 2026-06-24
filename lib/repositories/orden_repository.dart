@@ -94,6 +94,51 @@ class OrdenRepository {
     }
   }
 
+Future<RestaurantOrder?> obtenerOrdenActivaPorMesa(String tableId) async {
+  final response = await _client
+      .from('orders')
+      .select('*, order_items(*)')
+      .eq('table_id', tableId);
+
+  final ordenes = (response as List)
+      .map((e) => RestaurantOrder.fromJson(e))
+      .where(
+        (o) =>
+            o.status != 'pagada' &&
+            o.status != 'cancelada',
+      )
+      .toList();
+
+  if (ordenes.isEmpty) return null;
+
+  return ordenes.first;
+}
+
+Future<void> agregarItemsAOrden(
+  String orderId,
+  List<Map<String, dynamic>> itemsMap,
+) async {
+
+  final itemsConRelacion = itemsMap.map((item) {
+
+    final itemLimpio = Map<String, dynamic>.from(item);
+
+    itemLimpio['order_id'] = orderId;
+
+    if (itemLimpio.containsKey('total')) {
+      itemLimpio['total_price'] = itemLimpio['total'];
+      itemLimpio.remove('total');
+    }
+
+    return itemLimpio;
+
+  }).toList();
+
+  await _client
+      .from('order_items')
+      .insert(itemsConRelacion);
+}
+
   // UPDATE: Cambiar el estado de la comanda (ej: de 'pendiente' a 'preparando' o 'lista')
   Future<void> actualizarEstado(String id, String nuevoEstado) async {
     try {
