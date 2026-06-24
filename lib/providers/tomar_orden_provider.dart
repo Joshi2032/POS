@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import '../repositories/producto_repository.dart';
-import '../repositories/mesa_repository.dart';
-import '../repositories/combo_repository.dart'; // AGREGADO
-import '../models/product.dart'; // Asegúrate que esta ruta sea correcta
+
 import '../models/cart_item.dart';
 import '../models/mesa.dart';
+import '../models/product.dart';
+import '../repositories/combo_repository.dart';
+import '../repositories/mesa_repository.dart';
+import '../repositories/producto_repository.dart';
 
 enum OrderType { dineIn, takeaway }
 
 class TomarOrdenProvider extends ChangeNotifier {
   final ProductoRepository _productoRepository;
   final MesaRepository _mesaRepository;
-  final ComboRepository _comboRepository; // AGREGADO
+  final ComboRepository _comboRepository;
 
   TomarOrdenProvider(
-    this._productoRepository, 
-    this._mesaRepository, 
-    this._comboRepository, // AGREGADO
+    this._productoRepository,
+    this._mesaRepository,
+    this._comboRepository,
   ) {
     cargarProductos();
     cargarMesas();
@@ -27,159 +28,317 @@ class TomarOrdenProvider extends ChangeNotifier {
   final List<CartItem> _cart = [];
 
   OrderType _orderType = OrderType.dineIn;
+  bool _isExistingTable = false;
+
   String _selectedArea = '';
-  String _selectedTableId = ''; // UUID de la mesa, no el nombre
+  String _selectedTableId = '';
   String _selectedCategory = 'Todos';
   String _searchTerm = '';
   String _notes = '';
 
-  // Getters
   List<CartItem> get cart => _cart;
   OrderType get orderType => _orderType;
+  bool get isExistingTable => _isExistingTable;
+
   String get selectedArea => _selectedArea;
   String get selectedTable => _selectedTableId;
-  String get selectedTableName {
-    try {
-      final mesa = _mesas.firstWhere((m) => m.id == _selectedTableId);
-      return mesa.nombre;
-    } catch (e) {
-      return 'Sin mesa';
-    }
-  }
-
   String get selectedCategory => _selectedCategory;
   String get searchTerm => _searchTerm;
   String get notes => _notes;
 
+  String get selectedTableName {
+    try {
+      return _mesas
+          .firstWhere(
+            (mesa) =>
+                mesa.id.toString() ==
+                _selectedTableId.toString(),
+          )
+          .nombre;
+    } catch (_) {
+      return 'Sin mesa';
+    }
+  }
+
   List<String> get areas {
-    final uniqueAreas = _mesas.map((m) => m.area).toSet().toList();
-    uniqueAreas.sort();
-    return uniqueAreas.isEmpty ? ['General'] : uniqueAreas;
+    final result = _mesas
+        .map((mesa) => mesa.area.trim())
+        .where((area) => area.isNotEmpty)
+        .toSet()
+        .toList();
+
+    result.sort();
+
+    return result;
+  }
+
+  List<String> get availableAreas {
+    final result = _mesas
+        .where((mesa) {
+          final estado =
+              mesa.estado.trim().toLowerCase();
+
+          if (_isExistingTable) {
+            return estado == 'ocupada';
+          }
+
+          return estado == 'libre' ||
+              estado == 'disponible';
+        })
+        .map((mesa) => mesa.area.trim())
+        .where((area) => area.isNotEmpty)
+        .toSet()
+        .toList();
+
+    result.sort();
+
+    return result;
   }
 
   List<String> get currentTables {
-    if (_selectedArea.isEmpty) return [];
-    return _mesas
-        .where(
-            (m) => m.area == _selectedArea && m.estado.toLowerCase() == 'libre')
-        .map((m) => m.nombre)
-        .toList();
-  }
-
-  String? getTableIdByName(String tableName) {
-    try {
-      return _mesas.firstWhere((m) => m.nombre == tableName).id;
-    } catch (e) {
-      return null;
+    if (_selectedArea.isEmpty) {
+      return [];
     }
+
+    final result = _mesas.where((mesa) {
+      final mismaArea =
+          mesa.area.trim().toLowerCase() ==
+              _selectedArea.trim().toLowerCase();
+
+      if (!mismaArea) {
+        return false;
+      }
+
+      final estado =
+          mesa.estado.trim().toLowerCase();
+
+      if (_isExistingTable) {
+        return estado == 'ocupada';
+      }
+
+      return estado == 'libre' ||
+          estado == 'disponible';
+    }).map((mesa) => mesa.nombre).toList();
+
+    result.sort();
+
+    return result;
   }
 
-  int get itemsCount => _cart.fold(0, (sum, item) => sum + item.qty);
-  double get total =>
-      _cart.fold(0.0, (sum, item) => sum + (item.qty * item.product.price));
-
-  // CORREGIDO: Evitamos la duplicación de la categoría 'Combos'
   List<String> get categories {
-    final cats = _products.map((p) => p.category).toSet().toList();
-    
-    // Si por alguna razón la lista de combos está vacía, agregamos la categoría manualmente,
-    // pero si ya existen combos cargados, evitamos duplicarla.
-    if (!cats.contains('Combos')) {
-      cats.add('Combos');
-    }
-    
-    return ['Todos', ...cats];
+    final result = _products
+        .map((product) => product.category.trim())
+        .where((category) => category.isNotEmpty)
+        .toSet()
+        .toList();
+
+    result.sort();
+
+    return ['Todos', ...result];
   }
 
   List<Producto> get visibleProducts {
+    final search =
+        _searchTerm.trim().toLowerCase();
+
     return _products.where((product) {
-      final name = product.name.toLowerCase();
-      final desc = product.description.toLowerCase();
-      final cat = product.category.toLowerCase();
-      final search = _searchTerm.toLowerCase();
-
       final matchesCategory =
-          _selectedCategory == 'Todos' || product.category == _selectedCategory;
-      final matchesSearch = name.contains(search) ||
-          desc.contains(search) ||
-          cat.contains(search);
+          _selectedCategory == 'Todos' ||
+              product.category ==
+                  _selectedCategory;
 
-      return matchesCategory && matchesSearch;
+      final matchesSearch = search.isEmpty ||
+          product.name
+              .toLowerCase()
+              .contains(search) ||
+          product.description
+              .toLowerCase()
+              .contains(search) ||
+          product.category
+              .toLowerCase()
+              .contains(search);
+
+      return matchesCategory &&
+          matchesSearch;
     }).toList();
+  }
+
+  int get itemsCount {
+    return _cart.fold(
+      0,
+      (total, item) => total + item.qty,
+    );
+  }
+
+  double get total {
+    return _cart.fold(
+      0,
+      (total, item) => total + item.total,
+    );
   }
 
   Future<void> cargarProductos() async {
     try {
-      // 1. Cargamos los productos normales
-      final productosDB = await _productoRepository.getAll();
-      
-      // 2. Cargamos los combos
-      final combosDB = await _comboRepository.getAll();
+      final productos =
+          await _productoRepository.getAll();
 
-      // 3. Convertimos los ComboItem a Producto para que el carrito los entienda
-      final combosConvertidos = combosDB.map((combo) {
+      final combos =
+          await _comboRepository.getAll();
+
+      final combosConvertidos =
+          combos.map((combo) {
         return Producto(
-          id: combo.id, 
-          name: combo.title,             // El título del combo pasa a ser el nombre
-          description: combo.subtitle,   // El subtítulo pasa a ser la descripción
+          id: combo.id,
+          name: combo.title,
+          description: combo.subtitle,
           price: combo.price,
-          category: 'Combos',            // Forzamos la categoría para los filtros
-          
+          category: 'Combos',
           stock: 999,
           unit: 'combo',
           active: true,
-          // NOTA: Si tu clase "Producto" en 'models/product.dart' requiere obligatoriamente 
-          // campos como 'imageUrl', 'active', etc., agrégalos aquí. 
-          // Por ejemplo: imageUrl: '', active: true
         );
       }).toList();
 
-      // 4. Unimos ambas listas
-      _products = [...productosDB, ...combosConvertidos];
-      
+      _products = [
+        ...productos,
+        ...combosConvertidos,
+      ];
+
       notifyListeners();
     } catch (e) {
-      debugPrint('Error cargando productos y combos: $e');
+      debugPrint(
+        'Error cargando productos y combos: $e',
+      );
     }
   }
 
   Future<void> cargarMesas() async {
     try {
       _mesas = await _mesaRepository.getAll();
-      // Inicializa el área y mesa selectas si están vacías
-      if (_selectedArea.isEmpty && areas.isNotEmpty) {
-        _selectedArea = areas.first;
+
+      if (_orderType == OrderType.takeaway) {
+        _selectedArea = '';
+        _selectedTableId = '';
+        notifyListeners();
+        return;
       }
-      if (_selectedTableId.isEmpty && currentTables.isNotEmpty) {
-        final firstTable = currentTables.first;
-        _selectedTableId = getTableIdByName(firstTable) ?? '';
+
+      final areasValidas = availableAreas;
+
+      if (areasValidas.isEmpty) {
+        _selectedArea = '';
+        _selectedTableId = '';
+      } else {
+        final areaActualSigueDisponible =
+            areasValidas.any(
+          (area) =>
+              area.trim().toLowerCase() ==
+              _selectedArea
+                  .trim()
+                  .toLowerCase(),
+        );
+
+        if (!areaActualSigueDisponible) {
+          _selectedArea =
+              areasValidas.first;
+        }
+
+        _seleccionarPrimeraMesaDisponible();
       }
+
       notifyListeners();
     } catch (e) {
-      debugPrint('Error cargando mesas: $e');
+      debugPrint(
+        'Error cargando mesas: $e',
+      );
     }
   }
 
-  void setOrderType(OrderType type) {
+  Future<void> setOrderType(
+    OrderType type,
+  ) async {
     _orderType = type;
+
+    if (type == OrderType.takeaway) {
+      _isExistingTable = false;
+      _selectedArea = '';
+      _selectedTableId = '';
+
+      notifyListeners();
+      return;
+    }
+
+    _selectedArea = '';
+    _selectedTableId = '';
+
     notifyListeners();
+
+    await cargarMesas();
+  }
+
+  Future<void> setIsExistingTable(
+    bool value,
+  ) async {
+    _isExistingTable = value;
+    _selectedArea = '';
+    _selectedTableId = '';
+
+    notifyListeners();
+
+    await cargarMesas();
   }
 
   void setArea(String area) {
     _selectedArea = area;
-    final mesasEnArea = _mesas.where((m) => m.area == area).toList();
-    if (mesasEnArea.isNotEmpty) {
-      _selectedTableId = mesasEnArea.first.id;
-    }
+    _seleccionarPrimeraMesaDisponible();
     notifyListeners();
   }
 
   void setTable(String tableName) {
-    final mesaId = getTableIdByName(tableName);
-    if (mesaId != null) {
-      _selectedTableId = mesaId;
+    final mesaId =
+        getTableIdByName(tableName);
+
+    if (mesaId == null) {
+      return;
     }
+
+    _selectedTableId = mesaId;
     notifyListeners();
+  }
+
+  String? getTableIdByName(
+    String tableName,
+  ) {
+    try {
+      return _mesas
+          .firstWhere(
+            (mesa) =>
+                mesa.nombre.trim().toLowerCase() ==
+                tableName
+                    .trim()
+                    .toLowerCase(),
+          )
+          .id
+          .toString();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _seleccionarPrimeraMesaDisponible() {
+    final mesasDisponibles =
+        currentTables;
+
+    if (mesasDisponibles.isEmpty) {
+      _selectedTableId = '';
+      return;
+    }
+
+    _selectedTableId =
+        getTableIdByName(
+              mesasDisponibles.first,
+            ) ??
+            '';
   }
 
   void setCategory(String category) {
@@ -199,12 +358,19 @@ class TomarOrdenProvider extends ChangeNotifier {
 
   void addToCart(Producto product) {
     final index = _cart.indexWhere(
-        (item) => item.product.id.toString() == product.id.toString());
+      (item) =>
+          item.product.id.toString() ==
+          product.id.toString(),
+    );
+
     if (index == -1) {
-      _cart.add(CartItem(product: product));
+      _cart.add(
+        CartItem(product: product),
+      );
     } else {
       _cart[index].qty++;
     }
+
     notifyListeners();
   }
 
@@ -215,17 +381,21 @@ class TomarOrdenProvider extends ChangeNotifier {
 
   void decrement(CartItem item) {
     if (item.qty <= 1) {
-      _cart.removeWhere(
-          (entry) => entry.product.id.toString() == item.product.id.toString());
-    } else {
-      item.qty--;
+      remove(item);
+      return;
     }
+
+    item.qty--;
     notifyListeners();
   }
 
   void remove(CartItem item) {
     _cart.removeWhere(
-        (entry) => entry.product.id.toString() == item.product.id.toString());
+      (entry) =>
+          entry.product.id.toString() ==
+          item.product.id.toString(),
+    );
+
     notifyListeners();
   }
 

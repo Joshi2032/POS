@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/mesa.dart';
 import '../repositories/mesa_repository.dart';
 
@@ -6,17 +7,15 @@ class MesasProvider extends ChangeNotifier {
   final MesaRepository _repository;
 
   MesasProvider(this._repository) {
-    cargarMesas(); // Carga inicial de datos
+    cargarMesas();
   }
 
   List<Mesa> _mesas = [];
-  String _filtroSeleccionado = 'Todas'; 
+  String _filtroSeleccionado = 'Todas';
 
-  // --- ESTADOS DE CONTROL DE FLUJO Y ERRORES ---
   bool _isLoading = false;
   String? _errorMessage;
 
-  // --- GETTERS COMPATIBLES CON TU VISTA (mesas_page.dart) ---
   List<Mesa> get mesas => _mesas;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -24,25 +23,51 @@ class MesasProvider extends ChangeNotifier {
 
   String get filtroSeleccionado => _filtroSeleccionado;
 
-  // Lista estática de filtros generales de la UI
-  List<String> get filtros => ['Todas', 'Disponibles', 'Ocupadas', 'Por Cobrar'];
+  List<String> get filtros => [
+        'Todas',
+        'Disponibles',
+        'Ocupadas',
+        'Por Cobrar',
+      ];
 
-  // Áreas del restaurante calculadas dinámicamente desde el modelo real
   List<String> get areas {
-    final deModelos = _mesas.map((m) => m.area).where((a) => a.isNotEmpty).toSet().toList();
-    deModelos.sort();
-    return ['Todas', ...deModelos];
+    final areasEncontradas = _mesas
+        .map((mesa) => mesa.area.trim())
+        .where((area) => area.isNotEmpty)
+        .toSet()
+        .toList();
+
+    areasEncontradas.sort();
+
+    return ['Todas', ...areasEncontradas];
   }
 
-  // --- CONTADORES KPI CORREGIDOS UTILIZANDO TU PROPIEDAD 'estado' ---
-  int get libres => _mesas.where((m) => m.estado.toLowerCase() == 'libre' || m.estado.toLowerCase() == 'disponible').length;
-  int get ocupadas => _mesas.where((m) => m.estado.toLowerCase() == 'ocupada').length;
-  int get porCobrar => _mesas.where((m) => m.estado.toLowerCase() == 'por cobrar' || m.estado.toLowerCase() == 'cuenta').length;
+  int get libres {
+    return _mesas.where((mesa) {
+      final estado = mesa.estado.trim().toLowerCase();
 
-  // --- MÉTODOS CRUD ADAPTADOS CON INTERCEPCIÓN DE TIPOS ---
+      return estado == 'libre' || estado == 'disponible';
+    }).length;
+  }
+
+  int get ocupadas {
+    return _mesas.where((mesa) {
+      return mesa.estado.trim().toLowerCase() == 'ocupada';
+    }).length;
+  }
+
+  int get porCobrar {
+    return _mesas.where((mesa) {
+      final estado = mesa.estado.trim().toLowerCase();
+
+      return estado == 'por cobrar' || estado == 'cuenta';
+    }).length;
+  }
+
   Future<void> cargarMesas() async {
     _setLoading(true);
     _clearError();
+
     try {
       _mesas = await _repository.getAll();
     } catch (e) {
@@ -55,9 +80,12 @@ class MesasProvider extends ChangeNotifier {
   Future<bool> addMesa(Mesa mesa) async {
     _setLoading(true);
     _clearError();
+
     try {
       await _repository.create(mesa);
-      await cargarMesas();
+      _mesas = await _repository.getAll();
+
+      notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -68,13 +96,24 @@ class MesasProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateMesa(dynamic id, Mesa mesa) async {
+  Future<bool> updateMesa(
+    dynamic id,
+    Mesa mesa,
+  ) async {
     _setLoading(true);
     _clearError();
+
     try {
-      final String convertedId = id.toString();
-      await _repository.update(convertedId, mesa);
-      await cargarMesas();
+      final convertedId = id.toString();
+
+      await _repository.update(
+        convertedId,
+        mesa,
+      );
+
+      _mesas = await _repository.getAll();
+
+      notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -88,10 +127,14 @@ class MesasProvider extends ChangeNotifier {
   Future<bool> deleteMesa(dynamic id) async {
     _setLoading(true);
     _clearError();
+
     try {
-      final String convertedId = id.toString();
+      final convertedId = id.toString();
+
       await _repository.delete(convertedId);
-      await cargarMesas();
+      _mesas = await _repository.getAll();
+
+      notifyListeners();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -102,9 +145,68 @@ class MesasProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> removeMesa(dynamic id) => deleteMesa(id);
+  Future<bool> removeMesa(dynamic id) {
+    return deleteMesa(id);
+  }
 
-  // --- CONTROL DE FILTROS DE INTERFAZ ---
+  Future<bool> cambiarEstadoMesa(
+    String id,
+    String nuevoEstado,
+  ) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      var index = _mesas.indexWhere(
+        (mesa) => mesa.id.toString() == id.toString(),
+      );
+
+      if (index == -1) {
+        _mesas = await _repository.getAll();
+
+        index = _mesas.indexWhere(
+          (mesa) => mesa.id.toString() == id.toString(),
+        );
+      }
+
+      if (index == -1) {
+        throw Exception(
+          'No se encontró la mesa con id: $id',
+        );
+      }
+
+      final mesaActual = _mesas[index];
+
+      final mesaActualizada = Mesa(
+        id: mesaActual.id,
+        nombre: mesaActual.nombre,
+        capacidad: mesaActual.capacidad,
+        area: mesaActual.area,
+        estado: nuevoEstado,
+      );
+
+      await _repository.update(
+        mesaActual.id.toString(),
+        mesaActualizada,
+      );
+
+      _mesas = await _repository.getAll();
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage =
+          'Error al cambiar estado de la mesa: $e';
+
+      debugPrint(_errorMessage);
+      notifyListeners();
+
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void setFiltro(String filtro) {
     _filtroSeleccionado = filtro;
     notifyListeners();
@@ -114,30 +216,34 @@ class MesasProvider extends ChangeNotifier {
     setFiltro(status);
   }
 
-  // --- FILTRADO DE COMPONENTES BASADO EN TU MODELO ORIGINAL ---
   List<Mesa> get mesasFiltradas {
     if (_filtroSeleccionado == 'Todas') {
       return _mesas;
     }
-    
-    return _mesas.where((m) {
-      final estadoLower = m.estado.toLowerCase(); // Corregido para leer 'estado'
+
+    return _mesas.where((mesa) {
+      final estado =
+          mesa.estado.trim().toLowerCase();
+
       if (_filtroSeleccionado == 'Disponibles') {
-        return estadoLower == 'libre' || estadoLower == 'disponible';
+        return estado == 'libre' ||
+            estado == 'disponible';
       }
+
       if (_filtroSeleccionado == 'Ocupadas') {
-        return estadoLower == 'ocupada';
+        return estado == 'ocupada';
       }
+
       if (_filtroSeleccionado == 'Por Cobrar') {
-        return estadoLower == 'por cobrar' || estadoLower == 'cuenta';
+        return estado == 'por cobrar' ||
+            estado == 'cuenta';
       }
-      
-      // Filtro alterno por el nombre del área
-      return m.area == _filtroSeleccionado;
+
+      return mesa.area.trim().toLowerCase() ==
+          _filtroSeleccionado.trim().toLowerCase();
     }).toList();
   }
 
-  // --- MÉTODOS AUXILIARES ---
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
@@ -147,3 +253,4 @@ class MesasProvider extends ChangeNotifier {
     _errorMessage = null;
   }
 }
+

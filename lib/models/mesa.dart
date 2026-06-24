@@ -3,7 +3,7 @@ class Mesa {
   String nombre;
   int capacidad;
   String area;
-  String estado; // UI: 'Libre' | 'Ocupada'
+  String estado;
 
   Mesa({
     required this.id,
@@ -14,31 +14,48 @@ class Mesa {
   });
 
   factory Mesa.fromJson(Map<String, dynamic> json) {
-    // Traducimos de BD (Inglés) a UI (Español)
-    String statusDb = json['status']?.toString().toLowerCase() ?? 'free';
+    final statusDb =
+        json['status']?.toString().trim().toLowerCase() ?? 'free';
+
     String estadoUi = 'Libre';
-    if (statusDb == 'occupied') estadoUi = 'Ocupada';
+
+    if (statusDb == 'occupied') {
+      estadoUi = 'Ocupada';
+    } else if (statusDb == 'pending_payment') {
+      estadoUi = 'Por cobrar';
+    }
 
     return Mesa(
       id: json['id']?.toString() ?? '',
-      nombre: json['name'] ?? '',
-      capacidad: json['capacity'] ?? 4,
-      area: json['area'] ?? 'General',
+      nombre: json['name']?.toString() ?? '',
+      capacidad: int.tryParse(
+            json['capacity']?.toString() ?? '',
+          ) ??
+          4,
+      area: json['area']?.toString() ?? 'General',
       estado: estadoUi,
     );
   }
 
   Map<String, dynamic> toJson() {
-    // Traducimos de UI (Español) a BD (Inglés) para pasar el CHECK
+    final estadoNormalizado =
+        estado.trim().toLowerCase();
+
     String statusDb = 'free';
-    if (estado == 'Ocupada') statusDb = 'occupied';
+
+    if (estadoNormalizado == 'ocupada') {
+      statusDb = 'occupied';
+    } else if (estadoNormalizado == 'por cobrar' ||
+        estadoNormalizado == 'cuenta') {
+      statusDb = 'pending_payment';
+    }
 
     return {
       if (id.isNotEmpty) 'id': id,
       'name': nombre,
       'capacity': capacidad,
       'area': area,
-      'status': statusDb, 
+      'status': statusDb,
     };
   }
 }

@@ -1,9 +1,11 @@
 // lib/pages/mesas_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../models/mesa.dart';
 import '../providers/mesas_provider.dart';
 import '../widgets/app_widgets.dart';
-import '../models/mesa.dart';
 
 class MesasPage extends StatelessWidget {
   const MesasPage({super.key});
@@ -23,47 +25,77 @@ class _MesasView extends StatefulWidget {
 
 class _MesasViewState extends State<_MesasView> {
   final _formKey = GlobalKey<FormState>();
-  final _nombreCtrl = TextEditingController();
-  final _capacidadCtrl = TextEditingController();
-  final _areaCtrl = TextEditingController();
+
+  final _nombreController = TextEditingController();
+  final _capacidadController = TextEditingController();
+  final _areaController = TextEditingController();
 
   @override
   void dispose() {
-    _nombreCtrl.dispose();
-    _capacidadCtrl.dispose();
-    _areaCtrl.dispose();
+    _nombreController.dispose();
+    _capacidadController.dispose();
+    _areaController.dispose();
     super.dispose();
   }
 
-  void _abrirModalAgregarEditar(MesasProvider provider, {Mesa? mesa}) {
-    if (mesa != null) {
-      _nombreCtrl.text = mesa.nombre;
-      _capacidadCtrl.text = mesa.capacidad.toString();
-      _areaCtrl.text = mesa.area;
+  int _columnasPorAncho(double width) {
+    if (width < 400) return 1;
+    if (width < 640) return 2;
+    if (width < 960) return 3;
+    return 4;
+  }
+
+  bool _esMesaOcupada(Mesa mesa) {
+    return mesa.estado.trim().toLowerCase() == 'ocupada';
+  }
+
+  void _limpiarFormulario() {
+    _nombreController.clear();
+    _capacidadController.text = '1';
+    _areaController.clear();
+  }
+
+  void _cargarFormulario(Mesa mesa) {
+    _nombreController.text = mesa.nombre;
+    _capacidadController.text = mesa.capacidad.toString();
+    _areaController.text = mesa.area;
+  }
+
+  Future<void> _abrirFormularioMesa(
+    MesasProvider provider, {
+    Mesa? mesa,
+  }) async {
+    if (mesa == null) {
+      _limpiarFormulario();
     } else {
-      _nombreCtrl.text = '';
-      _capacidadCtrl.text = '1';
-      _areaCtrl.text = '';
+      _cargarFormulario(mesa);
     }
 
-    showDialog(
+    final esEdicion = mesa != null;
+
+    await showDialog<void>(
       context: context,
-      builder: (ctx) {
-        final dw = MediaQuery.of(ctx).size.width;
+      builder: (dialogContext) {
+        final width = MediaQuery.sizeOf(dialogContext).width;
+
         return AlertDialog(
           insetPadding: EdgeInsets.symmetric(
-            horizontal: dw < 480 ? 16 : 40,
+            horizontal: width < 480 ? 16 : 40,
             vertical: 24,
           ),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           title: Text(
-            mesa != null ? 'Editar Mesa' : 'Agregar Mesa',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            esEdicion ? 'Editar Mesa' : 'Agregar Mesa',
             textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
           ),
           content: SizedBox(
-            width: dw < 480 ? double.infinity : 400,
+            width: width < 480 ? double.infinity : 400,
             child: SingleChildScrollView(
               child: Form(
                 key: _formKey,
@@ -71,56 +103,59 @@ class _MesasViewState extends State<_MesasView> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Nombre:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _nombreCtrl,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder()),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
+                    _CampoFormulario(
+                      label: 'Nombre',
+                      controller: _nombreController,
+                      validator: (value) {
+                        final texto = value?.trim() ?? '';
+
+                        if (texto.isEmpty) {
                           return 'El nombre es obligatorio.';
                         }
-                        if (v.length < 2 || v.length > 30) {
-                          return 'El nombre debe tener entre 2 y 30 caracteres.';
+
+                        if (texto.length < 2 || texto.length > 30) {
+                          return 'Debe tener entre 2 y 30 caracteres.';
                         }
+
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
-                    const Text('Capacidad:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _capacidadCtrl,
+                    const SizedBox(height: 14),
+                    _CampoFormulario(
+                      label: 'Capacidad',
+                      controller: _capacidadController,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder()),
-                      validator: (v) {
-                        final n = int.tryParse(v ?? '');
-                        if (n == null) return 'Debe ser un número entero.';
-                        if (n < 1 || n > 20) {
-                          return 'La capacidad debe estar entre 1 y 20.';
+                      validator: (value) {
+                        final capacidad = int.tryParse(
+                          value?.trim() ?? '',
+                        );
+
+                        if (capacidad == null) {
+                          return 'Debe ser un número entero.';
                         }
+
+                        if (capacidad < 1 || capacidad > 20) {
+                          return 'Debe estar entre 1 y 20.';
+                        }
+
                         return null;
                       },
                     ),
-                    const SizedBox(height: 12),
-                    const Text('Área:',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _areaCtrl,
-                      decoration: const InputDecoration(
-                          border: OutlineInputBorder()),
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
+                    const SizedBox(height: 14),
+                    _CampoFormulario(
+                      label: 'Área',
+                      controller: _areaController,
+                      validator: (value) {
+                        final texto = value?.trim() ?? '';
+
+                        if (texto.isEmpty) {
                           return 'El área es obligatoria.';
                         }
-                        if (v.length < 2 || v.length > 30) {
-                          return 'El área debe tener entre 2 y 30 caracteres.';
+
+                        if (texto.length < 2 || texto.length > 30) {
+                          return 'Debe tener entre 2 y 30 caracteres.';
                         }
+
                         return null;
                       },
                     ),
@@ -131,37 +166,64 @@ class _MesasViewState extends State<_MesasView> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
               onPressed: () async {
-                if (_formKey.currentState!.validate()) {
-                  if (mesa != null) {
-                    await provider.updateMesa(
-                      mesa.id,
-                      Mesa(
-                        id: mesa.id,
-                        nombre: _nombreCtrl.text.trim(),
-                        capacidad: int.parse(_capacidadCtrl.text),
-                        area: _areaCtrl.text.trim(),
-                        estado: mesa.estado,
+                if (!(_formKey.currentState?.validate() ?? false)) {
+                  return;
+                }
+
+                final nuevaMesa = Mesa(
+                  id: mesa?.id ?? '',
+                  nombre: _nombreController.text.trim(),
+                  capacidad: int.parse(
+                    _capacidadController.text.trim(),
+                  ),
+                  area: _areaController.text.trim(),
+                  estado: mesa?.estado ?? 'Libre',
+                );
+
+                final guardada = esEdicion
+                    ? await provider.updateMesa(
+                        mesa.id,
+                        nuevaMesa,
+                      )
+                    : await provider.addMesa(nuevaMesa);
+
+                if (!dialogContext.mounted) return;
+
+                if (guardada) {
+                  Navigator.pop(dialogContext);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        esEdicion
+                            ? 'Mesa actualizada correctamente.'
+                            : 'Mesa creada correctamente.',
                       ),
-                    );
-                  } else {
-                    await provider.addMesa(Mesa(
-                      id: '',
-                      nombre: _nombreCtrl.text.trim(),
-                      capacidad: int.parse(_capacidadCtrl.text),
-                      area: _areaCtrl.text.trim(),
-                      estado: 'Libre',
-                    ));
-                  }
-                  if (ctx.mounted) Navigator.pop(ctx);
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        provider.errorMessage ??
+                            'No se pudo guardar la mesa.',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+                backgroundColor:
+                    Theme.of(dialogContext).primaryColor,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Guardar'),
@@ -172,347 +234,662 @@ class _MesasViewState extends State<_MesasView> {
     );
   }
 
-  void _confirmarEliminar(
-      BuildContext context, MesasProvider provider, Mesa mesa) {
-    showDialog(
+  Future<void> _confirmarEliminar(
+    MesasProvider provider,
+    Mesa mesa,
+  ) async {
+    final confirmada = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar mesa'),
-        content: Text('Se eliminará ${mesa.nombre}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar mesa'),
+          content: Text(
+            '¿Seguro que deseas eliminar ${mesa.nombre}?',
           ),
-          TextButton(
-            onPressed: () async {
-              await provider.removeMesa(mesa.id);
-              if (ctx.mounted) Navigator.pop(ctx);
-            },
-            child: const Text('Confirmar',
-                style: TextStyle(color: Colors.red)),
-          ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmada != true || !mounted) return;
+
+    final eliminada = await provider.removeMesa(mesa.id);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          eliminada
+              ? 'Mesa eliminada correctamente.'
+              : provider.errorMessage ??
+                  'No se pudo eliminar la mesa.',
+        ),
+        backgroundColor:
+            eliminada ? Colors.green : Colors.red,
       ),
     );
   }
 
-  int _mesaColumns(double w) {
-    if (w < 400) return 1;
-    if (w < 640) return 2;
-    if (w < 960) return 3;
-    return 4;
+  void _mostrarErrorMesaOcupada() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'No puedes eliminar una mesa ocupada.',
+        ),
+        backgroundColor: Colors.redAccent,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
-    final primaryTextColor = Theme.of(context).colorScheme.onSurface;
-    final provider = Provider.of<MesasProvider>(context);
+    final provider = context.watch<MesasProvider>();
+
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+    final textColor = theme.colorScheme.onSurface;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final w = constraints.maxWidth;
-            final hPad = w < 480 ? 16.0 : (w < 900 ? 24.0 : 40.0);
-            final vPad = w < 480 ? 16.0 : 24.0;
-            final isCompact = w < 600;
+            final width = constraints.maxWidth;
 
-            // Áreas filtradas con sus mesas
-            final areasFiltradas = provider.areas.where((area) =>
-                provider.filtroSeleccionado == 'Todas' ||
-                provider.filtroSeleccionado == area);
+            final horizontalPadding = width < 480
+                ? 16.0
+                : width < 900
+                    ? 24.0
+                    : 40.0;
 
-            return CustomScrollView(
-              slivers: [
-                // ── Padding top + contenido estático ──────────────────────
-                SliverPadding(
-                  padding: EdgeInsets.fromLTRB(hPad, vPad, hPad, 0),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      // HEADER
-                      if (isCompact) ...[
-                        SectionHeader(
-                          title: '🪑 Configuración de Mesas',
-                          subtitle:
-                              '${provider.mesas.length} mesas configuradas',
+            final verticalPadding =
+                width < 480 ? 16.0 : 24.0;
+
+            final isCompact = width < 600;
+
+            final mesasVisibles = provider.mesasFiltradas;
+
+            final areasVisibles = mesasVisibles
+                .map((mesa) => mesa.area.trim())
+                .where((area) => area.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
+
+            return RefreshIndicator(
+              onRefresh: provider.cargarMesas,
+              child: CustomScrollView(
+                physics:
+                    const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      verticalPadding,
+                      horizontalPadding,
+                      0,
+                    ),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _HeaderMesas(
+                          isCompact: isCompact,
+                          totalMesas: provider.mesas.length,
+                          primaryColor: primaryColor,
+                          onNuevaMesa: () {
+                            _abrirFormularioMesa(provider);
+                          },
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: _BotonNuevaMesa(
-                            primaryColor: primaryColor,
-                            onPressed: () =>
-                                _abrirModalAgregarEditar(provider),
+                        const SizedBox(height: 24),
+
+                        _ResumenMesas(
+                          libres: provider.libres,
+                          ocupadas: provider.ocupadas,
+                          porCobrar: provider.porCobrar,
+                          primaryColor: primaryColor,
+                        ),
+                        const SizedBox(height: 24),
+
+                        _FiltrosMesas(
+                          filtros: provider.filtros,
+                          filtroSeleccionado:
+                              provider.filtroSeleccionado,
+                          primaryColor: primaryColor,
+                          isCompact: isCompact,
+                          onSelected: provider.setFiltro,
+                        ),
+                        const SizedBox(height: 20),
+
+                        if (provider.isLoading)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 30,
+                            ),
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
                           ),
-                        ),
-                      ] else ...[
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: SectionHeader(
-                                title: '🪑 Configuración de Mesas',
-                                subtitle:
-                                    '${provider.mesas.length} mesas configuradas',
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            _BotonNuevaMesa(
-                              primaryColor: primaryColor,
-                              onPressed: () =>
-                                  _abrirModalAgregarEditar(provider),
-                            ),
-                          ],
-                        ),
-                      ],
 
-                      const SizedBox(height: 24),
+                        if (provider.hasError &&
+                            !provider.isLoading)
+                          _MensajeEstado(
+                            icon: Icons.error_outline,
+                            mensaje: provider.errorMessage ??
+                                'Ocurrió un error al cargar las mesas.',
+                            color: Colors.redAccent,
+                          ),
 
-                      // KPI CARDS — siempre en fila de 3 con IntrinsicHeight
-                      // para que la altura sea la del contenido, no un ratio fijo
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: _KpiCard(
-                                data: _KpiData('Libres', provider.libres,
-                                    const Color(0xFF2FFF7A)),
-                              ),
+                        if (!provider.isLoading &&
+                            !provider.hasError &&
+                            mesasVisibles.isEmpty)
+                          _MensajeEstado(
+                            icon: Icons.table_restaurant_outlined,
+                            mensaje:
+                                'No hay mesas para el filtro seleccionado.',
+                            color: textColor.withValues(
+                              alpha: 0.65,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _KpiCard(
-                                data: _KpiData(
-                                    'Ocupadas', provider.ocupadas, primaryColor),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _KpiCard(
-                                data: _KpiData('Por cobrar', provider.porCobrar,
-                                    primaryColor),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // FILTROS
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: provider.filtros.map((f) {
-                          final isActive = provider.filtroSeleccionado == f;
-                          return InkWell(
-                            onTap: () => provider.setFiltro(f),
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 18, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isActive
-                                    ? primaryColor
-                                    : const Color(0xFF1E1E1E),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: isActive
-                                      ? primaryColor
-                                      : Colors.transparent,
-                                ),
-                              ),
-                              child: Text(
-                                f,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: isCompact ? 13 : 14,
-                                  color: isActive
-                                      ? Colors.white
-                                      : Colors.white70,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 20),
-                    ]),
+                          ),
+                      ]),
+                    ),
                   ),
-                ),
 
-                // ── Áreas + grids de mesas ─────────────────────────────────
-                for (final area in areasFiltradas) ...[
-                  Builder(builder: (context) {
-                    final mesasEnArea =
-                        provider.mesas.where((m) => m.area == area).toList();
-                    if (mesasEnArea.isEmpty) return const SliverToBoxAdapter();
-
-                    return SliverPadding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: hPad),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          // Título del área
-                          Padding(
-                            padding:
-                                const EdgeInsets.only(top: 16, bottom: 12),
-                            child: Text(
-                              area,
-                              style: TextStyle(
-                                fontSize: isCompact ? 16 : 18,
-                                fontWeight: FontWeight.bold,
-                                color: primaryTextColor,
-                              ),
-                            ),
-                          ),
-                          // Grid de mesas con shrinkWrap dentro del sliver
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: _mesaColumns(w),
-                              mainAxisSpacing: 14,
-                              crossAxisSpacing: 14,
-                              childAspectRatio: isCompact ? 1.15 : 1.05,
-                            ),
-                            itemCount: mesasEnArea.length,
-                            itemBuilder: (context, index) {
-                              final mesa = mesasEnArea[index];
-                              final isOcupada = mesa.estado == 'Ocupada';
-
-                              return AppCard(
-                                padding: EdgeInsets.all(isCompact ? 12 : 16),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Flexible(
-                                          child: Container(
-                                            padding:
-                                                const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 5),
-                                            decoration: BoxDecoration(
-                                              color: primaryColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                            ),
-                                            child: Text(
-                                              mesa.estado,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 11,
-                                              ),
-                                              overflow:
-                                                  TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ),
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            _IconAccion(
-                                              icon: Icons.edit,
-                                              color: primaryColor,
-                                              onPressed: () =>
-                                                  _abrirModalAgregarEditar(
-                                                      provider,
-                                                      mesa: mesa),
-                                            ),
-                                            const SizedBox(width: 2),
-                                            _IconAccion(
-                                              icon: Icons.delete,
-                                              color: Colors.redAccent,
-                                              onPressed: isOcupada
-                                                  ? () {
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                              'No puedes eliminar una mesa ocupada.'),
-                                                          backgroundColor:
-                                                              Colors
-                                                                  .redAccent,
-                                                        ),
-                                                      );
-                                                    }
-                                                  : () =>
-                                                      _confirmarEliminar(
-                                                          context,
-                                                          provider,
-                                                          mesa),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      mesa.nombre,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: isCompact ? 15 : 18,
-                                        color: Colors.white,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${mesa.capacidad} personas',
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      mesa.area,
-                                      style: TextStyle(
-                                        color: primaryColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ]),
+                  if (!provider.isLoading &&
+                      !provider.hasError)
+                    for (final area in areasVisibles)
+                      _construirSeccionArea(
+                        area: area,
+                        mesasVisibles: mesasVisibles,
+                        width: width,
+                        horizontalPadding:
+                            horizontalPadding,
+                        isCompact: isCompact,
+                        primaryColor: primaryColor,
+                        textColor: textColor,
+                        provider: provider,
                       ),
-                    );
-                  }),
-                ],
 
-                // ── Padding bottom ─────────────────────────────────────────
-                SliverPadding(padding: EdgeInsets.only(bottom: vPad)),
-              ],
+                  SliverPadding(
+                    padding: EdgeInsets.only(
+                      bottom: verticalPadding,
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         ),
       ),
     );
   }
+
+  Widget _construirSeccionArea({
+    required String area,
+    required List<Mesa> mesasVisibles,
+    required double width,
+    required double horizontalPadding,
+    required bool isCompact,
+    required Color primaryColor,
+    required Color textColor,
+    required MesasProvider provider,
+  }) {
+    final mesasEnArea = mesasVisibles.where((mesa) {
+      return mesa.area.trim().toLowerCase() ==
+          area.trim().toLowerCase();
+    }).toList();
+
+    if (mesasEnArea.isEmpty) {
+      return const SliverToBoxAdapter();
+    }
+
+    return SliverPadding(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+      ),
+      sliver: SliverList(
+        delegate: SliverChildListDelegate([
+          Padding(
+            padding: const EdgeInsets.only(
+              top: 16,
+              bottom: 12,
+            ),
+            child: Text(
+              area,
+              style: TextStyle(
+                fontSize: isCompact ? 16 : 18,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+          ),
+          GridView.builder(
+            shrinkWrap: true,
+            physics:
+                const NeverScrollableScrollPhysics(),
+            gridDelegate:
+                SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _columnasPorAncho(width),
+              mainAxisSpacing: 14,
+              crossAxisSpacing: 14,
+              childAspectRatio:
+                  isCompact ? 1.15 : 1.05,
+            ),
+            itemCount: mesasEnArea.length,
+            itemBuilder: (context, index) {
+              final mesa = mesasEnArea[index];
+              final ocupada = _esMesaOcupada(mesa);
+
+              return _MesaCard(
+                mesa: mesa,
+                ocupada: ocupada,
+                isCompact: isCompact,
+                primaryColor: primaryColor,
+                onEditar: () {
+                  _abrirFormularioMesa(
+                    provider,
+                    mesa: mesa,
+                  );
+                },
+                onEliminar: ocupada
+                    ? _mostrarErrorMesaOcupada
+                    : () {
+                        _confirmarEliminar(
+                          provider,
+                          mesa,
+                        );
+                      },
+              );
+            },
+          ),
+        ]),
+      ),
+    );
+  }
 }
 
-// ── WIDGETS AUXILIARES ──────────────────────────────────────────────────────
+class _HeaderMesas extends StatelessWidget {
+  const _HeaderMesas({
+    required this.isCompact,
+    required this.totalMesas,
+    required this.primaryColor,
+    required this.onNuevaMesa,
+  });
+
+  final bool isCompact;
+  final int totalMesas;
+  final Color primaryColor;
+  final VoidCallback onNuevaMesa;
+
+  @override
+  Widget build(BuildContext context) {
+    final header = SectionHeader(
+      title: '🪑 Configuración de Mesas',
+      subtitle: '$totalMesas mesas configuradas',
+    );
+
+    final boton = _BotonNuevaMesa(
+      primaryColor: primaryColor,
+      onPressed: onNuevaMesa,
+    );
+
+    if (isCompact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          header,
+          const SizedBox(height: 12),
+          boton,
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: header),
+        const SizedBox(width: 16),
+        boton,
+      ],
+    );
+  }
+}
+
+class _ResumenMesas extends StatelessWidget {
+  const _ResumenMesas({
+    required this.libres,
+    required this.ocupadas,
+    required this.porCobrar,
+    required this.primaryColor,
+  });
+
+  final int libres;
+  final int ocupadas;
+  final int porCobrar;
+  final Color primaryColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _KpiCard(
+              data: _KpiData(
+                'Libres',
+                libres,
+                const Color(0xFF2FFF7A),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _KpiCard(
+              data: _KpiData(
+                'Ocupadas',
+                ocupadas,
+                primaryColor,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _KpiCard(
+              data: _KpiData(
+                'Por cobrar',
+                porCobrar,
+                primaryColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FiltrosMesas extends StatelessWidget {
+  const _FiltrosMesas({
+    required this.filtros,
+    required this.filtroSeleccionado,
+    required this.primaryColor,
+    required this.isCompact,
+    required this.onSelected,
+  });
+
+  final List<String> filtros;
+  final String filtroSeleccionado;
+  final Color primaryColor;
+  final bool isCompact;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: filtros.map((filtro) {
+        final seleccionado =
+            filtroSeleccionado == filtro;
+
+        return InkWell(
+          onTap: () => onSelected(filtro),
+          borderRadius: BorderRadius.circular(8),
+          child: AnimatedContainer(
+            duration: const Duration(
+              milliseconds: 180,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 10,
+            ),
+            decoration: BoxDecoration(
+              color: seleccionado
+                  ? primaryColor
+                  : const Color(0xFF1E1E1E),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: seleccionado
+                    ? primaryColor
+                    : Colors.transparent,
+              ),
+            ),
+            child: Text(
+              filtro,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: isCompact ? 13 : 14,
+                color: seleccionado
+                    ? Colors.white
+                    : Colors.white70,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _MesaCard extends StatelessWidget {
+  const _MesaCard({
+    required this.mesa,
+    required this.ocupada,
+    required this.isCompact,
+    required this.primaryColor,
+    required this.onEditar,
+    required this.onEliminar,
+  });
+
+  final Mesa mesa;
+  final bool ocupada;
+  final bool isCompact;
+  final Color primaryColor;
+  final VoidCallback onEditar;
+  final VoidCallback onEliminar;
+
+  @override
+  Widget build(BuildContext context) {
+    final estadoNormalizado =
+        mesa.estado.trim().toLowerCase();
+
+    final Color estadoColor;
+
+    if (estadoNormalizado == 'ocupada') {
+      estadoColor = Colors.orange;
+    } else if (estadoNormalizado == 'por cobrar' ||
+        estadoNormalizado == 'cuenta') {
+      estadoColor = Colors.redAccent;
+    } else {
+      estadoColor = Colors.green;
+    }
+
+    return AppCard(
+      padding: EdgeInsets.all(
+        isCompact ? 12 : 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment:
+                MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: estadoColor,
+                    borderRadius:
+                        BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    mesa.estado,
+                    maxLines: 1,
+                    overflow:
+                        TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _IconAccion(
+                    icon: Icons.edit,
+                    color: primaryColor,
+                    onPressed: onEditar,
+                  ),
+                  const SizedBox(width: 2),
+                  _IconAccion(
+                    icon: Icons.delete,
+                    color: ocupada
+                        ? Colors.grey
+                        : Colors.redAccent,
+                    onPressed: onEliminar,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            mesa.nombre,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: isCompact ? 15 : 18,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${mesa.capacidad} personas',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            mesa.area,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: primaryColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CampoFormulario extends StatelessWidget {
+  const _CampoFormulario({
+    required this.label,
+    required this.controller,
+    required this.validator,
+    this.keyboardType,
+  });
+
+  final String label;
+  final TextEditingController controller;
+  final FormFieldValidator<String> validator;
+  final TextInputType? keyboardType;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label:',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+          ),
+          validator: validator,
+        ),
+      ],
+    );
+  }
+}
+
+class _MensajeEstado extends StatelessWidget {
+  const _MensajeEstado({
+    required this.icon,
+    required this.mensaje,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String mensaje;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        vertical: 36,
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 48,
+            color: color,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            mensaje,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: color,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _BotonNuevaMesa extends StatelessWidget {
   const _BotonNuevaMesa({
@@ -530,14 +907,20 @@ class _BotonNuevaMesa extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 14,
+        ),
       ),
       child: const Text(
         '+ Nueva Mesa',
-        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 15,
+        ),
       ),
     );
   }
@@ -557,38 +940,58 @@ class _IconAccion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(icon, size: 18),
+      icon: Icon(
+        icon,
+        size: 18,
+      ),
       color: color,
       onPressed: onPressed,
       padding: const EdgeInsets.all(4),
-      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+      constraints: const BoxConstraints(
+        minWidth: 30,
+        minHeight: 30,
+      ),
       splashRadius: 18,
     );
   }
 }
 
 class _KpiData {
-  const _KpiData(this.label, this.value, this.color);
+  const _KpiData(
+    this.label,
+    this.value,
+    this.color,
+  );
+
   final String label;
   final int value;
   final Color color;
 }
 
 class _KpiCard extends StatelessWidget {
-  const _KpiCard({required this.data});
+  const _KpiCard({
+    required this.data,
+  });
+
   final _KpiData data;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+      padding: const EdgeInsets.symmetric(
+        vertical: 20,
+        horizontal: 12,
+      ),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
-        border: Border.all(color: data.color, width: 1.0),
+        border: Border.all(
+          color: data.color,
+        ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment:
+            MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
@@ -597,7 +1000,7 @@ class _KpiCard extends StatelessWidget {
               fontSize: 26,
               fontWeight: FontWeight.w900,
               color: data.color,
-              height: 1.0,
+              height: 1,
             ),
           ),
           const SizedBox(height: 8),
