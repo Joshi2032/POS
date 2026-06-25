@@ -28,22 +28,30 @@ class CajaProvider extends ChangeNotifier {
   String? _errorMessage;
 
   // --- GETTERS (Exactamente idénticos a los que necesita tu UI original) ---
-  List<CashOrder> get pendingOrders => _ordenesProvider.orders
-      .where((o) => o.status == 'pendiente' || o.status == 'preparando')
-      .map(_mapRestaurantToCashOrder)
-      .toList();
+List<CashOrder> get pendingOrders =>
+    _ordenesProvider.orders.where((o) {
+      final status = o.status.toLowerCase().trim();
 
-  List<CashOrder> get paidToday => _ordenesProvider.orders
-      .where((o) => o.status == 'pagada')
-      .map(_mapRestaurantToCashOrder)
-      .toList();
-  double get totalInCash => _totalInCash;
-  String? get selectedOrderId => _selectedOrderId;
-  CashOrder? get selectedOrder => _selectedOrder;
-  String get selectedMethod => _selectedMethod;
-  double get orderSubtotal => _selectedOrder?.total ?? 0.0;
-  String get cashError => _cashError;
-  int get paidTodayCount => paidToday.length;
+      return status == 'pending' ||
+          status == 'pendiente' ||
+          status == 'preparing' ||
+          status == 'preparando';
+    }).map(_mapRestaurantToCashOrder).toList();
+
+List<CashOrder> get paidToday =>
+    _ordenesProvider.orders.where((o) {
+      final status = o.status.toLowerCase().trim();
+
+      return status == 'paid' || status == 'pagada';
+    }).map(_mapRestaurantToCashOrder).toList();
+
+double get totalInCash => _totalInCash;
+String? get selectedOrderId => _selectedOrderId;
+CashOrder? get selectedOrder => _selectedOrder;
+String get selectedMethod => _selectedMethod;
+double get orderSubtotal => _selectedOrder?.total ?? 0.0;
+String get cashError => _cashError;
+int get paidTodayCount => paidToday.length;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
