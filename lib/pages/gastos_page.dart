@@ -295,88 +295,139 @@ class _GastosViewState extends State<_GastosView> {
                             )
                           else
                             // En tablet/escritorio: DataTable con scroll horizontal
-                            Card(
-                              clipBehavior: Clip.antiAlias,
-                              child: SizedBox(
-                                width: double.infinity,
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: DataTable(
-                                    headingRowColor:
-                                        WidgetStateProperty.all(
-                                      Theme.of(context)
-                                          .colorScheme
-                                          .surfaceContainerHighest,
-                                    ),
-                                    columns: const [
-                                      DataColumn(
-                                          label: Text('Fecha',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                      DataColumn(
-                                          label: Text('Concepto',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                      DataColumn(
-                                          label: Text('Categoría',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                      DataColumn(
-                                          label: Text('Método',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                      DataColumn(
-                                          label: Text('Monto',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
-                                      DataColumn(label: Text('')),
-                                    ],
-                                    rows: provider.paginatedGastos.map((g) {
-                                      return DataRow(cells: [
-                                        DataCell(Text(g.date)),
-                                        DataCell(Text(g.concept,
-                                            style: const TextStyle(
-                                                fontWeight:
-                                                    FontWeight.w500))),
-                                        DataCell(Text(g.category)),
-                                        DataCell(
-                                            Text(g.method ?? 'N/A')),
-                                        DataCell(Text(
-                                            Formatters.money(g.amount),
-                                            style: const TextStyle(
-                                                fontWeight:
-                                                    FontWeight.bold))),
-                                        DataCell(Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  abrirEditar(g),
-                                              child:
-                                                  const Text('Editar'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () =>
-                                                  eliminarGastoConfirmado(
-                                                      provider, g),
-                                              child: const Text(
-                                                  'Eliminar',
-                                                  style: TextStyle(
-                                                      color: Colors.red)),
-                                            ),
-                                          ],
-                                        )),
-                                      ]);
-                                    }).toList(),
-                                  ),
-                                ),
-                              ),
+                           Card(
+  clipBehavior: Clip.antiAlias,
+  margin: EdgeInsets.zero,
+  child: LayoutBuilder(
+    builder: (context, tableConstraints) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: tableConstraints.maxWidth,
+          ),
+          child: DataTable(
+            headingRowColor: WidgetStateProperty.all(
+              Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest,
+            ),
+            horizontalMargin: 20,
+            columnSpacing: 32,
+            columns: const [
+              DataColumn(
+                label: Text(
+                  'Fecha',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Concepto',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Categoría',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Método',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Monto',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              DataColumn(
+                label: Text(
+                  'Acciones',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+            rows: provider.paginatedGastos.map((g) {
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Text(g.date),
+                  ),
+                  DataCell(
+                    Text(
+                      g.concept,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Text(g.category),
+                  ),
+                  DataCell(
+                    Text(g.method ?? 'N/A'),
+                  ),
+                  DataCell(
+                    Text(
+                      Formatters.money(g.amount),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            abrirEditar(g);
+                          },
+                          child: const Text('Editar'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            eliminarGastoConfirmado(
+                              provider,
+                              g,
+                            );
+                          },
+                          child: const Text(
+                            'Eliminar',
+                            style: TextStyle(
+                              color: Colors.red,
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList(),
+          ),
+        ),
+      );
+    },
+  ),
+),
 
                           const SizedBox(height: 14),
 

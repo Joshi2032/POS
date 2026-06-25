@@ -1,152 +1,258 @@
 import 'package:flutter/material.dart';
+
 import '../models/nomina_pago.dart';
 import '../repositories/nomina_pago_repository.dart';
 
 class NominasProvider extends ChangeNotifier {
-  final NominaPagoRepository _repository;
-
   NominasProvider(this._repository) {
-    cargarNominas(); // Carga inicial al levantar el módulo
+    cargarNominas();
   }
 
-  List<NominaPago> _nominas = [];
-  
-  // --- ESTADOS CENTRALIZADOS DE FLUJO Y ERRORES ---
-  bool _isLoading = false;
-  String? _errorMessage;
+  final NominaPagoRepository _repository;
 
   final int pageSize = 10;
-  final List<String> tipos = ['Todos', 'Salario', 'Adelanto', 'Bono', 'Deducción'];
+
+  final List<String> tipos = [
+    'Todos',
+    'Salario',
+    'Adelanto',
+    'Bono',
+    'Deducción',
+  ];
+
+  List<NominaPago> _nominas = [];
+
+  bool _isLoading = false;
+  String? _errorMessage;
 
   String _search = '';
   String _selectedType = 'Todos';
   int _currentPage = 1;
 
-  // --- GETTERS COMPATIBLES AL 100% CON TU INTERFAZ ORIGINAL ---
+  // ── GETTERS ────────────────────────────────────────────────
+
   String get search => _search;
   String get selectedType => _selectedType;
   int get currentPage => _currentPage;
+
   bool get isLoading => _isLoading;
-  
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
 
   List<NominaPago> get nominasFiltradas {
-    return _nominas.where((n) {
-      final matchSearch = _search.isEmpty ||
-          [n.empleado, n.tipo, n.metodo]
-              .whereType<String>()
-              .any((v) => v.toLowerCase().contains(_search.toLowerCase()));
-      final matchType = _selectedType == 'Todos' || n.tipo == _selectedType;
-      return matchSearch && matchType;
+    final busqueda = _search.trim().toLowerCase();
+
+    return _nominas.where((nomina) {
+      final coincideBusqueda =
+          busqueda.isEmpty ||
+          nomina.empleado.toLowerCase().contains(busqueda) ||
+          nomina.tipo.toLowerCase().contains(busqueda) ||
+          nomina.metodo.toLowerCase().contains(busqueda);
+
+      final coincideTipo =
+          _selectedType == 'Todos' ||
+          nomina.tipo.toLowerCase() ==
+              _selectedType.toLowerCase();
+
+      return coincideBusqueda && coincideTipo;
     }).toList();
   }
 
-  int get totalPages => (nominasFiltradas.length / pageSize).ceil().clamp(1, 999999);
-
   List<NominaPago> get paginatedNominas {
-    final start = (_currentPage - 1) * pageSize;
-    return nominasFiltradas.skip(start).take(pageSize).toList();
+    final registros = nominasFiltradas;
+    final inicio = (_currentPage - 1) * pageSize;
+
+    if (inicio >= registros.length) {
+      return [];
+    }
+
+    return registros
+        .skip(inicio)
+        .take(pageSize)
+        .toList();
+  }
+
+  int get totalPages {
+    final paginas =
+        (nominasFiltradas.length / pageSize).ceil();
+
+    return paginas < 1 ? 1 : paginas;
   }
 
   double get totalMensual {
-    return _nominas.fold(0.0, (sum, item) => sum + item.monto);
-  }
-  
-  List<NominaPago> filtrar(String busqueda) {
-    return _nominas.where((n) => 
-      n.empleadoNombre.toLowerCase().contains(busqueda.toLowerCase())
-    ).toList();
+    final ahora = DateTime.now();
+
+    return _nominas.where((nomina) {
+      final fecha = DateTime.tryParse(nomina.fecha);
+
+      return fecha != null &&
+          fecha.year == ahora.year &&
+          fecha.month == ahora.month;
+    }).fold<double>(0, (total, nomina) {
+      final tipo = nomina.tipo.trim().toLowerCase();
+
+      final esDeduccion =
+          tipo == 'deducción' ||
+          tipo == 'deduccion';
+
+      return esDeduccion
+          ? total - nomina.monto
+          : total + nomina.monto;
+    });
   }
 
-  // --- LÓGICA DE DATOS SEGURA ---
+  // ── CARGA DE DATOS ─────────────────────────────────────────
+
   Future<void> cargarNominas() async {
     _setLoading(true);
     _clearError();
+
     try {
       _nominas = await _repository.getAll();
+      _ajustarPaginaActual();
     } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error cargando nóminas: $e');
+      _errorMessage =
+          'No se pudieron cargar los pagos: $e';
+
+      debugPrint(
+        'Error al cargar nóminas: $e',
+      );
     } finally {
       _setLoading(false);
     }
   }
 
-  // --- SETTERS Y CONTROLES DE INTERFAZ ---
-  void setSearch(String val) {
-    _search = val;
+  // ── FILTROS Y PAGINACIÓN ───────────────────────────────────
+
+  void setSearch(String value) {
+    _search = value;
     _currentPage = 1;
     notifyListeners();
   }
 
-  void setType(String type) {
-    _selectedType = type;
+  void setType(String value) {
+    _selectedType = value;
     _currentPage = 1;
     notifyListeners();
   }
 
-  void changePage(int newPage) {
-    _currentPage = newPage.clamp(1, totalPages);
+  void changePage(int page) {
+    if (page < 1 || page > totalPages) {
+      return;
+    }
+
+    _currentPage = page;
     notifyListeners();
   }
 
-  // --- ACCIONES C.R.U.D CON RETORNO DE CONTROL COMPATIBLE ---
-  Future<bool> agregarNomina(NominaPago nomina) async {
+  // ── CRUD ───────────────────────────────────────────────────
+
+  Future<bool> agregarNomina(
+    NominaPago nomina,
+  ) async {
+    if (_isLoading) return false;
+
     _setLoading(true);
     _clearError();
+
     try {
       await _repository.create(nomina);
-      await cargarNominas();
+      await _recargarLista();
+
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error agregando nómina: $e');
-      notifyListeners();
+      _errorMessage =
+          'No se pudo registrar el pago: $e';
+
+      debugPrint(
+        'Error agregando nómina: $e',
+      );
+
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  // Soporta id dynamic en caso de que la UI envíe llaves numéricas o strings de forma indistinta
-  Future<bool> actualizarNomina(dynamic id, NominaPago nomina) async {
+  Future<bool> actualizarNomina(
+    dynamic id,
+    NominaPago nomina,
+  ) async {
+    if (_isLoading) return false;
+
     _setLoading(true);
     _clearError();
+
     try {
-      final String convertedId = id.toString();
-      await _repository.update(convertedId, nomina);
-      await cargarNominas();
+      await _repository.update(
+        id.toString(),
+        nomina,
+      );
+
+      await _recargarLista();
+
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error actualizando nómina: $e');
-      notifyListeners();
+      _errorMessage =
+          'No se pudo actualizar el pago: $e';
+
+      debugPrint(
+        'Error actualizando nómina: $e',
+      );
+
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  Future<bool> eliminarNomina(dynamic id) async {
+  Future<bool> eliminarNomina(
+    dynamic id,
+  ) async {
+    if (_isLoading) return false;
+
     _setLoading(true);
     _clearError();
+
     try {
-      final String convertedId = id.toString();
-      await _repository.delete(convertedId);
-      await cargarNominas();
+      await _repository.delete(
+        id.toString(),
+      );
+
+      await _recargarLista();
+
       return true;
     } catch (e) {
-      _errorMessage = e.toString();
-      debugPrint('Error eliminando nómina: $e');
-      notifyListeners();
+      _errorMessage =
+          'No se pudo eliminar el pago: $e';
+
+      debugPrint(
+        'Error eliminando nómina: $e',
+      );
+
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  // --- MÉTODOS AUXILIARES ---
+  // ── AUXILIARES ─────────────────────────────────────────────
+
+  Future<void> _recargarLista() async {
+    _nominas = await _repository.getAll();
+    _ajustarPaginaActual();
+  }
+
+  void _ajustarPaginaActual() {
+    if (_currentPage > totalPages) {
+      _currentPage = totalPages;
+    }
+
+    if (_currentPage < 1) {
+      _currentPage = 1;
+    }
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

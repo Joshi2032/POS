@@ -927,124 +927,129 @@ class _CartSection extends StatelessWidget {
     );
   }
 
-  Future<void> _enviarOrden({
-    required BuildContext context,
-    required TomarOrdenProvider provider,
-  }) async {
-    final orderType = provider.orderType;
-    final selectedTable =
-        provider.selectedTable;
-    final selectedArea =
-        provider.selectedArea;
+ Future<void> _enviarOrden({
+  required BuildContext context,
+  required TomarOrdenProvider provider,
+}) async {
+  // Capturar todo lo que depende de BuildContext
+  // antes del primer await.
+  final authProvider = context.read<AuthProvider>();
+  final ordenesProvider = context.read<OrdenesProvider>();
+  final mesasProvider = context.read<MesasProvider>();
 
-    final cartSnapshot =
-        List<CartItem>.from(
-      provider.cart,
+  final messenger = ScaffoldMessenger.of(context);
+  final router = GoRouter.of(context);
+  final navigator = Navigator.of(context);
+
+  // Copia del estado actual de la orden.
+  final orderType = provider.orderType;
+  final selectedTable = provider.selectedTable;
+  final selectedTableName = provider.selectedTableName;
+  final selectedArea = provider.selectedArea;
+  final isExistingTable = provider.isExistingTable;
+  final notes = provider.notes.trim();
+
+  final cartSnapshot = List<CartItem>.from(provider.cart);
+  final total = provider.total;
+
+  if (cartSnapshot.isEmpty) {
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Agrega al menos un producto a la orden.',
+        ),
+        backgroundColor: Colors.orange,
+      ),
     );
+    return;
+  }
 
-    final total = provider.total;
-
-    final idComanda =
-        'CMD-${DateTime.now().millisecondsSinceEpoch}';
-
-    final now = DateTime.now();
-
-    final hora =
-        '${now.hour.toString().padLeft(2, '0')}:'
-        '${now.minute.toString().padLeft(2, '0')}';
-
-    final identificador =
-        orderType == OrderType.dineIn
-            ? '${provider.selectedTableName} '
-                '(Área $selectedArea)'
-            : 'Para Llevar';
-
-    final cocinaItems =
-        cartSnapshot.map((item) {
-      return OrderItem(
-        productName: item.product.name,
-        productId: item.product.id,
-        quantity: item.qty,
-        unitPrice: item.product.price,
-        total: item.total,
-      );
-    }).toList();
-
-    final itemsMap =
-        cartSnapshot.map((item) {
-      return {
-        'product_name':
-            item.product.name,
-        'product_id':
-            item.product.id,
-        'quantity': item.qty,
-        'unit_price':
-            item.product.price,
-        'total': item.total,
-      };
-    }).toList();
-
-    final authProvider =
-        context.read<AuthProvider>();
-
-    final nuevaOrden = RestaurantOrder(
-      id: '',
-      orderNumber: idComanda,
-      tableId:
-          orderType == OrderType.dineIn
-              ? selectedTable
-              : null,
-      tableOrCustomer:
-          identificador,
-      time: hora,
-      status: 'pending',
-      serviceType:
-          orderType == OrderType.dineIn
-              ? 'dine_in'
-              : 'takeout',
-      items: cocinaItems,
-      totalAmount: total,
-      notes:
-          provider.notes.trim().isEmpty
-              ? null
-              : provider.notes.trim(),
-      waiterId: authProvider.userId,
-      waiterName:
-          authProvider.nombreUsuario,
+  if (orderType == OrderType.dineIn &&
+      selectedTable.isEmpty) {
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Selecciona una mesa antes de continuar.',
+        ),
+        backgroundColor: Colors.orange,
+      ),
     );
+    return;
+  }
 
-    final ordenesProvider =
-        context.read<OrdenesProvider>();
+  final idComanda =
+      'CMD-${DateTime.now().millisecondsSinceEpoch}';
 
-    final messenger =
-        ScaffoldMessenger.of(context);
+  final now = DateTime.now();
 
-    final router =
-        GoRouter.of(context);
+  final hora =
+      '${now.hour.toString().padLeft(2, '0')}:'
+      '${now.minute.toString().padLeft(2, '0')}';
 
-    String mensajeExito =
-        'Orden creada exitosamente';
+  final identificador =
+      orderType == OrderType.dineIn
+          ? '$selectedTableName (Área $selectedArea)'
+          : 'Para Llevar';
 
+  final cocinaItems = cartSnapshot.map((item) {
+    return OrderItem(
+      productName: item.product.name,
+      productId: item.product.id,
+      quantity: item.qty,
+      unitPrice: item.product.price,
+      total: item.total,
+    );
+  }).toList();
+
+  final itemsMap = cartSnapshot.map((item) {
+    return {
+      'product_name': item.product.name,
+      'product_id': item.product.id,
+      'quantity': item.qty,
+      'unit_price': item.product.price,
+      'total': item.total,
+    };
+  }).toList();
+
+  final nuevaOrden = RestaurantOrder(
+    id: '',
+    orderNumber: idComanda,
+    tableId: orderType == OrderType.dineIn
+        ? selectedTable
+        : null,
+    tableOrCustomer: identificador,
+    time: hora,
+    status: 'pending',
+    serviceType: orderType == OrderType.dineIn
+        ? 'dine_in'
+        : 'takeout',
+    items: cocinaItems,
+    totalAmount: total,
+    notes: notes.isEmpty ? null : notes,
+    waiterId: authProvider.userId,
+    waiterName: authProvider.nombreUsuario,
+  );
+
+  String mensajeExito = 'Orden creada exitosamente';
+
+  try {
     if (orderType == OrderType.dineIn &&
-        provider.isExistingTable) {
+        isExistingTable) {
       final ordenExistente =
-          await ordenesProvider
-              .obtenerOrdenActivaPorMesa(
+          await ordenesProvider.obtenerOrdenActivaPorMesa(
         selectedTable,
       );
 
       if (ordenExistente != null) {
-        await ordenesProvider
-            .agregarItemsAOrden(
+        await ordenesProvider.agregarItemsAOrden(
           ordenExistente.id,
           itemsMap,
         );
 
         mensajeExito =
-            'Productos agregados a ${provider.selectedTableName}';
+            'Productos agregados a $selectedTableName';
       } else {
-        await ordenesProvider
-            .insertarNuevaComanda(
+        await ordenesProvider.insertarNuevaComanda(
           nuevaOrden,
         );
 
@@ -1052,98 +1057,78 @@ class _CartSection extends StatelessWidget {
             'No había una orden activa; se creó una nueva';
       }
     } else {
-      await ordenesProvider
-          .insertarNuevaComanda(
+      await ordenesProvider.insertarNuevaComanda(
         nuevaOrden,
       );
     }
 
-    if (ordenesProvider.errorMessage !=
-        null) {
-      if (!context.mounted) {
-        return;
-      }
-
+    if (ordenesProvider.errorMessage != null) {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
             'Error al guardar la orden: '
             '${ordenesProvider.errorMessage}',
           ),
-          backgroundColor:
-              Colors.red,
-          duration:
-              const Duration(seconds: 5),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
         ),
       );
-
       return;
     }
 
     if (orderType == OrderType.dineIn &&
-        !provider.isExistingTable) {
-      final mesasProvider =
-          context.read<MesasProvider>();
-
+        !isExistingTable) {
       final actualizada =
-          await mesasProvider
-              .cambiarEstadoMesa(
+          await mesasProvider.cambiarEstadoMesa(
         selectedTable,
         'ocupada',
       );
 
       if (!actualizada) {
-        if (!context.mounted) {
-          return;
-        }
-
         messenger.showSnackBar(
           SnackBar(
             content: Text(
               mesasProvider.errorMessage ??
                   'La orden se creó, pero no se pudo marcar la mesa como ocupada.',
             ),
-            backgroundColor:
-                Colors.red,
-            duration:
-                const Duration(seconds: 5),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
-
         return;
       }
     }
 
     provider.sendOrder();
 
-    if (!context.mounted) {
-      return;
-    }
+    if (!context.mounted) return;
 
-    if (isMobile &&
-        Navigator.canPop(context)) {
-      Navigator.pop(context);
+    if (isMobile && navigator.canPop()) {
+      navigator.pop();
     }
 
     messenger.showSnackBar(
       SnackBar(
         content: Text(mensajeExito),
-        backgroundColor:
-            Colors.green,
+        backgroundColor: Colors.green,
       ),
     );
 
-    Future.delayed(
-      const Duration(
-        milliseconds: 150,
+    router.go('/ordenes');
+  } catch (e) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'No se pudo procesar la orden: $e',
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
       ),
-      () {
-        router.go('/ordenes');
-      },
     );
   }
 }
-
+}
+// no borrar
 class _TypeButton extends StatelessWidget {
   const _TypeButton({
     required this.label,
