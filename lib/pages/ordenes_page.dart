@@ -46,11 +46,16 @@ class _OrdenesView extends StatelessWidget {
   }
 
   String _getServiceLabel(ServiceType type) {
-    if (type == 'comedor') return '🍽️ Comedor';
-    if (type == 'llevar') return '🛍️ Para Llevar';
-    return '🛵 Domicilio';
+  if (type == 'comedor' || type == 'dine_in') {
+    return '🍽️ Comedor';
   }
 
+  if (type == 'llevar' || type == 'takeout') {
+    return '🛍️ Para Llevar';
+  }
+
+  return '🛵 Domicilio';
+}
   // Columnas del grid según ancho
   int _gridColumns(double w) {
     if (w < 500) return 1;
@@ -68,6 +73,7 @@ class _OrdenesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<OrdenesProvider>();
+    
 
     return Scaffold(
       body: Stack(
@@ -473,10 +479,22 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final serviceType = order.serviceType.toLowerCase().trim();
+
+    final esParaLlevar =
+        serviceType == 'llevar' || serviceType == 'takeout';
+
+    final nombreOrden = esParaLlevar
+        ? 'Para llevar'
+        : order.tableOrCustomer.trim().isEmpty
+            ? 'Mesa sin identificar'
+            : order.tableOrCustomer;
+
     return Card(
       elevation: 3,
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
@@ -485,7 +503,6 @@ class _OrderCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Número de orden + hora
               Row(
                 children: [
                   Expanded(
@@ -496,26 +513,40 @@ class _OrderCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: Colors.grey),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text('🕒 ${order.time}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 12)),
+                  Text(
+                    '🕒 ${order.time}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 6),
-              // Cliente/mesa + badge de estado
               Row(
                 children: [
+                  Icon(
+                    esParaLlevar
+                        ? Icons.shopping_bag_outlined
+                        : Icons.table_restaurant_outlined,
+                    size: 19,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  const SizedBox(width: 7),
                   Expanded(
                     child: Text(
-                      order.tableOrCustomer,
+                      nombreOrden,
                       style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.bold),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -523,7 +554,9 @@ class _OrderCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: statusColor,
                       borderRadius: BorderRadius.circular(8),
@@ -531,25 +564,30 @@ class _OrderCard extends StatelessWidget {
                     child: Text(
                       statusLabel,
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
-              Text(serviceLabel,
-                  style: const TextStyle(
-                      fontSize: 12, color: Colors.blueGrey)),
+              Text(
+                serviceLabel,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.blueGrey,
+                ),
+              ),
               const Divider(height: 12),
-              // Productos (máximo 2)
               Expanded(
                 child: ListView.builder(
                   itemCount:
                       order.items.length > 2 ? 2 : order.items.length,
-                  itemBuilder: (ctx, idx) {
-                    final item = order.items[idx];
+                  itemBuilder: (context, index) {
+                    final item = order.items[index];
+
                     return Text(
                       '${item.quantity}x ${item.productName}',
                       style: const TextStyle(fontSize: 12),
@@ -562,21 +600,27 @@ class _OrderCard extends StatelessWidget {
               if (order.items.length > 2)
                 Text(
                   '+ ${order.items.length - 2} productos más...',
-                  style:
-                      const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
                 ),
               const SizedBox(height: 4),
-              // Total
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Total: ${Formatters.money(order.totalAmount)}',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
-                  const Icon(Icons.arrow_forward_ios,
-                      size: 12, color: Colors.grey),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 12,
+                    color: Colors.grey,
+                  ),
                 ],
               ),
             ],
@@ -603,19 +647,34 @@ class _DetalleModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final order = provider.selectedOrderForModal!;
-    final w = MediaQuery.of(context).size.width;
-    final h = MediaQuery.of(context).size.height;
-    final isWide = w > 600;
+
+    final serviceType = order.serviceType.toLowerCase().trim();
+
+    final esParaLlevar =
+        serviceType == 'llevar' || serviceType == 'takeout';
+
+    final nombreOrden = esParaLlevar
+        ? 'Para llevar'
+        : order.tableOrCustomer.trim().isEmpty
+            ? 'Mesa sin identificar'
+            : order.tableOrCustomer;
+
+    final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+    final isWide = width > 600;
 
     return Center(
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: isWide ? 500 : w - 32,
-        constraints: BoxConstraints(maxHeight: h * 0.88),
+        width: isWide ? 500 : width - 32,
+        constraints: BoxConstraints(
+          maxHeight: height * 0.88,
+        ),
         margin: const EdgeInsets.all(16),
         child: Card(
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: EdgeInsets.all(isWide ? 24 : 18),
             child: SingleChildScrollView(
@@ -623,16 +682,17 @@ class _DetalleModal extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Título
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
                           'Comanda: ${order.orderNumber.isNotEmpty ? order.orderNumber : order.id}',
                           style: TextStyle(
-                              fontSize: isWide ? 18 : 16,
-                              fontWeight: FontWeight.bold),
+                            fontSize: isWide ? 18 : 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -646,18 +706,39 @@ class _DetalleModal extends StatelessWidget {
                   ),
                   const Divider(),
                   const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        esParaLlevar
+                            ? Icons.shopping_bag_outlined
+                            : Icons.table_restaurant_outlined,
+                        size: 20,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          esParaLlevar
+                              ? 'Servicio: $nombreOrden'
+                              : 'Mesa: $nombreOrden',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Text(
-                    'Cliente/Mesa: ${order.tableOrCustomer}',
+                    'Tipo de servicio: ${getServiceLabel(order.serviceType)}',
                     style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w600),
+                      color: Colors.blueGrey,
+                    ),
                   ),
                   Text(
-                    'Tipo de Servicio: ${getServiceLabel(order.serviceType)}',
-                    style: const TextStyle(color: Colors.blueGrey),
+                    'Hora de registro: ${order.time} hrs',
                   ),
-                  Text('Hora de Registro: ${order.time} hrs'),
-
-                  // Notas
                   if (order.notes != null &&
                       order.notes!.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -667,29 +748,39 @@ class _DetalleModal extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.orange.withAlpha(30),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange),
+                        border: Border.all(
+                          color: Colors.orange,
+                        ),
                       ),
-                      child: Text('⚠️ Notas: ${order.notes}',
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w500)),
+                      child: Text(
+                        '⚠️ Notas: ${order.notes}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
-
                   const SizedBox(height: 14),
-                  const Text('Productos Solicitados:',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14)),
+                  const Text(
+                    'Productos solicitados:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
                   const SizedBox(height: 6),
-
-                  // Lista de productos (sin Flexible — dentro de SingleChildScrollView)
                   ListView.builder(
                     shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
+                    physics:
+                        const NeverScrollableScrollPhysics(),
                     itemCount: order.items.length,
-                    itemBuilder: (ctx, index) {
+                    itemBuilder: (context, index) {
                       final item = order.items[index];
+
                       return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                        ),
                         child: Row(
                           mainAxisAlignment:
                               MainAxisAlignment.spaceBetween,
@@ -697,46 +788,54 @@ class _DetalleModal extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 '${item.quantity}x ${item.productName}',
-                                style: const TextStyle(fontSize: 13),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                             Text(
                               Formatters.money(item.total),
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w500),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
                       );
                     },
                   ),
-
                   const Divider(),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Importe Total:',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15)),
+                      const Text(
+                        'Importe total:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
                       Text(
                         Formatters.money(order.totalAmount),
                         style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17,
-                            color: Colors.green),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                          color: Colors.green,
+                        ),
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-                  const Text('Flujo de Estados de Cocina:',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                          color: Colors.grey)),
+                  const Text(
+                    'Flujo de estados de cocina:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
                   const SizedBox(height: 10),
-
-                  // Botones de estado
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -744,63 +843,101 @@ class _DetalleModal extends StatelessWidget {
                       if (order.status == 'pendiente')
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white),
-                          icon: const Icon(Icons.soup_kitchen, size: 16),
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
+                          icon: const Icon(
+                            Icons.soup_kitchen,
+                            size: 16,
+                          ),
                           label: const Text('Cocinar'),
                           onPressed: () {
                             provider.cambiarEstadoOrden(
-                                order.id, 'preparando');
+                              order.id,
+                              'preparando',
+                            );
+
                             UiUtils.showToast(
-                                context, 'Orden movida a cocina',
-                                color: Colors.blue);
+                              context,
+                              'Orden movida a cocina',
+                              color: Colors.blue,
+                            );
                           },
                         ),
                       if (order.status == 'preparando')
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white),
-                          icon: const Icon(Icons.check, size: 16),
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                          icon: const Icon(
+                            Icons.check,
+                            size: 16,
+                          ),
                           label: const Text('Listo'),
                           onPressed: () {
                             provider.cambiarEstadoOrden(
-                                order.id, 'lista');
+                              order.id,
+                              'lista',
+                            );
+
                             UiUtils.showToast(
-                                context, 'Orden marcada como lista',
-                                color: Colors.green);
+                              context,
+                              'Orden marcada como lista',
+                              color: Colors.green,
+                            );
                           },
                         ),
                       if (order.status == 'lista')
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.grey,
-                              foregroundColor: Colors.white),
-                          icon: const Icon(Icons.delivery_dining,
-                              size: 16),
+                            backgroundColor: Colors.grey,
+                            foregroundColor: Colors.white,
+                          ),
+                          icon: const Icon(
+                            Icons.delivery_dining,
+                            size: 16,
+                          ),
                           label: const Text('Entregar'),
                           onPressed: () {
                             provider.cambiarEstadoOrden(
-                                order.id, 'entregada');
-                            UiUtils.showToast(context, 'Orden despachada',
-                                color: Colors.grey);
+                              order.id,
+                              'entregada',
+                            );
+
+                            UiUtils.showToast(
+                              context,
+                              'Orden despachada',
+                              color: Colors.grey,
+                            );
                           },
                         ),
                       if (order.status != 'entregada' &&
                           order.status != 'cancelada')
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
-                              side:
-                                  const BorderSide(color: Colors.red),
-                              foregroundColor: Colors.red),
-                          icon: const Icon(Icons.cancel_outlined,
-                              size: 16),
-                          label: const Text('Cancelar Orden'),
+                            side: const BorderSide(
+                              color: Colors.red,
+                            ),
+                            foregroundColor: Colors.red,
+                          ),
+                          icon: const Icon(
+                            Icons.cancel_outlined,
+                            size: 16,
+                          ),
+                          label:
+                              const Text('Cancelar Orden'),
                           onPressed: () {
                             provider.cambiarEstadoOrden(
-                                order.id, 'cancelada');
-                            UiUtils.showToast(context, 'Orden cancelada',
-                                color: Colors.red);
+                              order.id,
+                              'cancelada',
+                            );
+
+                            UiUtils.showToast(
+                              context,
+                              'Orden cancelada',
+                              color: Colors.red,
+                            );
                           },
                         ),
                     ],

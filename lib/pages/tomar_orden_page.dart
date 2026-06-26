@@ -1021,8 +1021,8 @@ class _CartSection extends StatelessWidget {
     time: hora,
     status: 'pending',
     serviceType: orderType == OrderType.dineIn
-        ? 'dine_in'
-        : 'takeout',
+    ? 'comedor'
+    : 'llevar',
     items: cocinaItems,
     totalAmount: total,
     notes: notes.isEmpty ? null : notes,

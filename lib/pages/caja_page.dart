@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 // Providers
-import '../providers/ordenes_provider.dart' ;
-import '../providers/caja_provider.dart' ;
+import '../providers/ordenes_provider.dart';
+import '../providers/caja_provider.dart';
 
 // Modelos
 import '../models/restaurant_order.dart';
@@ -38,13 +38,13 @@ class _CajaPageState extends State<CajaPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final ordenesPendientes = ordenesProvider.orders.where((o) {
-  final status = o.status.toLowerCase().trim();
+      final status = o.status.toLowerCase().trim();
 
-  return status == 'pending' ||
-      status == 'pendiente' ||
-      status == 'preparing' ||
-      status == 'preparando';
-}).toList();
+      return status == 'pending' ||
+          status == 'pendiente' ||
+          status == 'preparing' ||
+          status == 'preparando';
+    }).toList();
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -76,39 +76,91 @@ class _CajaPageState extends State<CajaPage> {
                       itemCount: ordenesPendientes.length,
                       itemBuilder: (context, index) {
                         final orden = ordenesPendientes[index];
+
+                        final esParaLlevar = orden.serviceType == 'llevar' ||
+                            orden.serviceType == 'takeout';
+
+                        final identificador = esParaLlevar
+                            ? 'Para llevar'
+                            : orden.tableOrCustomer.trim();
+
+                        final tituloOrden = identificador.isEmpty
+                            ? 'Mesa sin identificar'
+                            : identificador;
+
+                        final iconoOrden = esParaLlevar
+                            ? Icons.shopping_bag_outlined
+                            : Icons.table_restaurant_outlined;
+
                         return AppCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Flexible(
-                                    child: Text(
-                                      orden.orderNumber,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              iconoOrden,
+                                              size: 22,
+                                              color: Theme.of(context)
+                                                  .primaryColor,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                tituloOrden,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          orden.orderNumber,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDark
+                                                ? Colors.white54
+                                                : Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color:
                                           Colors.orange.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      'Por Cobrar',
+                                      'Por cobrar',
                                       style: TextStyle(
-                                          color: Colors.orange[800],
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold),
+                                        color: Colors.orange[800],
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
-                                  )
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 8),
@@ -121,35 +173,37 @@ class _CajaPageState extends State<CajaPage> {
                               ),
                               const Spacer(),
                               const Divider(),
-                             Row(
-  children: [
-    Expanded(
-      child: Text(
-        '\$${orden.totalAmount.toStringAsFixed(2)}',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.w900,
-          color: Theme.of(context).primaryColor,
-        ),
-      ),
-    ),
-    const SizedBox(width: 8),
-    ElevatedButton(
-      onPressed: () => _abrirModalCobro(context, orden),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.green[600],
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      child: const Text(
-        'Cobrar',
-        style: TextStyle(fontWeight: FontWeight.bold),
-      ),
-    ),
-  ],
-),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '\$${orden.totalAmount.toStringAsFixed(2)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w900,
+                                        color: Theme.of(context).primaryColor,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton(
+                                    onPressed: () =>
+                                        _abrirModalCobro(context, orden),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green[600],
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                    ),
+                                    child: const Text(
+                                      'Cobrar',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         );
@@ -197,11 +251,9 @@ class _CajaPageState extends State<CajaPage> {
             final double total = orden.totalAmount;
             final double recibido =
                 double.tryParse(montoRecibidoCtrl.text) ?? 0.0;
-            final double cambio =
-                recibido >= total ? recibido - total : 0.0;
+            final double cambio = recibido >= total ? recibido - total : 0.0;
 
-            final isDark =
-                Theme.of(context).brightness == Brightness.dark;
+            final isDark = Theme.of(context).brightness == Brightness.dark;
 
             return AlertDialog(
               shape: RoundedRectangleBorder(
@@ -247,15 +299,12 @@ class _CajaPageState extends State<CajaPage> {
                                 setModalState(() {
                                   metodoPago = 'cash';
                                 });
-                                cajaProvider
-                                    .setPaymentMethod('Efectivo');
+                                cajaProvider.setPaymentMethod('Efectivo');
                               },
-                              selectedColor:
-                                  Theme.of(context).primaryColor,
+                              selectedColor: Theme.of(context).primaryColor,
                               labelStyle: TextStyle(
-                                color: metodoPago == 'cash'
-                                    ? Colors.white
-                                    : null,
+                                color:
+                                    metodoPago == 'cash' ? Colors.white : null,
                               ),
                             ),
                           ),
@@ -268,15 +317,12 @@ class _CajaPageState extends State<CajaPage> {
                                 setModalState(() {
                                   metodoPago = 'card';
                                 });
-                                cajaProvider
-                                    .setPaymentMethod('Tarjeta');
+                                cajaProvider.setPaymentMethod('Tarjeta');
                               },
-                              selectedColor:
-                                  Theme.of(context).primaryColor,
+                              selectedColor: Theme.of(context).primaryColor,
                               labelStyle: TextStyle(
-                                color: metodoPago == 'card'
-                                    ? Colors.white
-                                    : null,
+                                color:
+                                    metodoPago == 'card' ? Colors.white : null,
                               ),
                             ),
                           ),
@@ -293,8 +339,7 @@ class _CajaPageState extends State<CajaPage> {
                                   'Transferencia',
                                 );
                               },
-                              selectedColor:
-                                  Theme.of(context).primaryColor,
+                              selectedColor: Theme.of(context).primaryColor,
                               labelStyle: TextStyle(
                                 color: metodoPago == 'transfer'
                                     ? Colors.white
@@ -308,8 +353,7 @@ class _CajaPageState extends State<CajaPage> {
                       if (metodoPago == 'cash') ...[
                         TextField(
                           controller: montoRecibidoCtrl,
-                          keyboardType:
-                              const TextInputType.numberWithOptions(
+                          keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
                           decoration: InputDecoration(
@@ -333,13 +377,11 @@ class _CajaPageState extends State<CajaPage> {
                                 : Colors.green[50],
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color:
-                                  Colors.green.withValues(alpha: 0.3),
+                              color: Colors.green.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
                                 'Cambio a devolver:',
@@ -388,8 +430,7 @@ class _CajaPageState extends State<CajaPage> {
                       return;
                     }
 
-                    final scaffoldMessenger =
-                        ScaffoldMessenger.of(context);
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
                     showDialog(
                       context: context,
@@ -399,8 +440,7 @@ class _CajaPageState extends State<CajaPage> {
                       ),
                     );
 
-                    final bool exito =
-                        await cajaProvider.chargeSelectedOrder();
+                    final bool exito = await cajaProvider.chargeSelectedOrder();
 
                     if (!context.mounted) return;
 
