@@ -341,6 +341,32 @@ class TomarOrdenProvider extends ChangeNotifier {
             '';
   }
 
+Future<void> seleccionarMesaExistentePorId(
+  String tableId,
+) async {
+  if (_mesas.isEmpty) {
+    await cargarMesas();
+  }
+
+  try {
+    final mesa = _mesas.firstWhere(
+      (item) =>
+          item.id.toString() == tableId.toString(),
+    );
+
+    _isExistingTable = true;
+    _orderType = OrderType.dineIn;
+    _selectedArea = mesa.area;
+    _selectedTableId = mesa.id.toString();
+
+    notifyListeners();
+  } catch (e) {
+    debugPrint(
+      'No se encontró la mesa de la orden: $e',
+    );
+  }
+}
+
   void setCategory(String category) {
     _selectedCategory = category;
     notifyListeners();

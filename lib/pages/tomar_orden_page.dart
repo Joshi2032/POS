@@ -212,140 +212,136 @@ class _MenuSection extends StatelessWidget {
         ? const Color(0xFF1E1E2D)
         : Colors.white;
 
-    return Padding(
-      padding: EdgeInsets.all(
-        isCompact ? 14 : 18,
+   return Padding(
+  padding: EdgeInsets.all(
+    isCompact ? 14 : 18,
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Tomar Orden',
+        style: TextStyle(
+          fontSize: isCompact ? 22 : 26,
+          fontWeight: FontWeight.bold,
+          color: textColor,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+      Text(
+        'Registra los productos del cliente',
+        style: TextStyle(
+          color: secondaryTextColor,
+          fontSize: 13,
+        ),
+      ),
+      const SizedBox(height: 12),
+
+      Row(
         children: [
-          Text(
-            'Tomar Orden',
-            style: TextStyle(
-              fontSize: isCompact ? 22 : 26,
-              fontWeight: FontWeight.bold,
-              color: textColor,
-            ),
+          _TypeButton(
+            label: 'Comer Aquí',
+            type: OrderType.dineIn,
+            layout: layout,
           ),
-          Text(
-            'Registra los productos del cliente',
-            style: TextStyle(
-              color: secondaryTextColor,
-              fontSize: 13,
-            ),
+          const SizedBox(width: 8),
+          _TypeButton(
+            label: 'Para Llevar',
+            type: OrderType.takeaway,
+            layout: layout,
           ),
-          const SizedBox(height: 12),
+        ],
+      ),
 
-          Row(
-            children: [
-              _TypeButton(
-                label: 'Comer Aquí',
-                type: OrderType.dineIn,
-                layout: layout,
+      const SizedBox(height: 12),
+
+      if (provider.orderType == OrderType.dineIn) ...[
+        Row(
+          children: [
+            SizedBox(
+              width: 54,
+              child: Text(
+                'Orden:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: textColor,
+                ),
               ),
-              const SizedBox(width: 8),
-              _TypeButton(
-                label: 'Para Llevar',
-                type: OrderType.takeaway,
-                layout: layout,
+            ),
+
+            // NUEVA ORDEN
+            ChoiceChip(
+              label: const Text('Nueva'),
+              selected: !provider.isExistingTable,
+              selectedColor: Theme.of(context).primaryColor,
+              backgroundColor: cardColor,
+              labelStyle: TextStyle(
+                color: !provider.isExistingTable
+                    ? Colors.white
+                    : textColor,
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
+              onSelected: (selected) async {
+                if (!selected) return;
 
-          if (provider.orderType ==
-              OrderType.dineIn) ...[
-            Row(
-              children: [
-                SizedBox(
-                  width: 54,
-                  child: Text(
-                    'Orden:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: textColor,
-                    ),
-                  ),
-                ),
-                ChoiceChip(
-                  label: const Text('Nueva'),
-                  selected:
-                      !provider.isExistingTable,
-                  selectedColor:
-                      Theme.of(context).primaryColor,
-                  backgroundColor: cardColor,
-                  labelStyle: TextStyle(
-                    color:
-                        !provider.isExistingTable
-                            ? Colors.white
-                            : textColor,
-                  ),
-                  onSelected: (selected) {
-                    if (selected) {
-                      context
-                          .read<TomarOrdenProvider>()
-                          .setIsExistingTable(false);
-                    }
-                  },
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('Existente'),
-                  selected:
-                      provider.isExistingTable,
-                  selectedColor:
-                      Theme.of(context).primaryColor,
-                  backgroundColor: cardColor,
-                  labelStyle: TextStyle(
-                    color:
-                        provider.isExistingTable
-                            ? Colors.white
-                            : textColor,
-                  ),
-                  onSelected: (selected) {
-                    if (selected) {
-                      context
-                          .read<TomarOrdenProvider>()
-                          .setIsExistingTable(true);
-                    }
-                  },
-                ),
-              ],
+                await context
+                    .read<TomarOrdenProvider>()
+                    .setIsExistingTable(false);
+              },
             ),
-            const SizedBox(height: 12),
 
-            _ChipsRow(
-              label: 'Área:',
-              options:
-                  provider.availableAreas,
-              selected:
-                  provider.selectedArea,
-              onSelected: context
-                  .read<TomarOrdenProvider>()
-                  .setArea,
-            ),
-            const SizedBox(height: 12),
+            const SizedBox(width: 8),
 
-            _ChipsRow(
-              label: 'Mesa:',
-              options:
-                  provider.currentTables,
-              selected:
-                  provider.selectedTableName,
-              emptyMessage:
-                  provider.isExistingTable
-                      ? 'No hay mesas ocupadas'
-                      : 'No hay mesas libres',
-              onSelected: context
-                  .read<TomarOrdenProvider>()
-                  .setTable,
+            // ORDEN EXISTENTE
+            ChoiceChip(
+              label: const Text('Existente'),
+              selected: provider.isExistingTable,
+              selectedColor: Theme.of(context).primaryColor,
+              backgroundColor: cardColor,
+              labelStyle: TextStyle(
+                color: provider.isExistingTable
+                    ? Colors.white
+                    : textColor,
+              ),
+              onSelected: (selected) async {
+                if (!selected) return;
+
+                await _mostrarOrdenesExistentes(
+                  context,
+                );
+              },
             ),
-            const SizedBox(height: 12),
           ],
+        ),
 
-          TextField(
+        const SizedBox(height: 12),
+
+        _ChipsRow(
+          label: 'Área:',
+          options: provider.availableAreas,
+          selected: provider.selectedArea,
+          onSelected: context
+              .read<TomarOrdenProvider>()
+              .setArea,
+        ),
+
+        const SizedBox(height: 12),
+
+        _ChipsRow(
+          label: 'Mesa:',
+          options: provider.currentTables,
+          selected: provider.selectedTableName,
+          emptyMessage: provider.isExistingTable
+              ? 'No hay mesas ocupadas'
+              : 'No hay mesas libres',
+          onSelected: context
+              .read<TomarOrdenProvider>()
+              .setTable,
+        ),
+
+        const SizedBox(height: 12),
+      ],
+
+      TextField(
             style: TextStyle(
               color: textColor,
             ),
@@ -598,6 +594,503 @@ class _MenuSection extends StatelessWidget {
       ),
     );
   }
+}
+Future<void> _mostrarOrdenesExistentes(
+  BuildContext context,
+) async {
+  final ordenesProvider =
+      context.read<OrdenesProvider>();
+
+  final tomarOrdenProvider =
+      context.read<TomarOrdenProvider>();
+
+  await ordenesProvider.cargarOrdenes();
+
+  if (!context.mounted) return;
+
+  final ordenesExistentes =
+      ordenesProvider.orders.where((order) {
+    final status =
+        order.status.toLowerCase().trim();
+
+    final serviceType =
+        order.serviceType.toLowerCase().trim();
+
+    final esActiva =
+        status == 'pendiente' ||
+        status == 'preparando' ||
+        status == 'pending' ||
+        status == 'preparing';
+
+    final esComedor =
+        serviceType == 'comedor' ||
+        serviceType == 'dine_in';
+
+    final tieneMesa =
+        order.tableId != null &&
+        order.tableId!.trim().isNotEmpty;
+
+    return esActiva &&
+        esComedor &&
+        tieneMesa;
+  }).toList();
+
+  if (ordenesExistentes.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'No hay órdenes existentes en mesas ocupadas.',
+        ),
+        backgroundColor: Colors.orange,
+      ),
+    );
+    return;
+  }
+
+  String? ordenExpandidaId;
+  RestaurantOrder? ordenSeleccionada;
+
+  final resultado =
+      await showDialog<RestaurantOrder>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (
+          context,
+          setDialogState,
+        ) {
+          return AlertDialog(
+            title: const Text(
+              'Seleccionar orden existente',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: SizedBox(
+              width: 560,
+              height: 500,
+              child: Column(
+                children: [
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Selecciona una orden para revisar lo que ya pidió el cliente.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount:
+                          ordenesExistentes.length,
+                      separatorBuilder:
+                          (_, __) =>
+                              const SizedBox(
+                        height: 10,
+                      ),
+                      itemBuilder:
+                          (context, index) {
+                        final order =
+                            ordenesExistentes[index];
+
+                        final expandida =
+                            ordenExpandidaId ==
+                                order.id;
+
+                        final seleccionada =
+                            ordenSeleccionada?.id ==
+                                order.id;
+
+                        return Card(
+                          elevation:
+                              seleccionada ? 3 : 1,
+                          shape:
+                              RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(
+                              12,
+                            ),
+                            side: BorderSide(
+                              color: seleccionada
+                                  ? Theme.of(context)
+                                      .primaryColor
+                                  : Colors
+                                      .grey.shade300,
+                              width: seleccionada
+                                  ? 2
+                                  : 1,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              InkWell(
+                                borderRadius:
+                                    BorderRadius.circular(
+                                  12,
+                                ),
+                                onTap: () {
+                                  setDialogState(() {
+                                    if (expandida) {
+                                      ordenExpandidaId =
+                                          null;
+
+                                      if (seleccionada) {
+                                        ordenSeleccionada =
+                                            null;
+                                      }
+                                    } else {
+                                      ordenExpandidaId =
+                                          order.id;
+
+                                      ordenSeleccionada =
+                                          order;
+                                    }
+                                  });
+                                },
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets
+                                          .all(12),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons
+                                            .table_restaurant_outlined,
+                                        color: Theme.of(
+                                          context,
+                                        ).primaryColor,
+                                      ),
+                                      const SizedBox(
+                                        width: 10,
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment
+                                                  .start,
+                                          children: [
+                                            Text(
+                                              order
+                                                  .tableOrCustomer,
+                                              style:
+                                                  const TextStyle(
+                                                fontSize:
+                                                    16,
+                                                fontWeight:
+                                                    FontWeight
+                                                        .bold,
+                                              ),
+                                            ),
+                                            const SizedBox(
+                                              height: 3,
+                                            ),
+                                            Text(
+                                              '${order.orderNumber} • ${order.time}',
+                                              style:
+                                                  const TextStyle(
+                                                fontSize:
+                                                    12,
+                                                color:
+                                                    Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        '\$${order.totalAmount.toStringAsFixed(2)}',
+                                        style:
+                                            const TextStyle(
+                                          fontWeight:
+                                              FontWeight
+                                                  .bold,
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: 8,
+                                      ),
+                                      Icon(
+                                        expandida
+                                            ? Icons
+                                                .keyboard_arrow_up
+                                            : Icons
+                                                .keyboard_arrow_down,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              if (expandida) ...[
+                                const Divider(
+                                  height: 1,
+                                ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets
+                                          .all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment
+                                            .start,
+                                    children: [
+                                      const Text(
+                                        'Productos solicitados',
+                                        style:
+                                            TextStyle(
+                                          fontSize: 13,
+                                          fontWeight:
+                                              FontWeight
+                                                  .bold,
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        height: 8,
+                                      ),
+
+                                      if (order
+                                          .items.isEmpty)
+                                        const Text(
+                                          'Esta orden no tiene productos registrados.',
+                                          style:
+                                              TextStyle(
+                                            color: Colors
+                                                .grey,
+                                          ),
+                                        )
+                                      else
+                                        ...order.items.map(
+                                          (item) {
+                                            return Padding(
+                                              padding:
+                                                  const EdgeInsets
+                                                      .symmetric(
+                                                vertical:
+                                                    4,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    width:
+                                                        34,
+                                                    alignment:
+                                                        Alignment.center,
+                                                    padding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                      vertical:
+                                                          5,
+                                                    ),
+                                                    decoration:
+                                                        BoxDecoration(
+                                                      color: Theme.of(
+                                                        context,
+                                                      )
+                                                          .primaryColor
+                                                          .withValues(
+                                                            alpha:
+                                                                0.12,
+                                                          ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                        6,
+                                                      ),
+                                                    ),
+                                                    child:
+                                                        Text(
+                                                      '${item.quantity}x',
+                                                      style:
+                                                          TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color:
+                                                            Theme.of(
+                                                          context,
+                                                        ).primaryColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(
+                                                    width:
+                                                        8,
+                                                  ),
+                                                  Expanded(
+                                                    child:
+                                                        Text(
+                                                      item.productName,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    '\$${item.total.toStringAsFixed(2)}',
+                                                    style:
+                                                        const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+
+                                      if (order.notes !=
+                                              null &&
+                                          order.notes!
+                                              .trim()
+                                              .isNotEmpty) ...[
+                                        const SizedBox(
+                                          height: 8,
+                                        ),
+                                        Container(
+                                          width: double
+                                              .infinity,
+                                          padding:
+                                              const EdgeInsets
+                                                  .all(8),
+                                          decoration:
+                                              BoxDecoration(
+                                            color: Colors
+                                                .orange
+                                                .withValues(
+                                              alpha: 0.1,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius
+                                                    .circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Notas: ${order.notes}',
+                                            style:
+                                                const TextStyle(
+                                              fontSize:
+                                                  12,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+
+                                      const Divider(
+                                        height: 20,
+                                      ),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment
+                                                .spaceBetween,
+                                        children: [
+                                          const Text(
+                                            'Total actual:',
+                                            style:
+                                                TextStyle(
+                                              fontWeight:
+                                                  FontWeight
+                                                      .bold,
+                                            ),
+                                          ),
+                                          Text(
+                                            '\$${order.totalAmount.toStringAsFixed(2)}',
+                                            style:
+                                                const TextStyle(
+                                              fontSize:
+                                                  16,
+                                              fontWeight:
+                                                  FontWeight
+                                                      .bold,
+                                              color: Colors
+                                                  .green,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton.icon(
+                onPressed: () {
+                  setDialogState(() {
+                    ordenExpandidaId = null;
+                    ordenSeleccionada = null;
+                  });
+                },
+                icon: const Icon(
+                  Icons.arrow_back,
+                ),
+                label: const Text(
+                  'Regresar',
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(
+                    dialogContext,
+                  );
+                },
+                child: const Text(
+                  'Cancelar',
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed:
+                    ordenSeleccionada == null
+                        ? null
+                        : () {
+                            Navigator.pop(
+                              dialogContext,
+                              ordenSeleccionada,
+                            );
+                          },
+                icon: const Icon(
+                  Icons.check,
+                ),
+                label: const Text(
+                  'Confirmar orden',
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+
+  if (resultado == null ||
+      resultado.tableId == null ||
+      !context.mounted) {
+    return;
+  }
+
+  await tomarOrdenProvider
+      .seleccionarMesaExistentePorId(
+    resultado.tableId!,
+  );
+
+  if (!context.mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        'Orden ${resultado.orderNumber} seleccionada para ${resultado.tableOrCustomer}.',
+      ),
+      backgroundColor: Colors.green,
+    ),
+  );
 }
 
 class _CartSection extends StatelessWidget {
@@ -1034,87 +1527,91 @@ class _CartSection extends StatelessWidget {
 
   try {
     if (orderType == OrderType.dineIn &&
-        isExistingTable) {
-      final ordenExistente =
-          await ordenesProvider.obtenerOrdenActivaPorMesa(
-        selectedTable,
-      );
+    isExistingTable) {
+  final ordenExistente =
+      await ordenesProvider.obtenerOrdenActivaPorMesa(
+    selectedTable,
+  );
 
-      if (ordenExistente != null) {
-        await ordenesProvider.agregarItemsAOrden(
-          ordenExistente.id,
-          itemsMap,
-        );
-
-        mensajeExito =
-            'Productos agregados a $selectedTableName';
-      } else {
-        await ordenesProvider.insertarNuevaComanda(
-          nuevaOrden,
-        );
-
-        mensajeExito =
-            'No había una orden activa; se creó una nueva';
-      }
-    } else {
-      await ordenesProvider.insertarNuevaComanda(
-        nuevaOrden,
-      );
-    }
-
-    if (ordenesProvider.errorMessage != null) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error al guardar la orden: '
-            '${ordenesProvider.errorMessage}',
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-      return;
-    }
-
-    if (orderType == OrderType.dineIn &&
-        !isExistingTable) {
-      final actualizada =
-          await mesasProvider.cambiarEstadoMesa(
-        selectedTable,
-        'ocupada',
-      );
-
-      if (!actualizada) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              mesasProvider.errorMessage ??
-                  'La orden se creó, pero no se pudo marcar la mesa como ocupada.',
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-        return;
-      }
-    }
-
-    provider.sendOrder();
-
-    if (!context.mounted) return;
-
-    if (isMobile && navigator.canPop()) {
-      navigator.pop();
-    }
-
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(mensajeExito),
-        backgroundColor: Colors.green,
-      ),
+  if (ordenExistente != null) {
+    await ordenesProvider.agregarItemsAOrden(
+      ordenExistente.id,
+      itemsMap,
     );
 
-    router.go('/ordenes');
+    mensajeExito =
+        'Productos agregados a $selectedTableName';
+  } else {
+    await ordenesProvider.insertarNuevaComanda(
+      nuevaOrden,
+    );
+
+    mensajeExito =
+        'No había una orden activa; se creó una nueva';
+  }
+} else {
+  await ordenesProvider.insertarNuevaComanda(
+    nuevaOrden,
+  );
+
+  mensajeExito = orderType == OrderType.dineIn
+      ? 'Orden creada para $selectedTableName'
+      : 'Orden para llevar creada correctamente';
+}
+
+if (ordenesProvider.errorMessage != null) {
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        'Error al guardar la orden: '
+        '${ordenesProvider.errorMessage}',
+      ),
+      backgroundColor: Colors.red,
+      duration: const Duration(seconds: 5),
+    ),
+  );
+  return;
+}
+
+if (orderType == OrderType.dineIn &&
+    !isExistingTable) {
+  final actualizada =
+      await mesasProvider.cambiarEstadoMesa(
+    selectedTable,
+    'ocupada',
+  );
+
+  if (!actualizada) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          mesasProvider.errorMessage ??
+              'La orden se creó, pero no se pudo marcar la mesa como ocupada.',
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+    return;
+  }
+}
+
+provider.sendOrder();
+
+if (!context.mounted) return;
+
+if (isMobile && navigator.canPop()) {
+  navigator.pop();
+}
+
+messenger.showSnackBar(
+  SnackBar(
+    content: Text(mensajeExito),
+    backgroundColor: Colors.green,
+  ),
+);
+
+router.go('/ordenes');
   } catch (e) {
     messenger.showSnackBar(
       SnackBar(

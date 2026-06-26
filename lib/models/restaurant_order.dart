@@ -68,7 +68,8 @@ class RestaurantOrder {
 
     // Traducción del tipo de servicio
     String typeDb = json['order_type']?.toString() ?? 'dine_in';
-    String typeUi = typeDb == 'takeout' ? 'para llevar' : 'comedor';
+    String typeUi =
+    typeDb == 'takeout' ? 'llevar' : 'comedor';
 
     // Resolver el nombre legible de la mesa desde el embed restaurant_tables(name).
     String? nombreMesa;
