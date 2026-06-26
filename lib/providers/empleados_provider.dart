@@ -93,20 +93,27 @@ class EmpleadosProvider extends ChangeNotifier {
     _searchTerm = term;
     notifyListeners();
   }
+List<Empleado> get empleadosFiltrados {
+  return _empleados.where((e) {
+    final String fullName =
+        '${e.firstName} ${e.lastName}'.toLowerCase();
 
-  List<Empleado> get empleadosFiltrados {
-    return _empleados.where((e) {
-      final String fullName = '${e.firstName} ${e.lastName}'.toLowerCase();
-      final String position = e.position.toLowerCase();
-      final String query = _searchTerm.toLowerCase();
+    final String position = e.position.toLowerCase();
+    final String email = e.email.toLowerCase();
+    final String query = _searchTerm.trim().toLowerCase();
 
-      final matchesSearch = fullName.contains(query) || position.contains(query);
-      final matchesRole = _selectedRol == 'Todos' || e.position == _selectedRol;
+    final matchesSearch =
+        fullName.contains(query) ||
+        position.contains(query) ||
+        email.contains(query);
 
-      return matchesSearch && matchesRole;
-    }).toList();
-  }
+    final matchesRole =
+        _selectedRol == 'Todos' ||
+        e.position == _selectedRol;
 
+    return matchesSearch && matchesRole;
+  }).toList();
+}
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

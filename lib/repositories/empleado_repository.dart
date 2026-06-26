@@ -15,27 +15,64 @@ class EmpleadoRepository {
     }
   }
 
-  Future<void> create(Empleado empleado) async {
-    try {
-      final data = empleado.toJson();
-      // Elimina cualquier llave vacía ("") para que se use el DEFAULT de Supabase
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      await _client.from('employees').insert(data);
-    } catch (e) {
-      throw Exception('Error al registrar al empleado: $e');
-    }
-  }
+ Future<void> create(Empleado empleado) async {
+  try {
+    final data = empleado.toJson();
 
-  Future<void> update(String id, Empleado empleado) async {
-    try {
-      final data = empleado.toJson();
-      data.remove('id');
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      await _client.from('employees').update(data).eq('id', id);
-    } catch (e) {
-      throw Exception('Error al actualizar el empleado $id: $e');
+    data.removeWhere(
+      (key, value) =>
+          value == null ||
+          value.toString().trim().isEmpty,
+    );
+
+    await _client.from('employees').insert(data);
+  } on PostgrestException catch (e) {
+    if (e.code == '23505') {
+      throw Exception(
+        'Ya existe un empleado registrado con ese correo.',
+      );
     }
+
+    throw Exception(
+      'Error al registrar al empleado: ${e.message}',
+    );
+  } catch (e) {
+    throw Exception('Error al registrar al empleado: $e');
   }
+}
+
+ Future<void> update(String id, Empleado empleado) async {
+  try {
+    final data = empleado.toJson();
+
+    data.remove('id');
+
+    data.removeWhere(
+      (key, value) =>
+          value == null ||
+          value.toString().trim().isEmpty,
+    );
+
+    await _client
+        .from('employees')
+        .update(data)
+        .eq('id', id);
+  } on PostgrestException catch (e) {
+    if (e.code == '23505') {
+      throw Exception(
+        'Ya existe otro empleado registrado con ese correo.',
+      );
+    }
+
+    throw Exception(
+      'Error al actualizar el empleado: ${e.message}',
+    );
+  } catch (e) {
+    throw Exception(
+      'Error al actualizar el empleado $id: $e',
+    );
+  }
+}
 
   Future<void> delete(String id) async {
     try {

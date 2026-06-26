@@ -26,6 +26,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _salaryCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   String _formPosition = 'Mesero';
@@ -35,6 +36,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
   void dispose() {
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
+    _emailCtrl.dispose();
     _salaryCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
@@ -44,6 +46,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
     if (empleado != null) {
       _firstNameCtrl.text = empleado.firstName;
       _lastNameCtrl.text = empleado.lastName;
+      _emailCtrl.text = empleado.email;
       _salaryCtrl.text = empleado.salary?.toString() ?? '';
       _notesCtrl.text = empleado.notes ?? '';
       _formPosition = empleado.position;
@@ -51,6 +54,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
     } else {
       _firstNameCtrl.clear();
       _lastNameCtrl.clear();
+      _emailCtrl.clear();
       _salaryCtrl.clear();
       _notesCtrl.clear();
       _formPosition = 'Mesero';
@@ -85,24 +89,63 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                       TextFormField(
                         controller: _lastNameCtrl,
                         decoration: const InputDecoration(
-                            labelText: 'Apellido(s)',
-                            border: OutlineInputBorder()),
+                          labelText: 'Apellido(s)',
+                          border: OutlineInputBorder(),
+                        ),
                         validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _emailCtrl,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.email],
+                        decoration: const InputDecoration(
+                          labelText: 'Correo electrónico',
+                          hintText: 'empleado@correo.com',
+                          prefixIcon: Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          final email = value?.trim() ?? '';
+
+                          if (email.isEmpty) {
+                            return 'El correo es obligatorio';
+                          }
+
+                          final emailValido = RegExp(
+                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                          ).hasMatch(email);
+
+                          if (!emailValido) {
+                            return 'Ingresa un correo válido';
+                          }
+
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         dropdownColor: Theme.of(context).cardColor,
                         initialValue: _formPosition,
                         decoration: const InputDecoration(
-                            labelText: 'Puesto / Puesto',
-                            border: OutlineInputBorder()),
+                          labelText: 'Puesto',
+                          border: OutlineInputBorder(),
+                        ),
                         items: provider.roles
                             .where((r) => r != 'Todos')
-                            .map((r) =>
-                                DropdownMenuItem(value: r, child: Text(r)))
+                            .map(
+                              (r) => DropdownMenuItem(
+                                value: r,
+                                child: Text(r),
+                              ),
+                            )
                             .toList(),
-                        onChanged: (v) =>
-                            setModalState(() => _formPosition = v!),
+                        onChanged: (v) {
+                          if (v != null) {
+                            setModalState(() => _formPosition = v);
+                          }
+                        },
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -151,19 +194,16 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
 
                       final nuevo = Empleado(
                         id: empleado?.id ?? '',
-                        // Conservamos el profile_id si ya lo tenía, si no, se queda null
                         profileId: empleado?.profileId,
-
-                        firstName: _firstNameCtrl.text,
-                        lastName: _lastNameCtrl.text,
+                        firstName: _firstNameCtrl.text.trim(),
+                        lastName: _lastNameCtrl.text.trim(),
+                        email: _emailCtrl.text.trim().toLowerCase(),
                         position: _formPosition,
-
-                        // Magia aquí: Si ya tenía fecha de contrato la dejamos, si es nuevo, le ponemos HOY
                         hireDate: empleado?.hireDate ?? fechaHoy,
-
-                        salary: double.tryParse(_salaryCtrl.text),
-                        notes:
-                            _notesCtrl.text.isNotEmpty ? _notesCtrl.text : null,
+                        salary: double.tryParse(_salaryCtrl.text.trim()),
+                        notes: _notesCtrl.text.trim().isNotEmpty
+                            ? _notesCtrl.text.trim()
+                            : null,
                         active: _formActive,
                       );
 
@@ -323,6 +363,36 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                                       .textTheme
                                       .titleMedium
                                       ?.copyWith(fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.email_outlined,
+                                    size: 14,
+                                    color: emp.email.isEmpty
+                                        ? Colors.orange
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      emp.email.isEmpty
+                                          ? 'Correo pendiente'
+                                          : emp.email,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: emp.email.isEmpty
+                                                ? Colors.orange
+                                                : Colors.grey,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 4),
                               if (emp.salary != null)
                                 Text(

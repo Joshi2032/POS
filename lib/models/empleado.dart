@@ -1,8 +1,10 @@
 class Empleado {
   final String id;
   final String? profileId;
+
   String firstName;
   String lastName;
+  String email;
   String position;
   String? hireDate;
   double? salary;
@@ -14,6 +16,7 @@ class Empleado {
     this.profileId,
     required this.firstName,
     required this.lastName,
+    this.email = '',
     required this.position,
     this.hireDate,
     this.salary,
@@ -25,9 +28,10 @@ class Empleado {
     return Empleado(
       id: (json['id'] ?? '').toString(),
       profileId: json['profile_id']?.toString(),
-      firstName: json['first_name'] ?? '',
-      lastName: json['last_name'] ?? '',
-      position: json['position'] ?? 'Mesero',
+      firstName: json['first_name']?.toString() ?? '',
+      lastName: json['last_name']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      position: json['position']?.toString() ?? 'Mesero',
       hireDate: json['hire_date']?.toString(),
       salary: (json['salary'] as num?)?.toDouble(),
       active: json['active'] as bool? ?? true,
@@ -39,8 +43,9 @@ class Empleado {
     return {
       if (id.isNotEmpty) 'id': id,
       'profile_id': profileId,
-      'first_name': firstName,
-      'last_name': lastName,
+      'first_name': firstName.trim(),
+      'last_name': lastName.trim(),
+      'email': email.trim().toLowerCase(),
       'position': position,
       'hire_date': hireDate,
       'salary': salary,
@@ -54,6 +59,7 @@ class Empleado {
     String? profileId,
     String? firstName,
     String? lastName,
+    String? email,
     String? position,
     String? hireDate,
     double? salary,
@@ -65,6 +71,7 @@ class Empleado {
       profileId: profileId ?? this.profileId,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
+      email: email ?? this.email,
       position: position ?? this.position,
       hireDate: hireDate ?? this.hireDate,
       salary: salary ?? this.salary,
