@@ -36,6 +36,10 @@ class TomarOrdenProvider extends ChangeNotifier {
   String _searchTerm = '';
   String _notes = '';
 
+  // NUEVO: datos de la orden existente seleccionada
+  String _selectedExistingOrderId = '';
+  String _selectedExistingOrderNumber = '';
+
   List<CartItem> get cart => _cart;
   OrderType get orderType => _orderType;
   bool get isExistingTable => _isExistingTable;
@@ -45,6 +49,14 @@ class TomarOrdenProvider extends ChangeNotifier {
   String get selectedCategory => _selectedCategory;
   String get searchTerm => _searchTerm;
   String get notes => _notes;
+
+  // NUEVO
+  String get selectedExistingOrderId => _selectedExistingOrderId;
+  String get selectedExistingOrderNumber => _selectedExistingOrderNumber;
+
+  bool get hasSelectedExistingOrder {
+    return _selectedExistingOrderId.isNotEmpty;
+  }
 
   String get selectedTableName {
     try {
@@ -243,7 +255,11 @@ class TomarOrdenProvider extends ChangeNotifier {
               areasValidas.first;
         }
 
-        _seleccionarPrimeraMesaDisponible();
+        // Solo selecciona primera mesa automáticamente
+        // si NO hay una mesa ya seleccionada.
+        if (_selectedTableId.isEmpty) {
+          _seleccionarPrimeraMesaDisponible();
+        }
       }
 
       notifyListeners();
@@ -258,6 +274,10 @@ class TomarOrdenProvider extends ChangeNotifier {
     OrderType type,
   ) async {
     _orderType = type;
+
+    // Al cambiar tipo de orden, limpiamos selección existente
+    _selectedExistingOrderId = '';
+    _selectedExistingOrderNumber = '';
 
     if (type == OrderType.takeaway) {
       _isExistingTable = false;
@@ -283,6 +303,10 @@ class TomarOrdenProvider extends ChangeNotifier {
     _selectedArea = '';
     _selectedTableId = '';
 
+    // Limpiar orden existente anterior
+    _selectedExistingOrderId = '';
+    _selectedExistingOrderNumber = '';
+
     notifyListeners();
 
     await cargarMesas();
@@ -290,6 +314,12 @@ class TomarOrdenProvider extends ChangeNotifier {
 
   void setArea(String area) {
     _selectedArea = area;
+
+    // Si el usuario cambia de área manualmente,
+    // ya no debe quedarse amarrado a una orden anterior.
+    _selectedExistingOrderId = '';
+    _selectedExistingOrderNumber = '';
+
     _seleccionarPrimeraMesaDisponible();
     notifyListeners();
   }
@@ -303,6 +333,12 @@ class TomarOrdenProvider extends ChangeNotifier {
     }
 
     _selectedTableId = mesaId;
+
+    // Si el usuario cambia mesa manualmente,
+    // limpiamos la orden existente exacta.
+    _selectedExistingOrderId = '';
+    _selectedExistingOrderNumber = '';
+
     notifyListeners();
   }
 
@@ -341,31 +377,68 @@ class TomarOrdenProvider extends ChangeNotifier {
             '';
   }
 
-Future<void> seleccionarMesaExistentePorId(
-  String tableId,
-) async {
-  if (_mesas.isEmpty) {
-    await cargarMesas();
+  // NUEVO: esta es la función correcta para usar
+  // cuando confirmas una orden existente desde el modal.
+  Future<void> seleccionarOrdenExistente({
+    required String orderId,
+    required String orderNumber,
+    required String tableId,
+  }) async {
+    if (_mesas.isEmpty) {
+      await cargarMesas();
+    }
+
+    try {
+      final mesa = _mesas.firstWhere(
+        (item) =>
+            item.id.toString() == tableId.toString(),
+      );
+
+      _isExistingTable = true;
+      _orderType = OrderType.dineIn;
+      _selectedArea = mesa.area;
+      _selectedTableId = mesa.id.toString();
+
+      _selectedExistingOrderId = orderId;
+      _selectedExistingOrderNumber = orderNumber;
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'No se encontró la mesa de la orden: $e',
+      );
+    }
   }
 
-  try {
-    final mesa = _mesas.firstWhere(
-      (item) =>
-          item.id.toString() == tableId.toString(),
-    );
+  // Puedes dejar esta por compatibilidad, pero ya no será la principal.
+  Future<void> seleccionarMesaExistentePorId(
+    String tableId,
+  ) async {
+    if (_mesas.isEmpty) {
+      await cargarMesas();
+    }
 
-    _isExistingTable = true;
-    _orderType = OrderType.dineIn;
-    _selectedArea = mesa.area;
-    _selectedTableId = mesa.id.toString();
+    try {
+      final mesa = _mesas.firstWhere(
+        (item) =>
+            item.id.toString() == tableId.toString(),
+      );
 
-    notifyListeners();
-  } catch (e) {
-    debugPrint(
-      'No se encontró la mesa de la orden: $e',
-    );
+      _isExistingTable = true;
+      _orderType = OrderType.dineIn;
+      _selectedArea = mesa.area;
+      _selectedTableId = mesa.id.toString();
+
+      _selectedExistingOrderId = '';
+      _selectedExistingOrderNumber = '';
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'No se encontró la mesa de la orden: $e',
+      );
+    }
   }
-}
 
   void setCategory(String category) {
     _selectedCategory = category;
@@ -428,6 +501,14 @@ Future<void> seleccionarMesaExistentePorId(
   void sendOrder() {
     _cart.clear();
     _notes = '';
+
+    // Lo dejo así para que después de enviar
+    // se siga quedando en "Existente", como dijiste.
+    // Si quisieras que vuelva a Nueva, aquí se limpiaría:
+    // _isExistingTable = false;
+    // _selectedExistingOrderId = '';
+    // _selectedExistingOrderNumber = '';
+
     notifyListeners();
   }
 }
