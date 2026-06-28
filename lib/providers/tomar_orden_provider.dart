@@ -4,6 +4,7 @@ import '../models/cart_item.dart';
 import '../models/mesa.dart';
 import '../models/product.dart';
 import '../repositories/combo_repository.dart';
+import '../repositories/empleado_repository.dart';
 import '../repositories/mesa_repository.dart';
 import '../repositories/producto_repository.dart';
 
@@ -36,7 +37,10 @@ class TomarOrdenProvider extends ChangeNotifier {
   String _searchTerm = '';
   String _notes = '';
 
-  // NUEVO: datos de la orden existente seleccionada
+  // Áreas que tiene asignadas el empleado logueado.
+  List<String> _assignedAreas = [];
+
+  // Datos de la orden existente seleccionada.
   String _selectedExistingOrderId = '';
   String _selectedExistingOrderNumber = '';
 
@@ -50,7 +54,9 @@ class TomarOrdenProvider extends ChangeNotifier {
   String get searchTerm => _searchTerm;
   String get notes => _notes;
 
-  // NUEVO
+  List<String> get assignedAreas => _assignedAreas;
+  bool get hasAssignedAreas => _assignedAreas.isNotEmpty;
+
   String get selectedExistingOrderId => _selectedExistingOrderId;
   String get selectedExistingOrderNumber => _selectedExistingOrderNumber;
 
@@ -72,8 +78,26 @@ class TomarOrdenProvider extends ChangeNotifier {
     }
   }
 
+  Set<String> get _assignedAreasNormalized {
+    return _assignedAreas
+        .map((area) => area.trim().toLowerCase())
+        .where((area) => area.isNotEmpty)
+        .toSet();
+  }
+
+  bool _isAreaAllowed(String area) {
+    final normalizedArea = area.trim().toLowerCase();
+
+    if (normalizedArea.isEmpty) {
+      return false;
+    }
+
+    return _assignedAreasNormalized.contains(normalizedArea);
+  }
+
   List<String> get areas {
     final result = _mesas
+        .where((mesa) => _isAreaAllowed(mesa.area))
         .map((mesa) => mesa.area.trim())
         .where((area) => area.isNotEmpty)
         .toSet()
@@ -87,6 +111,10 @@ class TomarOrdenProvider extends ChangeNotifier {
   List<String> get availableAreas {
     final result = _mesas
         .where((mesa) {
+          if (!_isAreaAllowed(mesa.area)) {
+            return false;
+          }
+
           final estado =
               mesa.estado.trim().toLowerCase();
 
@@ -113,6 +141,10 @@ class TomarOrdenProvider extends ChangeNotifier {
     }
 
     final result = _mesas.where((mesa) {
+      if (!_isAreaAllowed(mesa.area)) {
+        return false;
+      }
+
       final mismaArea =
           mesa.area.trim().toLowerCase() ==
               _selectedArea.trim().toLowerCase();
@@ -224,6 +256,72 @@ class TomarOrdenProvider extends ChangeNotifier {
     }
   }
 
+  String _lastAuthUserIdLoaded = '';
+  bool _isLoadingAssignedAreas = false;
+
+  Future<void> cargarAreasDelUsuario({
+    required String authUserId,
+    required EmpleadoRepository empleadoRepository,
+  }) async {
+    if (authUserId.trim().isEmpty) {
+      return;
+    }
+
+    if (_isLoadingAssignedAreas) {
+      return;
+    }
+
+    if (_lastAuthUserIdLoaded == authUserId) {
+      return;
+    }
+
+    _isLoadingAssignedAreas = true;
+
+    try {
+      final empleado =
+          await empleadoRepository.getByAuthUserId(authUserId);
+
+      if (empleado == null) {
+        _assignedAreas = [];
+        _selectedArea = '';
+        _selectedTableId = '';
+        _lastAuthUserIdLoaded = authUserId;
+
+        notifyListeners();
+        return;
+      }
+
+      final areas =
+          await empleadoRepository.getAreasByEmployeeId(
+        empleado.id,
+      );
+
+      _assignedAreas = areas
+          .map((area) => area.trim())
+          .where((area) => area.isNotEmpty)
+          .toSet()
+          .toList();
+
+      _lastAuthUserIdLoaded = authUserId;
+
+      await cargarMesas();
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint(
+        'Error cargando áreas del usuario: $e',
+      );
+
+      _assignedAreas = [];
+      _selectedArea = '';
+      _selectedTableId = '';
+      _lastAuthUserIdLoaded = authUserId;
+
+      notifyListeners();
+    } finally {
+      _isLoadingAssignedAreas = false;
+    }
+  }
   Future<void> cargarMesas() async {
     try {
       _mesas = await _mesaRepository.getAll();
@@ -253,10 +351,9 @@ class TomarOrdenProvider extends ChangeNotifier {
         if (!areaActualSigueDisponible) {
           _selectedArea =
               areasValidas.first;
+          _selectedTableId = '';
         }
 
-        // Solo selecciona primera mesa automáticamente
-        // si NO hay una mesa ya seleccionada.
         if (_selectedTableId.isEmpty) {
           _seleccionarPrimeraMesaDisponible();
         }
@@ -275,7 +372,6 @@ class TomarOrdenProvider extends ChangeNotifier {
   ) async {
     _orderType = type;
 
-    // Al cambiar tipo de orden, limpiamos selección existente
     _selectedExistingOrderId = '';
     _selectedExistingOrderNumber = '';
 
@@ -303,7 +399,6 @@ class TomarOrdenProvider extends ChangeNotifier {
     _selectedArea = '';
     _selectedTableId = '';
 
-    // Limpiar orden existente anterior
     _selectedExistingOrderId = '';
     _selectedExistingOrderNumber = '';
 
@@ -313,14 +408,18 @@ class TomarOrdenProvider extends ChangeNotifier {
   }
 
   void setArea(String area) {
+    if (!_isAreaAllowed(area)) {
+      return;
+    }
+
     _selectedArea = area;
 
-    // Si el usuario cambia de área manualmente,
-    // ya no debe quedarse amarrado a una orden anterior.
     _selectedExistingOrderId = '';
     _selectedExistingOrderNumber = '';
 
+    _selectedTableId = '';
     _seleccionarPrimeraMesaDisponible();
+
     notifyListeners();
   }
 
@@ -332,10 +431,16 @@ class TomarOrdenProvider extends ChangeNotifier {
       return;
     }
 
+    final mesa = _mesas.firstWhere(
+      (item) => item.id.toString() == mesaId,
+    );
+
+    if (!_isAreaAllowed(mesa.area)) {
+      return;
+    }
+
     _selectedTableId = mesaId;
 
-    // Si el usuario cambia mesa manualmente,
-    // limpiamos la orden existente exacta.
     _selectedExistingOrderId = '';
     _selectedExistingOrderNumber = '';
 
@@ -352,7 +457,8 @@ class TomarOrdenProvider extends ChangeNotifier {
                 mesa.nombre.trim().toLowerCase() ==
                 tableName
                     .trim()
-                    .toLowerCase(),
+                    .toLowerCase() &&
+                _isAreaAllowed(mesa.area),
           )
           .id
           .toString();
@@ -377,8 +483,6 @@ class TomarOrdenProvider extends ChangeNotifier {
             '';
   }
 
-  // NUEVO: esta es la función correcta para usar
-  // cuando confirmas una orden existente desde el modal.
   Future<void> seleccionarOrdenExistente({
     required String orderId,
     required String orderNumber,
@@ -393,6 +497,13 @@ class TomarOrdenProvider extends ChangeNotifier {
         (item) =>
             item.id.toString() == tableId.toString(),
       );
+
+      if (!_isAreaAllowed(mesa.area)) {
+        debugPrint(
+          'La mesa de esta orden no pertenece a las áreas asignadas.',
+        );
+        return;
+      }
 
       _isExistingTable = true;
       _orderType = OrderType.dineIn;
@@ -410,7 +521,6 @@ class TomarOrdenProvider extends ChangeNotifier {
     }
   }
 
-  // Puedes dejar esta por compatibilidad, pero ya no será la principal.
   Future<void> seleccionarMesaExistentePorId(
     String tableId,
   ) async {
@@ -423,6 +533,13 @@ class TomarOrdenProvider extends ChangeNotifier {
         (item) =>
             item.id.toString() == tableId.toString(),
       );
+
+      if (!_isAreaAllowed(mesa.area)) {
+        debugPrint(
+          'La mesa no pertenece a las áreas asignadas.',
+        );
+        return;
+      }
 
       _isExistingTable = true;
       _orderType = OrderType.dineIn;
@@ -501,13 +618,6 @@ class TomarOrdenProvider extends ChangeNotifier {
   void sendOrder() {
     _cart.clear();
     _notes = '';
-
-    // Lo dejo así para que después de enviar
-    // se siga quedando en "Existente", como dijiste.
-    // Si quisieras que vuelva a Nueva, aquí se limpiaría:
-    // _isExistingTable = false;
-    // _selectedExistingOrderId = '';
-    // _selectedExistingOrderNumber = '';
 
     notifyListeners();
   }

@@ -26,7 +26,7 @@ import 'repositories/recipe_repository.dart';
 
 // --- Providers ---
 import 'providers/ajustes_provider.dart';
-import 'providers/caja_provider.dart' ;
+import 'providers/caja_provider.dart';
 import 'providers/combos_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/empleados_provider.dart';
@@ -34,7 +34,7 @@ import 'providers/gastos_provider.dart';
 import 'providers/historial_cortes_provider.dart';
 import 'providers/mesas_provider.dart';
 import 'providers/nominas_provider.dart';
-import 'providers/ordenes_provider.dart' ;
+import 'providers/ordenes_provider.dart';
 import 'providers/productos_provider.dart';
 import 'providers/categorias_provider.dart';
 import 'providers/provider_payment.dart';
@@ -47,7 +47,6 @@ import 'providers/movimiento_caja_provider.dart';
 import 'providers/recipe_provider.dart';
 import 'repositories/auth_repository.dart';
 import 'providers/auth_provider.dart';
-
 
 Future<void> main() async {
   // Asegura que los canales de la plataforma nativa estén listos antes de inicializar servicios externos
@@ -63,7 +62,7 @@ Future<void> main() async {
 
   final envUrl = dotenv.env['SUPABASE_URL']?.trim();
   final envAnonKey = dotenv.env['SUPABASE_ANON_KEY']?.trim();
-  
+
   // Mantenemos el fallback a Platform.environment por si lo corres en web/escritorio
   final url = (envUrl != null && envUrl.isNotEmpty)
       ? envUrl
@@ -73,11 +72,13 @@ Future<void> main() async {
       : Platform.environment['SUPABASE_ANON_KEY']?.trim() ?? '';
 
   if (url.isEmpty || anonKey.isEmpty) {
-    debugPrint('ERROR CRITICO: SUPABASE_URL o SUPABASE_ANON_KEY faltan. url=${url.isEmpty ? 'MISSING' : url}, anonKey length=${anonKey.length}');
+    debugPrint(
+        'ERROR CRITICO: SUPABASE_URL o SUPABASE_ANON_KEY faltan. url=${url.isEmpty ? 'MISSING' : url}, anonKey length=${anonKey.length}');
     // En lugar de crashear la app con throw StateError, permitimos que la app inicie
     // para evitar la pantalla negra. Puedes mostrar una alerta de error en el login si estas variables fallan.
   } else {
-    debugPrint('Supabase inicializado con URL=$url y anonKey length=${anonKey.length}');
+    debugPrint(
+        'Supabase inicializado con URL=$url y anonKey length=${anonKey.length}');
   }
 
   // Inicialización de Supabase usando las credenciales
@@ -174,7 +175,7 @@ Future<void> main() async {
         ChangeNotifierProvider(
           create: (context) => AuthProvider(context.read<AuthRepository>()),
         ),
-        
+
         ChangeNotifierProvider(
           create: (context) => DashboardProvider(
             context.read<OrdenRepository>(),
@@ -185,12 +186,27 @@ Future<void> main() async {
         ChangeNotifierProvider(
             create: (context) =>
                 ReportesProvider(context.read<OrdenRepository>())),
-        ChangeNotifierProvider(
+
+        ChangeNotifierProxyProvider<AuthProvider, TomarOrdenProvider>(
           create: (context) => TomarOrdenProvider(
             context.read<ProductoRepository>(),
             context.read<MesaRepository>(),
-            context.read<ComboRepository>(), // <-- ¡Esta es la línea que faltaba!
+            context.read<ComboRepository>(),
           ),
+          update: (context, authProvider, tomarOrdenProvider) {
+            final provider = tomarOrdenProvider!;
+
+            final authUserId = authProvider.userId;
+
+            if (authUserId != null && authUserId.isNotEmpty) {
+              provider.cargarAreasDelUsuario(
+                authUserId: authUserId,
+                empleadoRepository: context.read<EmpleadoRepository>(),
+              );
+            }
+
+            return provider;
+          },
         ),
 
         // ==========================================
