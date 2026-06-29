@@ -37,8 +37,10 @@ class TomarOrdenProvider extends ChangeNotifier {
   String _searchTerm = '';
   String _notes = '';
 
-  // Áreas que tiene asignadas el empleado logueado.
+  // Datos del empleado logueado.
   List<String> _assignedAreas = [];
+  String _currentEmployeePosition = '';
+  bool _canSeeAllAreas = false;
 
   // Datos de la orden existente seleccionada.
   String _selectedExistingOrderId = '';
@@ -57,6 +59,9 @@ class TomarOrdenProvider extends ChangeNotifier {
   List<String> get assignedAreas => _assignedAreas;
   bool get hasAssignedAreas => _assignedAreas.isNotEmpty;
 
+  String get currentEmployeePosition => _currentEmployeePosition;
+  bool get canSeeAllAreas => _canSeeAllAreas;
+
   String get selectedExistingOrderId => _selectedExistingOrderId;
   String get selectedExistingOrderNumber => _selectedExistingOrderNumber;
 
@@ -64,13 +69,21 @@ class TomarOrdenProvider extends ChangeNotifier {
     return _selectedExistingOrderId.isNotEmpty;
   }
 
+  bool get _isMesero {
+    return _currentEmployeePosition.trim().toLowerCase() == 'mesero';
+  }
+
+  bool get _isAdminOrGerente {
+    final position = _currentEmployeePosition.trim().toLowerCase();
+
+    return position == 'admin' || position == 'gerente';
+  }
+
   String get selectedTableName {
     try {
       return _mesas
           .firstWhere(
-            (mesa) =>
-                mesa.id.toString() ==
-                _selectedTableId.toString(),
+            (mesa) => mesa.id.toString() == _selectedTableId.toString(),
           )
           .nombre;
     } catch (_) {
@@ -92,7 +105,18 @@ class TomarOrdenProvider extends ChangeNotifier {
       return false;
     }
 
-    return _assignedAreasNormalized.contains(normalizedArea);
+    // Admin y Gerente ven todo.
+    if (_canSeeAllAreas || _isAdminOrGerente) {
+      return true;
+    }
+
+    // Mesero solo ve sus áreas asignadas.
+    if (_isMesero) {
+      return _assignedAreasNormalized.contains(normalizedArea);
+    }
+
+    // Cajero, Cocinero u otros roles no ven mesas en Tomar Orden.
+    return false;
   }
 
   List<String> get areas {
@@ -115,15 +139,13 @@ class TomarOrdenProvider extends ChangeNotifier {
             return false;
           }
 
-          final estado =
-              mesa.estado.trim().toLowerCase();
+          final estado = mesa.estado.trim().toLowerCase();
 
           if (_isExistingTable) {
             return estado == 'ocupada';
           }
 
-          return estado == 'libre' ||
-              estado == 'disponible';
+          return estado == 'libre' || estado == 'disponible';
         })
         .map((mesa) => mesa.area.trim())
         .where((area) => area.isNotEmpty)
@@ -147,21 +169,19 @@ class TomarOrdenProvider extends ChangeNotifier {
 
       final mismaArea =
           mesa.area.trim().toLowerCase() ==
-              _selectedArea.trim().toLowerCase();
+          _selectedArea.trim().toLowerCase();
 
       if (!mismaArea) {
         return false;
       }
 
-      final estado =
-          mesa.estado.trim().toLowerCase();
+      final estado = mesa.estado.trim().toLowerCase();
 
       if (_isExistingTable) {
         return estado == 'ocupada';
       }
 
-      return estado == 'libre' ||
-          estado == 'disponible';
+      return estado == 'libre' || estado == 'disponible';
     }).map((mesa) => mesa.nombre).toList();
 
     result.sort();
@@ -182,28 +202,18 @@ class TomarOrdenProvider extends ChangeNotifier {
   }
 
   List<Producto> get visibleProducts {
-    final search =
-        _searchTerm.trim().toLowerCase();
+    final search = _searchTerm.trim().toLowerCase();
 
     return _products.where((product) {
       final matchesCategory =
-          _selectedCategory == 'Todos' ||
-              product.category ==
-                  _selectedCategory;
+          _selectedCategory == 'Todos' || product.category == _selectedCategory;
 
       final matchesSearch = search.isEmpty ||
-          product.name
-              .toLowerCase()
-              .contains(search) ||
-          product.description
-              .toLowerCase()
-              .contains(search) ||
-          product.category
-              .toLowerCase()
-              .contains(search);
+          product.name.toLowerCase().contains(search) ||
+          product.description.toLowerCase().contains(search) ||
+          product.category.toLowerCase().contains(search);
 
-      return matchesCategory &&
-          matchesSearch;
+      return matchesCategory && matchesSearch;
     }).toList();
   }
 
@@ -223,14 +233,11 @@ class TomarOrdenProvider extends ChangeNotifier {
 
   Future<void> cargarProductos() async {
     try {
-      final productos =
-          await _productoRepository.getAll();
+      final productos = await _productoRepository.getAll();
 
-      final combos =
-          await _comboRepository.getAll();
+      final combos = await _comboRepository.getAll();
 
-      final combosConvertidos =
-          combos.map((combo) {
+      final combosConvertidos = combos.map((combo) {
         return Producto(
           id: combo.id,
           name: combo.title,
@@ -250,9 +257,7 @@ class TomarOrdenProvider extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      debugPrint(
-        'Error cargando productos y combos: $e',
-      );
+      debugPrint('Error cargando productos y combos: $e');
     }
   }
 
@@ -278,11 +283,12 @@ class TomarOrdenProvider extends ChangeNotifier {
     _isLoadingAssignedAreas = true;
 
     try {
-      final empleado =
-          await empleadoRepository.getByAuthUserId(authUserId);
+      final empleado = await empleadoRepository.getByAuthUserId(authUserId);
 
       if (empleado == null) {
         _assignedAreas = [];
+        _currentEmployeePosition = '';
+        _canSeeAllAreas = false;
         _selectedArea = '';
         _selectedTableId = '';
         _lastAuthUserIdLoaded = authUserId;
@@ -291,16 +297,30 @@ class TomarOrdenProvider extends ChangeNotifier {
         return;
       }
 
-      final areas =
-          await empleadoRepository.getAreasByEmployeeId(
-        empleado.id,
-      );
+      _currentEmployeePosition = empleado.position.trim();
 
-      _assignedAreas = areas
-          .map((area) => area.trim())
-          .where((area) => area.isNotEmpty)
-          .toSet()
-          .toList();
+      if (_isAdminOrGerente) {
+        // Admin y Gerente ven todas las áreas.
+        _assignedAreas = [];
+        _canSeeAllAreas = true;
+      } else if (_isMesero) {
+        // Mesero solo ve sus áreas asignadas.
+        final areas = await empleadoRepository.getAreasByEmployeeId(
+          empleado.id,
+        );
+
+        _assignedAreas = areas
+            .map((area) => area.trim())
+            .where((area) => area.isNotEmpty)
+            .toSet()
+            .toList();
+
+        _canSeeAllAreas = false;
+      } else {
+        // Cajero, Cocinero u otros roles no ven mesas en Tomar Orden.
+        _assignedAreas = [];
+        _canSeeAllAreas = false;
+      }
 
       _lastAuthUserIdLoaded = authUserId;
 
@@ -308,11 +328,11 @@ class TomarOrdenProvider extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      debugPrint(
-        'Error cargando áreas del usuario: $e',
-      );
+      debugPrint('Error cargando áreas del usuario: $e');
 
       _assignedAreas = [];
+      _currentEmployeePosition = '';
+      _canSeeAllAreas = false;
       _selectedArea = '';
       _selectedTableId = '';
       _lastAuthUserIdLoaded = authUserId;
@@ -322,6 +342,7 @@ class TomarOrdenProvider extends ChangeNotifier {
       _isLoadingAssignedAreas = false;
     }
   }
+
   Future<void> cargarMesas() async {
     try {
       _mesas = await _mesaRepository.getAll();
@@ -339,18 +360,13 @@ class TomarOrdenProvider extends ChangeNotifier {
         _selectedArea = '';
         _selectedTableId = '';
       } else {
-        final areaActualSigueDisponible =
-            areasValidas.any(
+        final areaActualSigueDisponible = areasValidas.any(
           (area) =>
-              area.trim().toLowerCase() ==
-              _selectedArea
-                  .trim()
-                  .toLowerCase(),
+              area.trim().toLowerCase() == _selectedArea.trim().toLowerCase(),
         );
 
         if (!areaActualSigueDisponible) {
-          _selectedArea =
-              areasValidas.first;
+          _selectedArea = areasValidas.first;
           _selectedTableId = '';
         }
 
@@ -361,15 +377,11 @@ class TomarOrdenProvider extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      debugPrint(
-        'Error cargando mesas: $e',
-      );
+      debugPrint('Error cargando mesas: $e');
     }
   }
 
-  Future<void> setOrderType(
-    OrderType type,
-  ) async {
+  Future<void> setOrderType(OrderType type) async {
     _orderType = type;
 
     _selectedExistingOrderId = '';
@@ -392,9 +404,7 @@ class TomarOrdenProvider extends ChangeNotifier {
     await cargarMesas();
   }
 
-  Future<void> setIsExistingTable(
-    bool value,
-  ) async {
+  Future<void> setIsExistingTable(bool value) async {
     _isExistingTable = value;
     _selectedArea = '';
     _selectedTableId = '';
@@ -424,8 +434,7 @@ class TomarOrdenProvider extends ChangeNotifier {
   }
 
   void setTable(String tableName) {
-    final mesaId =
-        getTableIdByName(tableName);
+    final mesaId = getTableIdByName(tableName);
 
     if (mesaId == null) {
       return;
@@ -447,17 +456,13 @@ class TomarOrdenProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  String? getTableIdByName(
-    String tableName,
-  ) {
+  String? getTableIdByName(String tableName) {
     try {
       return _mesas
           .firstWhere(
             (mesa) =>
                 mesa.nombre.trim().toLowerCase() ==
-                tableName
-                    .trim()
-                    .toLowerCase() &&
+                    tableName.trim().toLowerCase() &&
                 _isAreaAllowed(mesa.area),
           )
           .id
@@ -468,19 +473,14 @@ class TomarOrdenProvider extends ChangeNotifier {
   }
 
   void _seleccionarPrimeraMesaDisponible() {
-    final mesasDisponibles =
-        currentTables;
+    final mesasDisponibles = currentTables;
 
     if (mesasDisponibles.isEmpty) {
       _selectedTableId = '';
       return;
     }
 
-    _selectedTableId =
-        getTableIdByName(
-              mesasDisponibles.first,
-            ) ??
-            '';
+    _selectedTableId = getTableIdByName(mesasDisponibles.first) ?? '';
   }
 
   Future<void> seleccionarOrdenExistente({
@@ -494,13 +494,12 @@ class TomarOrdenProvider extends ChangeNotifier {
 
     try {
       final mesa = _mesas.firstWhere(
-        (item) =>
-            item.id.toString() == tableId.toString(),
+        (item) => item.id.toString() == tableId.toString(),
       );
 
       if (!_isAreaAllowed(mesa.area)) {
         debugPrint(
-          'La mesa de esta orden no pertenece a las áreas asignadas.',
+          'La mesa de esta orden no pertenece a las áreas permitidas.',
         );
         return;
       }
@@ -515,29 +514,22 @@ class TomarOrdenProvider extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      debugPrint(
-        'No se encontró la mesa de la orden: $e',
-      );
+      debugPrint('No se encontró la mesa de la orden: $e');
     }
   }
 
-  Future<void> seleccionarMesaExistentePorId(
-    String tableId,
-  ) async {
+  Future<void> seleccionarMesaExistentePorId(String tableId) async {
     if (_mesas.isEmpty) {
       await cargarMesas();
     }
 
     try {
       final mesa = _mesas.firstWhere(
-        (item) =>
-            item.id.toString() == tableId.toString(),
+        (item) => item.id.toString() == tableId.toString(),
       );
 
       if (!_isAreaAllowed(mesa.area)) {
-        debugPrint(
-          'La mesa no pertenece a las áreas asignadas.',
-        );
+        debugPrint('La mesa no pertenece a las áreas permitidas.');
         return;
       }
 
@@ -551,9 +543,7 @@ class TomarOrdenProvider extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      debugPrint(
-        'No se encontró la mesa de la orden: $e',
-      );
+      debugPrint('No se encontró la mesa de la orden: $e');
     }
   }
 
@@ -574,9 +564,7 @@ class TomarOrdenProvider extends ChangeNotifier {
 
   void addToCart(Producto product) {
     final index = _cart.indexWhere(
-      (item) =>
-          item.product.id.toString() ==
-          product.id.toString(),
+      (item) => item.product.id.toString() == product.id.toString(),
     );
 
     if (index == -1) {
@@ -607,9 +595,7 @@ class TomarOrdenProvider extends ChangeNotifier {
 
   void remove(CartItem item) {
     _cart.removeWhere(
-      (entry) =>
-          entry.product.id.toString() ==
-          item.product.id.toString(),
+      (entry) => entry.product.id.toString() == item.product.id.toString(),
     );
 
     notifyListeners();

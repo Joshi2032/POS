@@ -50,18 +50,39 @@ class CustomSidebar extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
             alignment: Alignment.centerLeft,
             child: Row(
               children: [
-                Icon(Icons.local_fire_department, color: activeColor, size: 28),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    color: isDark ? Colors.black : Colors.white,
+                    padding: const EdgeInsets.all(4),
+                    child: Image.asset(
+                      isDark
+                          ? 'assets/images/LOGO ZORRO PARAOBL.png'
+                          : 'assets/images/LOGO ZORRO PARAO.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Text('LA BRASA POS',
+                Expanded(
+                  child: Text(
+                    'ZAPATA POS',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: textColor,
-                        letterSpacing: 1.2)),
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: textColor,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

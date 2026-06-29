@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../models/empleado.dart';
 import '../providers/empleados_provider.dart';
 import '../widgets/app_widgets.dart';
@@ -24,214 +25,442 @@ class _EmpleadosView extends StatefulWidget {
 
 class _EmpleadosViewState extends State<_EmpleadosView> {
   final _formKey = GlobalKey<FormState>();
+
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
   final _salaryCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
+
   String _formPosition = 'Mesero';
   bool _formActive = true;
+  bool _crearAcceso = true;
+  bool _obscurePassword = true;
+
+  List<String> _selectedAreas = [];
 
   @override
   void dispose() {
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _emailCtrl.dispose();
+    _passwordCtrl.dispose();
     _salaryCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
   }
 
-  void _abrirFormularioModal(EmpleadosProvider provider, {Empleado? empleado}) {
+  Future<void> _abrirFormularioModal(
+    EmpleadosProvider provider, {
+    Empleado? empleado,
+  }) async {
+    await provider.cargarAreasDisponibles();
+
+    if (empleado != null) {
+      _selectedAreas = await provider.obtenerAreasEmpleado(empleado.id);
+    } else {
+      _selectedAreas = [];
+    }
+
+    if (!mounted) return;
+
     if (empleado != null) {
       _firstNameCtrl.text = empleado.firstName;
       _lastNameCtrl.text = empleado.lastName;
       _emailCtrl.text = empleado.email;
+      _passwordCtrl.clear();
       _salaryCtrl.text = empleado.salary?.toString() ?? '';
       _notesCtrl.text = empleado.notes ?? '';
       _formPosition = empleado.position;
       _formActive = empleado.active;
+      _crearAcceso = false;
     } else {
       _firstNameCtrl.clear();
       _lastNameCtrl.clear();
       _emailCtrl.clear();
+      _passwordCtrl.clear();
       _salaryCtrl.clear();
       _notesCtrl.clear();
       _formPosition = 'Mesero';
       _formActive = true;
+      _crearAcceso = true;
     }
+
+    _obscurePassword = true;
 
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return AlertDialog(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
               title: Text(
-                  empleado != null ? 'Editar Empleado' : 'Nuevo Empleado',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: _firstNameCtrl,
-                        decoration: const InputDecoration(
+                empleado != null ? 'Editar Empleado' : 'Nuevo Empleado',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: SizedBox(
+                width: 520,
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: _firstNameCtrl,
+                          decoration: const InputDecoration(
                             labelText: 'Nombre(s)',
-                            border: OutlineInputBorder()),
-                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _lastNameCtrl,
-                        decoration: const InputDecoration(
-                          labelText: 'Apellido(s)',
-                          border: OutlineInputBorder(),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if ((value ?? '').trim().isEmpty) {
+                              return 'Campo requerido';
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _emailCtrl,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        autofillHints: const [AutofillHints.email],
-                        decoration: const InputDecoration(
-                          labelText: 'Correo electrónico',
-                          hintText: 'empleado@correo.com',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _lastNameCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Apellido(s)',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            if ((value ?? '').trim().isEmpty) {
+                              return 'Campo requerido';
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (value) {
-                          final email = value?.trim() ?? '';
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          decoration: const InputDecoration(
+                            labelText: 'Correo electrónico',
+                            hintText: 'empleado@correo.com',
+                            prefixIcon: Icon(Icons.email_outlined),
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (value) {
+                            final email = value?.trim() ?? '';
 
-                          if (email.isEmpty) {
-                            return 'El correo es obligatorio';
-                          }
+                            if (email.isEmpty) {
+                              return 'El correo es obligatorio';
+                            }
 
-                          final emailValido = RegExp(
-                            r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                          ).hasMatch(email);
+                            final emailValido = RegExp(
+                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                            ).hasMatch(email);
 
-                          if (!emailValido) {
-                            return 'Ingresa un correo válido';
-                          }
+                            if (!emailValido) {
+                              return 'Ingresa un correo válido';
+                            }
 
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        dropdownColor: Theme.of(context).cardColor,
-                        initialValue: _formPosition,
-                        decoration: const InputDecoration(
-                          labelText: 'Puesto',
-                          border: OutlineInputBorder(),
+                            return null;
+                          },
                         ),
-                        items: provider.roles
-                            .where((r) => r != 'Todos')
-                            .map(
-                              (r) => DropdownMenuItem(
-                                value: r,
-                                child: Text(r),
+
+                        if (empleado == null) ...[
+                          const SizedBox(height: 12),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text(
+                              'Crear acceso para iniciar sesión',
+                            ),
+                            subtitle: const Text(
+                              'Crea el usuario en Authentication con correo y contraseña.',
+                            ),
+                            value: _crearAcceso,
+                            onChanged: (value) {
+                              setModalState(() {
+                                _crearAcceso = value;
+                              });
+                            },
+                          ),
+                          if (_crearAcceso) ...[
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _passwordCtrl,
+                              obscureText: _obscurePassword,
+                              decoration: InputDecoration(
+                                labelText: 'Contraseña temporal',
+                                hintText: 'Mínimo 6 caracteres',
+                                border: const OutlineInputBorder(),
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                  ),
+                                  onPressed: () {
+                                    setModalState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
+                                ),
+                              ),
+                              validator: (value) {
+                                if (!_crearAcceso) return null;
+
+                                final password = value?.trim() ?? '';
+
+                                if (password.isEmpty) {
+                                  return 'La contraseña es obligatoria';
+                                }
+
+                                if (password.length < 6) {
+                                  return 'Mínimo 6 caracteres';
+                                }
+
+                                return null;
+                              },
+                            ),
+                          ],
+                        ],
+
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          dropdownColor: Theme.of(context).cardColor,
+                          initialValue: _formPosition,
+                          decoration: const InputDecoration(
+                            labelText: 'Puesto',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: provider.roles
+                              .where((r) => r != 'Todos')
+                              .map(
+                                (r) => DropdownMenuItem(
+                                  value: r,
+                                  child: Text(r),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setModalState(() {
+                                _formPosition = value;
+
+                                if (_formPosition != 'Mesero') {
+                                  _selectedAreas = [];
+                                }
+                              });
+                            }
+                          },
+                        ),
+
+                        if (_formPosition == 'Mesero') ...[
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Áreas asignadas',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (provider.areasDisponibles.isEmpty)
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'No hay áreas registradas en mesas.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange,
+                                ),
                               ),
                             )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v != null) {
-                            setModalState(() => _formPosition = v);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _salaryCtrl,
-                        decoration: const InputDecoration(
+                          else
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: provider.areasDisponibles.map((area) {
+                                  final selected =
+                                      _selectedAreas.contains(area);
+
+                                  return FilterChip(
+                                    label: Text(area),
+                                    selected: selected,
+                                    onSelected: (value) {
+                                      setModalState(() {
+                                        if (value) {
+                                          _selectedAreas.add(area);
+                                        } else {
+                                          _selectedAreas.remove(area);
+                                        }
+
+                                        _selectedAreas = _selectedAreas
+                                            .map((item) => item.trim())
+                                            .where((item) => item.isNotEmpty)
+                                            .toSet()
+                                            .toList();
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
+
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _salaryCtrl,
+                          decoration: const InputDecoration(
                             labelText: 'Salario Mensual (\$)',
                             border: OutlineInputBorder(),
-                            prefixText: '\$'),
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _notesCtrl,
-                        decoration: const InputDecoration(
-                            labelText: 'Notas / Observaciones',
-                            border: OutlineInputBorder()),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Estatus Activo'),
-                          Switch(
-                            value: _formActive,
-                            activeThumbColor: Colors.green,
-                            onChanged: (v) =>
-                                setModalState(() => _formActive = v),
+                            prefixText: '\$',
                           ),
-                        ],
-                      ),
-                    ],
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _notesCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Notas / Observaciones',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Estatus Activo'),
+                            Switch(
+                              value: _formActive,
+                              activeThumbColor: Colors.green,
+                              onChanged: (value) {
+                                setModalState(() {
+                                  _formActive = value;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar')),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
                 ElevatedButton(
-                  onPressed: () async {
-                    if (_formKey.currentState!.validate()) {
-                      // Obtenemos la fecha de hoy en formato SQL (YYYY-MM-DD)
-                      final String fechaHoy =
-                          DateTime.now().toIso8601String().split('T')[0];
+                  onPressed: provider.isLoading
+                      ? null
+                      : () async {
+                          if (!_formKey.currentState!.validate()) {
+                            return;
+                          }
 
-                      final nuevo = Empleado(
-                        id: empleado?.id ?? '',
-                        profileId: empleado?.profileId,
-                        firstName: _firstNameCtrl.text.trim(),
-                        lastName: _lastNameCtrl.text.trim(),
-                        email: _emailCtrl.text.trim().toLowerCase(),
-                        position: _formPosition,
-                        hireDate: empleado?.hireDate ?? fechaHoy,
-                        salary: double.tryParse(_salaryCtrl.text.trim()),
-                        notes: _notesCtrl.text.trim().isNotEmpty
-                            ? _notesCtrl.text.trim()
-                            : null,
-                        active: _formActive,
-                      );
+                          if (_formPosition == 'Mesero' &&
+                              _selectedAreas.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Selecciona al menos un área para el mesero.',
+                                ),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                            return;
+                          }
 
-                      bool exito;
-                      if (empleado != null) {
-                        exito = await provider.actualizarEmpleado(
-                            empleado.id, nuevo);
-                      } else {
-                        exito = await provider.agregarEmpleado(nuevo);
-                      }
+                          final fechaHoy = DateTime.now()
+                              .toIso8601String()
+                              .split('T')[0];
 
-                      if (exito) {
-                        if (context.mounted) Navigator.pop(context);
-                      } else {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(provider.errorMessage ??
-                                  'Error al guardar en Supabase'),
-                              backgroundColor: Colors.red,
-                            ),
+                          final nuevo = Empleado(
+                            id: empleado?.id ?? '',
+                            profileId: empleado?.profileId,
+                            firstName: _firstNameCtrl.text.trim(),
+                            lastName: _lastNameCtrl.text.trim(),
+                            email: _emailCtrl.text.trim().toLowerCase(),
+                            position: _formPosition,
+                            hireDate: empleado?.hireDate ?? fechaHoy,
+                            salary:
+                                double.tryParse(_salaryCtrl.text.trim()),
+                            notes: _notesCtrl.text.trim().isNotEmpty
+                                ? _notesCtrl.text.trim()
+                                : null,
+                            active: _formActive,
                           );
-                        }
-                      }
-                    }
-                  },
-                  child: Text(empleado != null ? 'Guardar Cambios' : 'Añadir'),
-                )
+
+                          bool exito;
+
+                          if (empleado != null) {
+                            exito = await provider.actualizarEmpleado(
+                              empleado.id,
+                              nuevo,
+                              areasAsignadas: _selectedAreas,
+                            );
+                          } else {
+                            if (_crearAcceso) {
+                              exito =
+                                  await provider.agregarEmpleadoConAcceso(
+                                nuevo,
+                                password: _passwordCtrl.text.trim(),
+                                areasAsignadas: _selectedAreas,
+                              );
+                            } else {
+                              exito = await provider.agregarEmpleado(
+                                nuevo,
+                                areasAsignadas: _selectedAreas,
+                              );
+                            }
+                          }
+
+                          if (!context.mounted) return;
+
+                          if (exito) {
+                            Navigator.pop(context);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  empleado != null
+                                      ? 'Empleado actualizado correctamente.'
+                                      : _crearAcceso
+                                          ? 'Empleado y acceso creados correctamente.'
+                                          : 'Empleado creado correctamente.',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  provider.errorMessage ??
+                                      'Error al guardar en Supabase',
+                                ),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 6),
+                              ),
+                            );
+                          }
+                        },
+                  child: Text(
+                    empleado != null ? 'Guardar Cambios' : 'Añadir',
+                  ),
+                ),
               ],
             );
           },
@@ -264,7 +493,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                 Expanded(
                   flex: 2,
                   child: CustomSearchBar(
-                    hint: 'Buscar empleado por nombre...',
+                    hint: 'Buscar empleado por nombre.',
                     onChanged: provider.setSearchTerm,
                   ),
                 ),
@@ -274,16 +503,29 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                   child: DropdownButtonFormField<String>(
                     dropdownColor: Theme.of(context).cardColor,
                     style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 14),
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                    ),
                     decoration: const InputDecoration(
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 12)),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                    ),
                     initialValue: provider.selectedRol,
                     items: provider.roles
-                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                        .map(
+                          (rol) => DropdownMenuItem(
+                            value: rol,
+                            child: Text(rol),
+                          ),
+                        )
                         .toList(),
-                    onChanged: (v) => provider.setSelectedRol(v!),
+                    onChanged: (value) {
+                      if (value != null) {
+                        provider.setSelectedRol(value);
+                      }
+                    },
                   ),
                 ),
               ],
@@ -310,8 +552,9 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                         mainAxisSpacing: 16,
                       ),
                       itemCount: filtrados.length,
-                      itemBuilder: (context, idx) {
-                        final emp = filtrados[idx];
+                      itemBuilder: (context, index) {
+                        final emp = filtrados[index];
+
                         return AppCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,23 +565,30 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Theme.of(context)
                                           .primaryColor
                                           .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: Text(emp.position,
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: Theme.of(context)
-                                                .primaryColor)),
+                                    child: Text(
+                                      emp.position,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color:
+                                            Theme.of(context).primaryColor,
+                                      ),
+                                    ),
                                   ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: (emp.active
                                               ? Colors.green
@@ -347,85 +597,132 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                        emp.active ? 'Activo' : 'Inactivo',
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: emp.active
-                                                ? Colors.green
-                                                : Colors.red)),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text('${emp.firstName} ${emp.lastName}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.email_outlined,
-                                    size: 14,
-                                    color: emp.email.isEmpty
-                                        ? Colors.orange
-                                        : Colors.grey,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      emp.email.isEmpty
-                                          ? 'Correo pendiente'
-                                          : emp.email,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: emp.email.isEmpty
-                                                ? Colors.orange
-                                                : Colors.grey,
-                                          ),
+                                      emp.active ? 'Activo' : 'Inactivo',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: emp.active
+                                            ? Colors.green
+                                            : Colors.red,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '${emp.firstName} ${emp.lastName}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
                               const SizedBox(height: 4),
-                              if (emp.salary != null)
-                                Text(
-                                    'Salario: \$${emp.salary!.toStringAsFixed(2)}',
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall),
-                              if (emp.notes != null && emp.notes!.isNotEmpty)
-                                Text('Nota: ${emp.notes}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(color: Colors.grey)),
+                              Text(
+                                emp.email,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                              ),
                               const Spacer(),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit_outlined,
-                                        size: 20, color: Colors.blueGrey),
-                                    onPressed: () => _abrirFormularioModal(
-                                        provider,
-                                        empleado: emp),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () {
+                                        _abrirFormularioModal(
+                                          provider,
+                                          empleado: emp,
+                                        );
+                                      },
+                                      icon: const Icon(
+                                        Icons.edit_outlined,
+                                        size: 16,
+                                      ),
+                                      label: const Text('Editar'),
+                                    ),
                                   ),
+                                  const SizedBox(width: 8),
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline,
-                                        size: 20, color: Colors.redAccent),
-                                    onPressed: () =>
-                                        provider.eliminarEmpleado(emp.id),
+                                    tooltip: 'Eliminar',
+                                    onPressed: () async {
+                                      final confirm =
+                                          await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) {
+                                          return AlertDialog(
+                                            title: const Text(
+                                              'Eliminar empleado',
+                                            ),
+                                            content: Text(
+                                              '¿Eliminar a ${emp.firstName} ${emp.lastName}?',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  Navigator.pop(
+                                                    context,
+                                                    false,
+                                                  );
+                                                },
+                                                child: const Text('Cancelar'),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () {
+                                                  Navigator.pop(
+                                                    context,
+                                                    true,
+                                                  );
+                                                },
+                                                style:
+                                                    ElevatedButton.styleFrom(
+                                                  backgroundColor:
+                                                      Colors.red,
+                                                ),
+                                                child:
+                                                    const Text('Eliminar'),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+
+                                      if (confirm != true) return;
+
+                                      final ok = await provider
+                                          .eliminarEmpleado(emp.id);
+
+                                      if (!context.mounted) return;
+
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            ok
+                                                ? 'Empleado eliminado.'
+                                                : provider.errorMessage ??
+                                                    'Error al eliminar.',
+                                          ),
+                                          backgroundColor: ok
+                                              ? Colors.green
+                                              : Colors.red,
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red,
+                                    ),
                                   ),
                                 ],
-                              )
+                              ),
                             ],
                           ),
                         );

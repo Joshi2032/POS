@@ -8,17 +8,31 @@ class EmpleadoRepository {
 
   Future<List<Empleado>> getAll() async {
     try {
-      final response = await _client
-          .from('employees')
-          .select('*')
-          .order('first_name');
+      final response =
+          await _client.from('employees').select('*').order('first_name');
 
-      return (response as List)
-          .map((json) => Empleado.fromJson(json))
-          .toList();
+      return (response as List).map((json) => Empleado.fromJson(json)).toList();
     } catch (e) {
       throw Exception(
         'Error al obtener los empleados de Supabase: $e',
+      );
+    }
+  }
+
+  Future<List<String>> getAvailableTableAreas() async {
+    try {
+      final response =
+          await _client.from('restaurant_tables').select('area').order('area');
+
+      return (response as List)
+          .map((json) => json['area']?.toString() ?? '')
+          .map((area) => area.trim())
+          .where((area) => area.isNotEmpty)
+          .toSet()
+          .toList();
+    } catch (e) {
+      throw Exception(
+        'Error al obtener áreas disponibles: $e',
       );
     }
   }
@@ -39,6 +53,42 @@ class EmpleadoRepository {
     } catch (e) {
       throw Exception(
         'Error al obtener empleado por perfil: $e',
+      );
+    }
+  }
+
+  Future<Empleado?> getByAuthUserId(String authUserId) async {
+    try {
+      final profileResponse = await _client
+          .from('profiles')
+          .select('id')
+          .eq('user_id', authUserId)
+          .maybeSingle();
+
+      if (profileResponse == null) {
+        return null;
+      }
+
+      final profileId = profileResponse['id']?.toString() ?? '';
+
+      if (profileId.isEmpty) {
+        return null;
+      }
+
+      final employeeResponse = await _client
+          .from('employees')
+          .select('*')
+          .eq('profile_id', profileId)
+          .maybeSingle();
+
+      if (employeeResponse == null) {
+        return null;
+      }
+
+      return Empleado.fromJson(employeeResponse);
+    } catch (e) {
+      throw Exception(
+        'Error al obtener empleado por usuario auth: $e',
       );
     }
   }
@@ -101,17 +151,18 @@ class EmpleadoRepository {
     }
   }
 
-  Future<void> create(Empleado empleado) async {
+  Future<Empleado> create(Empleado empleado) async {
     try {
       final data = empleado.toJson();
 
       data.removeWhere(
-        (key, value) =>
-            value == null ||
-            value.toString().trim().isEmpty,
+        (key, value) => value == null || value.toString().trim().isEmpty,
       );
 
-      await _client.from('employees').insert(data);
+      final response =
+          await _client.from('employees').insert(data).select().single();
+
+      return Empleado.fromJson(response);
     } on PostgrestException catch (e) {
       if (e.code == '23505') {
         throw Exception(
@@ -139,15 +190,10 @@ class EmpleadoRepository {
       data.remove('id');
 
       data.removeWhere(
-        (key, value) =>
-            value == null ||
-            value.toString().trim().isEmpty,
+        (key, value) => value == null || value.toString().trim().isEmpty,
       );
 
-      await _client
-          .from('employees')
-          .update(data)
-          .eq('id', id);
+      await _client.from('employees').update(data).eq('id', id);
     } on PostgrestException catch (e) {
       if (e.code == '23505') {
         throw Exception(
@@ -167,10 +213,9 @@ class EmpleadoRepository {
 
   Future<void> delete(String id) async {
     try {
-      await _client
-          .from('employees')
-          .delete()
-          .eq('id', id);
+      await _client.from('employee_areas').delete().eq('employee_id', id);
+
+      await _client.from('employees').delete().eq('id', id);
     } catch (e) {
       throw Exception(
         'Error al eliminar al empleado $id: $e',
@@ -178,40 +223,45 @@ class EmpleadoRepository {
     }
   }
 
-Future<Empleado?> getByAuthUserId(String authUserId) async {
-  try {
-    final profileResponse = await _client
-        .from('profiles')
-        .select('id')
-        .eq('user_id', authUserId)
-        .maybeSingle();
+  Future<Empleado> createEmployeeWithAuth({
+    required Empleado empleado,
+    required String password,
+    required List<String> areas,
+  }) async {
+    try {
+      final response = await _client.functions.invoke(
+        'create-employee-user',
+        body: {
+          'first_name': empleado.firstName,
+          'last_name': empleado.lastName,
+          'email': empleado.email,
+          'password': password,
+          'position': empleado.position,
+          'hire_date': empleado.hireDate,
+          'salary': empleado.salary,
+          'active': empleado.active,
+          'notes': empleado.notes,
+          'areas': areas,
+        },
+      );
 
-    if (profileResponse == null) {
-      return null;
+      final data = response.data;
+
+      if (data is! Map<String, dynamic>) {
+        throw Exception('Respuesta inválida de la función.');
+      }
+
+      if (data['ok'] != true) {
+        throw Exception(
+          data['error'] ?? 'Error al crear empleado con acceso.',
+        );
+      }
+
+      return Empleado.fromJson(
+        data['employee'] as Map<String, dynamic>,
+      );
+    } catch (e) {
+      throw Exception('Error al crear empleado con acceso: $e');
     }
-
-    final profileId =
-        profileResponse['id']?.toString() ?? '';
-
-    if (profileId.isEmpty) {
-      return null;
-    }
-
-    final employeeResponse = await _client
-        .from('employees')
-        .select('*')
-        .eq('profile_id', profileId)
-        .maybeSingle();
-
-    if (employeeResponse == null) {
-      return null;
-    }
-
-    return Empleado.fromJson(employeeResponse);
-  } catch (e) {
-    throw Exception(
-      'Error al obtener empleado por usuario auth: $e',
-    );
   }
-}
 }
