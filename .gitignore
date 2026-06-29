@@ -50,5 +50,12 @@ app.*.map.json
 # Artefactos generados por el CLI de Supabase (no deben versionarse: pueden
 # contener referencias al proyecto vinculado, como el project-ref y la URL
 # del pooler de la base de datos).
+# Supabase local/temp
 supabase/.temp/
 supabase/.branches/
+
+# Dependencias Node/Supabase CLI
+node_modules/
+
+# Config local de VS Code
+.vscode/
