@@ -40,14 +40,9 @@ class RestaurantOrder {
   factory RestaurantOrder.fromJson(Map<String, dynamic> json) {
     List<OrderItem> parsedItems = [];
     if (json['order_items'] != null) {
-      parsedItems = (json['order_items'] as List<dynamic>)
-          .map((i) => OrderItem(
-                productName: i['product_name'] ?? '',
-                quantity: i['quantity'] ?? 1,
-                unitPrice: (i['unit_price'] as num?)?.toDouble() ?? 0.0,
-                total: (i['total_price'] as num?)?.toDouble() ?? (i['total'] as num?)?.toDouble() ?? 0.0,
-              ))
-          .toList();
+     parsedItems = (json['order_items'] as List<dynamic>)
+    .map((i) => OrderItem.fromJson(i as Map<String, dynamic>))
+    .toList();
     } else if (json['items'] != null) {
       parsedItems = (json['items'] as List<dynamic>)
           .map((item) => OrderItem.fromJson(item as Map<String, dynamic>))
