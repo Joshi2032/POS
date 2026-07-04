@@ -45,13 +45,13 @@ class CajaRepository {
           .lt('paid_at', finUtc.toIso8601String());
 
       double totalEfectivo = 0.0;
-      
+
       if (response != null && response is List) {
         for (var row in response) {
           totalEfectivo += (row['total'] as num?)?.toDouble() ?? 0.0;
         }
       }
-      
+
       return totalEfectivo;
     } catch (e) {
       debugPrint('Advertencia: No se pudo calcular el saldo de caja: $e');
@@ -71,51 +71,98 @@ class CajaRepository {
   }
 
   // Registrar un cobro de orden directamente en la base de datos
-  Future<void> registrarCobro(String orderId, String metodoPago, double total) async {
-    String paymentMethodDb = 'cash';
-    if (metodoPago.toLowerCase() == 'tarjeta') paymentMethodDb = 'card';
-    if (metodoPago.toLowerCase() == 'transferencia') paymentMethodDb = 'transfer';
+ Future<void> registrarCobro(
+  String orderId,
+  String metodoPago,
+  double total,
+) async {
+  String paymentMethodDb = 'cash';
 
-    try {
-      final updateQuery = _client.from('orders').update({
-        'status': 'paid',
-        'payment_method': paymentMethodDb,
-        'paid_at': DateTime.now().toUtc().toIso8601String(),
-      });
-
-      final uuidRegExp = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
-      
-      if (uuidRegExp.hasMatch(orderId)) {
-        await updateQuery.eq('id', orderId);
-      } else {
-        await updateQuery.eq('order_number', orderId);
-      }
-
-      // Intentamos insertar el flujo de efectivo
-      try {
-        await _client.from('cash_movements').insert({
-          'concept': 'Cobro de Orden #$orderId',
-          'type': 'Ingreso',
-          'amount': total,
-          // Fecha en hora de México (no la del dispositivo), para que
-          // coincida con el rango usado en obtenerTotalEnCaja().
-          'date': _fechaDeHoyMexico(),
-        });
-      } catch (e) {
-        debugPrint('Advertencia: Tabla cash_movements falló: $e');
-      }
-      
-    } catch (e) {
-      throw Exception('Error al registrar el cobro: $e');
-    }
+  if (metodoPago.toLowerCase() == 'tarjeta') {
+    paymentMethodDb = 'card';
   }
+
+  if (metodoPago.toLowerCase() == 'transferencia') {
+    paymentMethodDb = 'transfer';
+  }
+
+  try {
+    final uuidRegExp = RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    );
+
+    // 1. Buscar primero la orden para obtener table_id antes de pagar
+    Map<String, dynamic>? ordenData;
+
+    if (uuidRegExp.hasMatch(orderId)) {
+      ordenData = await _client
+          .from('orders')
+          .select('id, order_number, table_id, order_type')
+          .eq('id', orderId)
+          .maybeSingle();
+    } else {
+      ordenData = await _client
+          .from('orders')
+          .select('id, order_number, table_id, order_type')
+          .eq('order_number', orderId)
+          .maybeSingle();
+    }
+
+    if (ordenData == null) {
+      throw Exception('No se encontró la orden para cobrar: $orderId');
+    }
+
+    final String realOrderId = ordenData['id'].toString();
+
+    final String? tableId = ordenData['table_id']?.toString();
+
+    debugPrint(
+      'CAJA_REPO: cobrando orden=$realOrderId table_id=$tableId metodo=$paymentMethodDb total=$total',
+    );
+
+    // 2. Marcar orden como pagada
+    await _client.from('orders').update({
+      'status': 'paid',
+      'payment_method': paymentMethodDb,
+      'paid_at': DateTime.now().toUtc().toIso8601String(),
+      'total': total,
+      'subtotal': total,
+    }).eq('id', realOrderId);
+
+    // 3. Liberar mesa si la orden tiene mesa
+    if (tableId != null && tableId.trim().isNotEmpty) {
+      await _client.from('restaurant_tables').update({
+        'status': 'free',
+      }).eq('id', tableId);
+
+      debugPrint('CAJA_REPO: mesa liberada correctamente: $tableId');
+    } else {
+      debugPrint('CAJA_REPO: la orden no tiene table_id, no se liberó mesa.');
+    }
+
+    // 4. Registrar movimiento de caja
+    try {
+      await _client.from('cash_movements').insert({
+        'concept': 'Cobro de Orden #$realOrderId',
+        'type': 'Ingreso',
+        'amount': total,
+        'date': _fechaDeHoyMexico(),
+      });
+    } catch (e) {
+      debugPrint('Advertencia: Tabla cash_movements falló: $e');
+    }
+  } catch (e) {
+    throw Exception('Error al registrar el cobro: $e');
+  }
+}
 
   // Registrar un corte de caja/arqueo al finalizar el turno
   Future<void> realizarCorte(CorteCaja corte) async {
     try {
       final data = corte.toJson();
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      
+      data.removeWhere(
+          (key, value) => value == null || value.toString().trim().isEmpty);
+
       await _client.from('cash_register_cuts').insert(data);
     } catch (e) {
       throw Exception('Error al guardar el corte de caja: $e');
@@ -126,8 +173,9 @@ class CajaRepository {
   Future<void> registrarMovimientoManual(MovimientoCaja movimiento) async {
     try {
       final data = movimiento.toJson();
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      
+      data.removeWhere(
+          (key, value) => value == null || value.toString().trim().isEmpty);
+
       await _client.from('cash_movements').insert(data);
     } catch (e) {
       throw Exception('Error al registrar movimiento manual: $e');

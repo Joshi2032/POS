@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 // Providers
 import '../providers/ordenes_provider.dart';
+import '../providers/mesas_provider.dart';
 import '../providers/caja_provider.dart';
 
 // Modelos
@@ -24,15 +25,15 @@ class CajaPage extends StatefulWidget {
 class _CajaPageState extends State<CajaPage> {
   final Set<String> _ordenesExpandidas = {};
 
-void _alternarExpansion(String orderId) {
-  setState(() {
-    if (_ordenesExpandidas.contains(orderId)) {
-      _ordenesExpandidas.remove(orderId);
-    } else {
-      _ordenesExpandidas.add(orderId);
-    }
-  });
-}
+  void _alternarExpansion(String orderId) {
+    setState(() {
+      if (_ordenesExpandidas.contains(orderId)) {
+        _ordenesExpandidas.remove(orderId);
+      } else {
+        _ordenesExpandidas.add(orderId);
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -55,7 +56,11 @@ void _alternarExpansion(String orderId) {
       return status == 'pending' ||
           status == 'pendiente' ||
           status == 'preparing' ||
-          status == 'preparando';
+          status == 'preparando' ||
+          status == 'ready' ||
+          status == 'lista' ||
+          status == 'delivered' ||
+          status == 'entregada';
     }).toList();
 
     return Scaffold(
@@ -72,373 +77,381 @@ void _alternarExpansion(String orderId) {
             ),
             const SizedBox(height: 24),
             Expanded(
-  child: ordenesPendientes.isEmpty
-      ? const EmptyState(
-          message: 'No hay cuentas pendientes por cobrar.',
-          icon: Icons.check_circle_outline,
-        )
-      : LayoutBuilder(
-          builder: (context, constraints) {
-            const spacing = 16.0;
-            const cardWidth = 340.0;
+              child: ordenesPendientes.isEmpty
+                  ? const EmptyState(
+                      message: 'No hay cuentas pendientes por cobrar.',
+                      icon: Icons.check_circle_outline,
+                    )
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        const spacing = 16.0;
+                        const cardWidth = 340.0;
 
-            return SingleChildScrollView(
-              child: Wrap(
-                spacing: spacing,
-                runSpacing: spacing,
-                children: ordenesPendientes.map((orden) {
-                  final serviceType =
-                      orden.serviceType.toLowerCase().trim();
+                        return SingleChildScrollView(
+                          child: Wrap(
+                            spacing: spacing,
+                            runSpacing: spacing,
+                            children: ordenesPendientes.map((orden) {
+                              final serviceType =
+                                  orden.serviceType.toLowerCase().trim();
 
-                  final esParaLlevar =
-                      serviceType == 'llevar' ||
-                      serviceType == 'takeout';
+                              final esParaLlevar = serviceType == 'llevar' ||
+                                  serviceType == 'takeout';
 
-                  final identificador = esParaLlevar
-                      ? 'Para llevar'
-                      : orden.tableOrCustomer.trim();
+                              final identificador = esParaLlevar
+                                  ? 'Para llevar'
+                                  : orden.tableOrCustomer.trim();
 
-                  final tituloOrden = identificador.isEmpty ||
-                          identificador.toLowerCase() == 'sin mesa'
-                      ? esParaLlevar
-                          ? 'Para llevar'
-                          : 'Mesa sin identificar'
-                      : identificador;
+                              final tituloOrden = identificador.isEmpty ||
+                                      identificador.toLowerCase() == 'sin mesa'
+                                  ? esParaLlevar
+                                      ? 'Para llevar'
+                                      : 'Mesa sin identificar'
+                                  : identificador;
 
-                  final iconoOrden = esParaLlevar
-                      ? Icons.shopping_bag_outlined
-                      : Icons.table_restaurant_outlined;
+                              final iconoOrden = esParaLlevar
+                                  ? Icons.shopping_bag_outlined
+                                  : Icons.table_restaurant_outlined;
 
-                  final expandida =
-                      _ordenesExpandidas.contains(orden.id);
+                              final expandida =
+                                  _ordenesExpandidas.contains(orden.id);
 
-                  final anchoDisponible =
-                      constraints.maxWidth < cardWidth
-                          ? constraints.maxWidth
-                          : cardWidth;
+                              final anchoDisponible =
+                                  constraints.maxWidth < cardWidth
+                                      ? constraints.maxWidth
+                                      : cardWidth;
 
-                  return SizedBox(
-                    width: anchoDisponible,
-                    child: AppCard(
-                      child: AnimatedSize(
-                        duration:
-                            const Duration(milliseconds: 220),
-                        curve: Curves.easeInOut,
-                        child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            InkWell(
-                              borderRadius:
-                                  BorderRadius.circular(8),
-                              onTap: () =>
-                                  _alternarExpansion(orden.id),
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                ),
-                                child: Column(
-                                  children: [
-                                    Row(
+                              return SizedBox(
+                                width: anchoDisponible,
+                                child: AppCard(
+                                  child: AnimatedSize(
+                                    duration: const Duration(milliseconds: 220),
+                                    curve: Curves.easeInOut,
+                                    child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Icon(
-                                          iconoOrden,
-                                          size: 22,
-                                          color: Theme.of(context)
-                                              .primaryColor,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment
-                                                    .start,
-                                            children: [
-                                              Text(
-                                                tituloOrden,
-                                                maxLines: 1,
-                                                overflow: TextOverflow
-                                                    .ellipsis,
-                                                style:
-                                                    const TextStyle(
-                                                  fontSize: 19,
-                                                  fontWeight:
-                                                      FontWeight.w900,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                orden.orderNumber,
-                                                maxLines: 1,
-                                                overflow: TextOverflow
-                                                    .ellipsis,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  color: isDark
-                                                      ? Colors.white54
-                                                      : Colors.grey[
-                                                          600],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding:
-                                              const EdgeInsets
-                                                  .symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange
-                                                .withValues(
-                                              alpha: 0.2,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'Por cobrar',
-                                            style: TextStyle(
-                                              color:
-                                                  Colors.orange[800],
-                                              fontSize: 11,
-                                              fontWeight:
-                                                  FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '${orden.items.length} producto(s)',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: isDark
-                                                ? Colors.white60
-                                                : Colors.grey[700],
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        Icon(
-                                          expandida
-                                              ? Icons
-                                                  .keyboard_arrow_up
-                                              : Icons
-                                                  .keyboard_arrow_down,
-                                          color: Colors.grey,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            if (expandida) ...[
-                              const Divider(height: 20),
-
-                              const Text(
-                                'Productos de la orden',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-
-                              const SizedBox(height: 8),
-
-                              if (orden.items.isEmpty)
-                                const Text(
-                                  'No hay productos registrados.',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                )
-                              else
-                                ...orden.items.map((item) {
-                                  return Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(
-                                      vertical: 5,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 30,
-                                          height: 30,
-                                          alignment:
-                                              Alignment.center,
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .primaryColor
-                                                .withValues(
-                                                  alpha: 0.12,
-                                                ),
-                                            borderRadius:
-                                                BorderRadius.circular(
-                                              7,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            '${item.quantity}x',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight:
-                                                  FontWeight.bold,
-                                              color: Theme.of(context)
-                                                  .primaryColor,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment
-                                                    .start,
-                                            children: [
-                                              Text(
-                                                item.productName,
-                                                maxLines: 1,
-                                                overflow: TextOverflow
-                                                    .ellipsis,
-                                                style:
-                                                    const TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight:
-                                                      FontWeight.w600,
-                                                ),
-                                              ),
-                                              Text(
-                                                '\$${item.total.toStringAsFixed(2)}',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: isDark
-                                                      ? Colors.white60
-                                                      : Colors.grey[
-                                                          600],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                                                                const SizedBox(width: 6),
-                                        OutlinedButton.icon(
-                                          onPressed: () {
-                                            _repetirProducto(
-                                              context,
-                                              orden,
-                                              item,
-                                            );
-                                          },
-                                          style: OutlinedButton.styleFrom(
+                                        InkWell(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          onTap: () =>
+                                              _alternarExpansion(orden.id),
+                                          child: Padding(
                                             padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 6,
+                                              vertical: 4,
                                             ),
-                                            visualDensity:
-                                                VisualDensity.compact,
-                                          ),
-                                          icon: const Icon(
-                                            Icons.replay,
-                                            size: 15,
-                                          ),
-                                          label: const Text(
-                                            'Repetir',
-                                            style: TextStyle(
-                                              fontSize: 11,
+                                            child: Column(
+                                              children: [
+                                                Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Icon(
+                                                      iconoOrden,
+                                                      size: 22,
+                                                      color: Theme.of(context)
+                                                          .primaryColor,
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            tituloOrden,
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 19,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w900,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 4),
+                                                          Text(
+                                                            orden.orderNumber,
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: isDark
+                                                                  ? Colors
+                                                                      .white54
+                                                                  : Colors.grey[
+                                                                      600],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.orange
+                                                            .withValues(
+                                                          alpha: 0.2,
+                                                        ),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(
+                                                          8,
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        'Por cobrar',
+                                                        style: TextStyle(
+                                                          color: Colors
+                                                              .orange[800],
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Row(
+                                                  children: [
+                                                    Text(
+                                                      '${orden.items.length} producto(s)',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: isDark
+                                                            ? Colors.white60
+                                                            : Colors.grey[700],
+                                                      ),
+                                                    ),
+                                                    const Spacer(),
+                                                    Icon(
+                                                      expandida
+                                                          ? Icons
+                                                              .keyboard_arrow_up
+                                                          : Icons
+                                                              .keyboard_arrow_down,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
+                                        if (expandida) ...[
+                                          const Divider(height: 20),
+                                          const Text(
+                                            'Productos de la orden',
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          if (orden.items.isEmpty)
+                                            const Text(
+                                              'No hay productos registrados.',
+                                              style: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12,
+                                              ),
+                                            )
+                                          else
+                                            ...orden.items.map((item) {
+                                              return Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  vertical: 5,
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Container(
+                                                      width: 30,
+                                                      height: 30,
+                                                      alignment:
+                                                          Alignment.center,
+                                                      decoration: BoxDecoration(
+                                                        color: Theme.of(context)
+                                                            .primaryColor
+                                                            .withValues(
+                                                              alpha: 0.12,
+                                                            ),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(
+                                                          7,
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        '${item.quantity}x',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          color:
+                                                              Theme.of(context)
+                                                                  .primaryColor,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            item.productName,
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 13,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            '\$${item.total.toStringAsFixed(2)}',
+                                                            style: TextStyle(
+                                                              fontSize: 11,
+                                                              color: isDark
+                                                                  ? Colors
+                                                                      .white60
+                                                                  : Colors.grey[
+                                                                      600],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    OutlinedButton.icon(
+                                                      onPressed: () {
+                                                        _repetirProducto(
+                                                          context,
+                                                          orden,
+                                                          item,
+                                                        );
+                                                      },
+                                                      style: OutlinedButton
+                                                          .styleFrom(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 6,
+                                                        ),
+                                                        visualDensity:
+                                                            VisualDensity
+                                                                .compact,
+                                                      ),
+                                                      icon: const Icon(
+                                                        Icons.replay,
+                                                        size: 15,
+                                                      ),
+                                                      label: const Text(
+                                                        'Repetir',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }),
+                                          if (orden.notes != null &&
+                                              orden.notes!
+                                                  .trim()
+                                                  .isNotEmpty) ...[
+                                            const SizedBox(height: 8),
+                                            Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.all(9),
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange.withValues(
+                                                  alpha: 0.1,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                'Notas: ${orden.notes}',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                        const SizedBox(height: 12),
+                                        const Divider(),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                '\$${orden.calculatedTotal.toStringAsFixed(2)}',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Theme.of(context)
+                                                      .primaryColor,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                _abrirModalCobro(
+                                                  context,
+                                                  orden,
+                                                );
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    Colors.green[600],
+                                                foregroundColor: Colors.white,
+                                                elevation: 0,
+                                              ),
+                                              child: const Text(
+                                                'Cobrar',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ],
                                     ),
-                                  );
-                                }),
-
-                              if (orden.notes != null &&
-                                  orden.notes!.trim().isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(9),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.withValues(
-                                      alpha: 0.1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    'Notas: ${orden.notes}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                    ),
                                   ),
                                 ),
-                              ],
-                            ],
-
-                            const SizedBox(height: 12),
-                            const Divider(),
-
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    '\$${orden.totalAmount.toStringAsFixed(2)}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w900,
-                                      color:
-                                          Theme.of(context).primaryColor,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    _abrirModalCobro(
-                                      context,
-                                      orden,
-                                    );
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[600],
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                  ),
-                                  child: const Text(
-                                    'Cobrar',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                }).toList(),
-              ),
-            );
-          },
-        ),
             ),
           ],
         ),
@@ -451,14 +464,11 @@ void _alternarExpansion(String orderId) {
     RestaurantOrder orden,
     dynamic item,
   ) async {
-    final ordenesProvider =
-        context.read<OrdenesProvider>();
+    final ordenesProvider = context.read<OrdenesProvider>();
 
-    final messenger =
-        ScaffoldMessenger.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
-    final productId =
-        item.productId?.toString().trim() ?? '';
+    final productId = item.productId?.toString().trim() ?? '';
 
     if (productId.isEmpty || productId == 'null') {
       messenger.showSnackBar(
@@ -490,8 +500,7 @@ void _alternarExpansion(String orderId) {
         messenger.showSnackBar(
           SnackBar(
             content: Text(
-              ordenesProvider.errorMessage ??
-                  'No se pudo repetir el producto.',
+              ordenesProvider.errorMessage ?? 'No se pudo repetir el producto.',
             ),
             backgroundColor: Colors.red,
           ),
@@ -529,11 +538,9 @@ void _alternarExpansion(String orderId) {
     BuildContext context,
     RestaurantOrder orden,
   ) {
-    final cajaProvider =
-        context.read<CajaProvider>();
+    final cajaProvider = context.read<CajaProvider>();
 
-    final cashOrder =
-        cajaProvider.pendingOrders.firstWhere(
+    final cashOrder = cajaProvider.pendingOrders.firstWhere(
       (co) => co.id == orden.id,
       orElse: () => CashOrder(
         id: orden.id,
@@ -542,7 +549,9 @@ void _alternarExpansion(String orderId) {
         status: orden.status,
         itemsCount: orden.items.length,
         items: [],
-        total: orden.totalAmount,
+        total: orden.calculatedTotal > 0
+            ? orden.calculatedTotal
+            : orden.totalAmount,
       ),
     );
 
@@ -552,9 +561,11 @@ void _alternarExpansion(String orderId) {
 
     cajaProvider.setPaymentMethod('Efectivo');
 
-    final montoRecibidoCtrl =
-        TextEditingController(
-      text: orden.totalAmount.toStringAsFixed(2),
+    final montoRecibidoCtrl = TextEditingController(
+      text: (orden.calculatedTotal > 0
+              ? orden.calculatedTotal
+              : orden.totalAmount)
+          .toStringAsFixed(2),
     );
 
     cajaProvider.setReceivedAmount(
@@ -567,47 +578,34 @@ void _alternarExpansion(String orderId) {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            final total = orden.totalAmount;
+            final total = orden.calculatedTotal > 0
+                ? orden.calculatedTotal
+                : orden.totalAmount;
 
-            final recibido =
-                double.tryParse(
+            final recibido = double.tryParse(
                   montoRecibidoCtrl.text,
                 ) ??
                 0.0;
 
-            final cambio = recibido >= total
-                ? recibido - total
-                : 0.0;
+            final cambio = recibido >= total ? recibido - total : 0.0;
 
-            final isDark =
-                Theme.of(context).brightness ==
-                    Brightness.dark;
+            final isDark = Theme.of(context).brightness == Brightness.dark;
 
-            final serviceType =
-                orden.serviceType
-                    .toLowerCase()
-                    .trim();
+            final serviceType = orden.serviceType.toLowerCase().trim();
 
             final esParaLlevar =
-                serviceType == 'llevar' ||
-                serviceType == 'takeout';
+                serviceType == 'llevar' || serviceType == 'takeout';
 
             final nombreOrden = esParaLlevar
                 ? 'Para llevar'
-                : orden.tableOrCustomer
-                            .trim()
-                            .isEmpty ||
-                        orden.tableOrCustomer
-                                .trim()
-                                .toLowerCase() ==
-                            'sin mesa'
+                : orden.tableOrCustomer.trim().isEmpty ||
+                        orden.tableOrCustomer.trim().toLowerCase() == 'sin mesa'
                     ? 'Mesa sin identificar'
                     : orden.tableOrCustomer;
 
             return AlertDialog(
               shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16),
               ),
               title: const Text(
                 'Procesar Cobro',
@@ -619,32 +617,25 @@ void _alternarExpansion(String orderId) {
                 child: SizedBox(
                   width: 400,
                   child: Column(
-                    mainAxisSize:
-                        MainAxisSize.min,
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
                           Icon(
                             esParaLlevar
-                                ? Icons
-                                    .shopping_bag_outlined
-                                : Icons
-                                    .table_restaurant_outlined,
+                                ? Icons.shopping_bag_outlined
+                                : Icons.table_restaurant_outlined,
                             size: 20,
-                            color: Theme.of(context)
-                                .primaryColor,
+                            color: Theme.of(context).primaryColor,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               nombreOrden,
-                              style:
-                                  const TextStyle(
+                              style: const TextStyle(
                                 fontSize: 16,
-                                fontWeight:
-                                    FontWeight.bold,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
@@ -663,18 +654,15 @@ void _alternarExpansion(String orderId) {
                         'Total a pagar: \$${total.toStringAsFixed(2)}',
                         style: TextStyle(
                           fontSize: 22,
-                          fontWeight:
-                              FontWeight.bold,
-                          color: Theme.of(context)
-                              .primaryColor,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
                         ),
                       ),
                       const SizedBox(height: 24),
                       const Text(
                         'Método de pago:',
                         style: TextStyle(
-                          fontWeight:
-                              FontWeight.bold,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -685,26 +673,20 @@ void _alternarExpansion(String orderId) {
                               label: const Text(
                                 'Efectivo',
                               ),
-                              selected:
-                                  metodoPago == 'cash',
+                              selected: metodoPago == 'cash',
                               onSelected: (_) {
                                 setModalState(() {
                                   metodoPago = 'cash';
                                 });
 
-                                cajaProvider
-                                    .setPaymentMethod(
+                                cajaProvider.setPaymentMethod(
                                   'Efectivo',
                                 );
                               },
-                              selectedColor:
-                                  Theme.of(context)
-                                      .primaryColor,
+                              selectedColor: Theme.of(context).primaryColor,
                               labelStyle: TextStyle(
                                 color:
-                                    metodoPago == 'cash'
-                                        ? Colors.white
-                                        : null,
+                                    metodoPago == 'cash' ? Colors.white : null,
                               ),
                             ),
                           ),
@@ -714,26 +696,20 @@ void _alternarExpansion(String orderId) {
                               label: const Text(
                                 'Tarjeta',
                               ),
-                              selected:
-                                  metodoPago == 'card',
+                              selected: metodoPago == 'card',
                               onSelected: (_) {
                                 setModalState(() {
                                   metodoPago = 'card';
                                 });
 
-                                cajaProvider
-                                    .setPaymentMethod(
+                                cajaProvider.setPaymentMethod(
                                   'Tarjeta',
                                 );
                               },
-                              selectedColor:
-                                  Theme.of(context)
-                                      .primaryColor,
+                              selectedColor: Theme.of(context).primaryColor,
                               labelStyle: TextStyle(
                                 color:
-                                    metodoPago == 'card'
-                                        ? Colors.white
-                                        : null,
+                                    metodoPago == 'card' ? Colors.white : null,
                               ),
                             ),
                           ),
@@ -743,26 +719,19 @@ void _alternarExpansion(String orderId) {
                               label: const Text(
                                 'Transf.',
                               ),
-                              selected:
-                                  metodoPago ==
-                                      'transfer',
+                              selected: metodoPago == 'transfer',
                               onSelected: (_) {
                                 setModalState(() {
-                                  metodoPago =
-                                      'transfer';
+                                  metodoPago = 'transfer';
                                 });
 
-                                cajaProvider
-                                    .setPaymentMethod(
+                                cajaProvider.setPaymentMethod(
                                   'Transferencia',
                                 );
                               },
-                              selectedColor:
-                                  Theme.of(context)
-                                      .primaryColor,
+                              selectedColor: Theme.of(context).primaryColor,
                               labelStyle: TextStyle(
-                                color: metodoPago ==
-                                        'transfer'
+                                color: metodoPago == 'transfer'
                                     ? Colors.white
                                     : null,
                               ),
@@ -773,22 +742,15 @@ void _alternarExpansion(String orderId) {
                       const SizedBox(height: 24),
                       if (metodoPago == 'cash') ...[
                         TextField(
-                          controller:
-                              montoRecibidoCtrl,
-                          keyboardType:
-                              const TextInputType
-                                  .numberWithOptions(
+                          controller: montoRecibidoCtrl,
+                          keyboardType: const TextInputType.numberWithOptions(
                             decimal: true,
                           ),
-                          decoration:
-                              InputDecoration(
-                            labelText:
-                                'Efectivo recibido',
+                          decoration: InputDecoration(
+                            labelText: 'Efectivo recibido',
                             prefixText: '\$ ',
-                            border:
-                                OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(
                                 8,
                               ),
                             ),
@@ -796,40 +758,33 @@ void _alternarExpansion(String orderId) {
                           onChanged: (value) {
                             setModalState(() {});
 
-                            cajaProvider
-                                .setReceivedAmount(
+                            cajaProvider.setReceivedAmount(
                               value,
                             );
                           },
                         ),
                         const SizedBox(height: 16),
                         Container(
-                          padding:
-                              const EdgeInsets.all(
+                          padding: const EdgeInsets.all(
                             12,
                           ),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? Colors.green
-                                    .withValues(
+                                ? Colors.green.withValues(
                                     alpha: 0.1,
                                   )
                                 : Colors.green[50],
-                            borderRadius:
-                                BorderRadius.circular(
+                            borderRadius: BorderRadius.circular(
                               8,
                             ),
                             border: Border.all(
-                              color: Colors.green
-                                  .withValues(
+                              color: Colors.green.withValues(
                                 alpha: 0.3,
                               ),
                             ),
                           ),
                           child: Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment
-                                    .spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
                                 'Cambio a devolver:',
@@ -839,11 +794,9 @@ void _alternarExpansion(String orderId) {
                               ),
                               Text(
                                 '\$${cambio.toStringAsFixed(2)}',
-                                style:
-                                    const TextStyle(
+                                style: const TextStyle(
                                   fontSize: 20,
-                                  fontWeight:
-                                      FontWeight.bold,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.green,
                                 ),
                               ),
@@ -858,8 +811,7 @@ void _alternarExpansion(String orderId) {
               actions: [
                 TextButton(
                   onPressed: () {
-                    cajaProvider
-                        .closeSelectedOrderPanel();
+                    cajaProvider.closeSelectedOrderPanel();
 
                     Navigator.pop(
                       dialogContext,
@@ -868,49 +820,37 @@ void _alternarExpansion(String orderId) {
                   child: const Text('Cancelar'),
                 ),
                 ElevatedButton(
-                  style:
-                      ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Colors.green[600],
-                    foregroundColor:
-                        Colors.white,
-                    minimumSize:
-                        const Size(120, 45),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600],
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(120, 45),
                   ),
                   onPressed: () async {
-                    if (metodoPago == 'cash' &&
-                        recibido < total) {
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(
+                    if (metodoPago == 'cash' && recibido < total) {
+                      ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
                             'Error: El monto recibido es menor al total de la cuenta.',
                           ),
-                          backgroundColor:
-                              Colors.red,
+                          backgroundColor: Colors.red,
                         ),
                       );
                       return;
                     }
 
-                    final scaffoldMessenger =
-                        ScaffoldMessenger.of(
+                    final scaffoldMessenger = ScaffoldMessenger.of(
                       context,
                     );
 
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (_) =>
-                          const Center(
-                        child:
-                            CircularProgressIndicator(),
+                      builder: (_) => const Center(
+                        child: CircularProgressIndicator(),
                       ),
                     );
 
-                    final exito =
-                        await cajaProvider
-                            .chargeSelectedOrder();
+                    final exito = await cajaProvider.chargeSelectedOrder();
 
                     if (!context.mounted) {
                       return;
@@ -922,28 +862,30 @@ void _alternarExpansion(String orderId) {
                     ).pop();
 
                     if (exito) {
+                      await context.read<MesasProvider>().cargarMesas();
+                      await context.read<OrdenesProvider>().cargarOrdenes();
+
+                      if (!context.mounted) {
+                        return;
+                      }
                       Navigator.pop(
                         dialogContext,
                       );
 
-                      scaffoldMessenger
-                          .showSnackBar(
+                      scaffoldMessenger.showSnackBar(
                         SnackBar(
                           content: Text(
                             'Orden ${orden.orderNumber} cobrada correctamente.',
                           ),
-                          backgroundColor:
-                              Colors.green,
-                          duration:
-                              const Duration(
+                          backgroundColor: Colors.green,
+                          duration: const Duration(
                             seconds: 2,
                           ),
                         ),
                       );
 
                       final printSuccess =
-                          await PrinterService
-                              .imprimirTicketCaja(
+                          await PrinterService.imprimirTicketCaja(
                         orden,
                       );
 
@@ -952,14 +894,12 @@ void _alternarExpansion(String orderId) {
                       }
 
                       if (!printSuccess) {
-                        scaffoldMessenger
-                            .showSnackBar(
+                        scaffoldMessenger.showSnackBar(
                           const SnackBar(
                             content: Text(
                               'El cobro fue exitoso, pero revisa la conexión de la impresora.',
                             ),
-                            backgroundColor:
-                                Colors.orange,
+                            backgroundColor: Colors.orange,
                           ),
                         );
                       }
@@ -967,15 +907,11 @@ void _alternarExpansion(String orderId) {
                       scaffoldMessenger.showSnackBar(
                         SnackBar(
                           content: Text(
-                            cajaProvider
-                                    .cashError
-                                    .isNotEmpty
-                                ? cajaProvider
-                                    .cashError
+                            cajaProvider.cashError.isNotEmpty
+                                ? cajaProvider.cashError
                                 : 'No se pudo guardar el pago.',
                           ),
-                          backgroundColor:
-                              Colors.red,
+                          backgroundColor: Colors.red,
                         ),
                       );
                     }

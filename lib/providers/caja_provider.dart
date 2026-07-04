@@ -35,7 +35,11 @@ List<CashOrder> get pendingOrders =>
       return status == 'pending' ||
           status == 'pendiente' ||
           status == 'preparing' ||
-          status == 'preparando';
+          status == 'preparando' ||
+          status == 'ready' ||
+          status == 'lista' ||
+          status == 'delivered' ||
+          status == 'entregada';
     }).map(_mapRestaurantToCashOrder).toList();
 
 List<CashOrder> get paidToday =>
@@ -170,6 +174,8 @@ CashOrder _mapRestaurantToCashOrder(RestaurantOrder o) {
           CashItem(name: it.productName, qty: it.quantity, price: it.unitPrice))
       .toList();
 
+  final totalReal = o.calculatedTotal > 0 ? o.calculatedTotal : o.totalAmount;
+
   return CashOrder(
     id: o.id,
     label: o.orderNumber.isNotEmpty ? o.orderNumber : o.tableOrCustomer,
@@ -177,6 +183,6 @@ CashOrder _mapRestaurantToCashOrder(RestaurantOrder o) {
     status: o.status,
     itemsCount: o.items.length,
     items: items,
-    total: o.totalAmount,
+    total: totalReal,
   );
 }
