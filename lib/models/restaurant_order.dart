@@ -150,6 +150,19 @@ class RestaurantOrder {
     };
   }
 
+   double get calculatedTotal {
+    return items.fold<double>(
+      0,
+      (sum, item) {
+        final itemTotal = item.total > 0
+            ? item.total
+            : item.unitPrice * item.quantity;
+
+        return sum + itemTotal;
+      },
+    );
+  }
+
   RestaurantOrder copyWith({
     String? id,
     String? orderNumber,

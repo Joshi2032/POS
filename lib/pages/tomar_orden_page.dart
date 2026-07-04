@@ -104,11 +104,11 @@ class TomarOrdenPage extends StatelessWidget {
           }
 
           final total = context.select<TomarOrdenProvider, double>(
-            (provider) => provider.total,
+            (provider) => provider.totalConOrdenExistente,
           );
 
           final count = context.select<TomarOrdenProvider, int>(
-            (provider) => provider.itemsCount,
+            (provider) => provider.itemsCountConOrdenExistente,
           );
 
           return FloatingActionButton.extended(
@@ -239,7 +239,6 @@ class _MenuSection extends StatelessWidget {
                   ),
                 ),
 
-                // NUEVA ORDEN
                 ChoiceChip(
                   label: const Text('Nueva'),
                   selected: !provider.isExistingTable,
@@ -259,7 +258,6 @@ class _MenuSection extends StatelessWidget {
 
                 const SizedBox(width: 8),
 
-                // ORDEN EXISTENTE
                 ChoiceChip(
                   label: const Text('Existente'),
                   selected: provider.isExistingTable,
@@ -562,6 +560,10 @@ Future<void> _mostrarOrdenesExistentes(
 
                         final seleccionada = ordenSeleccionada?.id == order.id;
 
+                        final totalMostrado = order.calculatedTotal > 0
+                            ? order.calculatedTotal
+                            : order.totalAmount;
+
                         return Card(
                           elevation: seleccionada ? 3 : 1,
                           shape: RoundedRectangleBorder(
@@ -635,7 +637,7 @@ Future<void> _mostrarOrdenesExistentes(
                                         ),
                                       ),
                                       Text(
-                                        '\$${order.totalAmount.toStringAsFixed(2)}',
+                                        '\$${totalMostrado.toStringAsFixed(2)}',
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -682,6 +684,11 @@ Future<void> _mostrarOrdenesExistentes(
                                       else
                                         ...order.items.map(
                                           (item) {
+                                            final itemTotal = item.total > 0
+                                                ? item.total
+                                                : item.unitPrice *
+                                                    item.quantity;
+
                                             return Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -727,7 +734,7 @@ Future<void> _mostrarOrdenesExistentes(
                                                     ),
                                                   ),
                                                   Text(
-                                                    '\$${item.total.toStringAsFixed(2)}',
+                                                    '\$${itemTotal.toStringAsFixed(2)}',
                                                     style: const TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold,
@@ -776,7 +783,7 @@ Future<void> _mostrarOrdenesExistentes(
                                             ),
                                           ),
                                           Text(
-                                            '\$${order.totalAmount.toStringAsFixed(2)}',
+                                            '\$${totalMostrado.toStringAsFixed(2)}',
                                             style: const TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.bold,
@@ -847,10 +854,21 @@ Future<void> _mostrarOrdenesExistentes(
     return;
   }
 
+  final totalResultado = resultado.calculatedTotal > 0
+      ? resultado.calculatedTotal
+      : resultado.totalAmount;
+
+  final itemsCountResultado = resultado.items.fold<int>(
+    0,
+    (sum, item) => sum + item.quantity,
+  );
+
   await tomarOrdenProvider.seleccionarOrdenExistente(
     orderId: resultado.id,
     orderNumber: resultado.orderNumber,
     tableId: resultado.tableId!,
+    totalAmount: totalResultado,
+    itemsCount: itemsCountResultado,
   );
 
   if (!context.mounted) return;
@@ -923,7 +941,9 @@ class _CartSection extends StatelessWidget {
                     Text(
                       orderType == OrderType.dineIn
                           ? provider.isExistingTable
-                              ? 'Agregar a orden existente'
+                              ? provider.hasSelectedExistingOrder
+                                  ? 'Agregar a orden ${provider.selectedExistingOrderNumber}'
+                                  : 'Agregar a orden existente'
                               : 'Nueva orden en mesa'
                           : 'Recoger en cocina',
                       style: TextStyle(
@@ -944,7 +964,7 @@ class _CartSection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${provider.itemsCount} Items',
+                  '${provider.itemsCountConOrdenExistente} Items',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -967,11 +987,34 @@ class _CartSection extends StatelessWidget {
           ),
         ),
         const Divider(height: 1),
+        if (provider.isExistingTable && provider.hasSelectedExistingOrder)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Orden actual: ${_formatCurrency(provider.selectedExistingOrderTotal)}. '
+                'Aquí solo se muestran productos nuevos por agregar.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: textColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
         Expanded(
           child: cart.isEmpty
               ? Center(
                   child: Text(
-                    'Selecciona productos para la orden',
+                    provider.isExistingTable && provider.hasSelectedExistingOrder
+                        ? 'Agrega productos nuevos a esta orden'
+                        : 'Selecciona productos para la orden',
                     style: TextStyle(
                       color: secondaryTextColor,
                     ),
@@ -1015,11 +1058,37 @@ class _CartSection extends StatelessWidget {
                 onChanged: context.read<TomarOrdenProvider>().setNotes,
               ),
               const SizedBox(height: 12),
+              if (provider.isExistingTable && provider.hasSelectedExistingOrder)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Nuevo agregado:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                      Text(
+                        _formatCurrency(provider.total),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: secondaryTextColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Total:',
+                    provider.isExistingTable && provider.hasSelectedExistingOrder
+                        ? 'Total actualizado:'
+                        : 'Total:',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -1028,7 +1097,7 @@ class _CartSection extends StatelessWidget {
                   ),
                   Text(
                     _formatCurrency(
-                      provider.total,
+                      provider.totalConOrdenExistente,
                     ),
                     style: TextStyle(
                       fontSize: 20,
@@ -1058,9 +1127,11 @@ class _CartSection extends StatelessWidget {
                     ),
                     elevation: 0,
                   ),
-                  child: const Text(
-                    'Enviar a Cocina',
-                    style: TextStyle(
+                  child: Text(
+                    provider.isExistingTable && provider.hasSelectedExistingOrder
+                        ? 'Agregar a Cocina'
+                        : 'Enviar a Cocina',
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1142,8 +1213,6 @@ class _CartSection extends StatelessWidget {
     required BuildContext context,
     required TomarOrdenProvider provider,
   }) async {
-    // Capturar todo lo que depende de BuildContext
-    // antes del primer await.
     final authProvider = context.read<AuthProvider>();
     final ordenesProvider = context.read<OrdenesProvider>();
     final mesasProvider = context.read<MesasProvider>();
@@ -1152,7 +1221,6 @@ class _CartSection extends StatelessWidget {
     final router = GoRouter.of(context);
     final navigator = Navigator.of(context);
 
-    // Copia del estado actual de la orden.
     final orderType = provider.orderType;
     final selectedTable = provider.selectedTable;
     final selectedTableName = provider.selectedTableName;
@@ -1330,7 +1398,6 @@ class _CartSection extends StatelessWidget {
   }
 }
 
-// no borrar
 class _TypeButton extends StatelessWidget {
   const _TypeButton({
     required this.label,

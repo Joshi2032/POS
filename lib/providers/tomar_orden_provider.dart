@@ -45,6 +45,8 @@ class TomarOrdenProvider extends ChangeNotifier {
   // Datos de la orden existente seleccionada.
   String _selectedExistingOrderId = '';
   String _selectedExistingOrderNumber = '';
+  double _selectedExistingOrderTotal = 0.0;
+  int _selectedExistingOrderItemsCount = 0;
 
   List<CartItem> get cart => _cart;
   OrderType get orderType => _orderType;
@@ -64,6 +66,25 @@ class TomarOrdenProvider extends ChangeNotifier {
 
   String get selectedExistingOrderId => _selectedExistingOrderId;
   String get selectedExistingOrderNumber => _selectedExistingOrderNumber;
+
+  double get selectedExistingOrderTotal => _selectedExistingOrderTotal;
+  int get selectedExistingOrderItemsCount => _selectedExistingOrderItemsCount;
+
+  double get totalConOrdenExistente {
+    if (_isExistingTable && _selectedExistingOrderId.isNotEmpty) {
+      return _selectedExistingOrderTotal + total;
+    }
+
+    return total;
+  }
+
+  int get itemsCountConOrdenExistente {
+    if (_isExistingTable && _selectedExistingOrderId.isNotEmpty) {
+      return _selectedExistingOrderItemsCount + itemsCount;
+    }
+
+    return itemsCount;
+  }
 
   bool get hasSelectedExistingOrder {
     return _selectedExistingOrderId.isNotEmpty;
@@ -162,27 +183,29 @@ class TomarOrdenProvider extends ChangeNotifier {
       return [];
     }
 
-    final result = _mesas.where((mesa) {
-      if (!_isAreaAllowed(mesa.area)) {
-        return false;
-      }
+    final result = _mesas
+        .where((mesa) {
+          if (!_isAreaAllowed(mesa.area)) {
+            return false;
+          }
 
-      final mismaArea =
-          mesa.area.trim().toLowerCase() ==
-          _selectedArea.trim().toLowerCase();
+          final mismaArea = mesa.area.trim().toLowerCase() ==
+              _selectedArea.trim().toLowerCase();
 
-      if (!mismaArea) {
-        return false;
-      }
+          if (!mismaArea) {
+            return false;
+          }
 
-      final estado = mesa.estado.trim().toLowerCase();
+          final estado = mesa.estado.trim().toLowerCase();
 
-      if (_isExistingTable) {
-        return estado == 'ocupada';
-      }
+          if (_isExistingTable) {
+            return estado == 'ocupada';
+          }
 
-      return estado == 'libre' || estado == 'disponible';
-    }).map((mesa) => mesa.nombre).toList();
+          return estado == 'libre' || estado == 'disponible';
+        })
+        .map((mesa) => mesa.nombre)
+        .toList();
 
     result.sort();
 
@@ -386,6 +409,8 @@ class TomarOrdenProvider extends ChangeNotifier {
 
     _selectedExistingOrderId = '';
     _selectedExistingOrderNumber = '';
+    _selectedExistingOrderTotal = 0.0;
+    _selectedExistingOrderItemsCount = 0;
 
     if (type == OrderType.takeaway) {
       _isExistingTable = false;
@@ -483,40 +508,47 @@ class TomarOrdenProvider extends ChangeNotifier {
     _selectedTableId = getTableIdByName(mesasDisponibles.first) ?? '';
   }
 
-  Future<void> seleccionarOrdenExistente({
-    required String orderId,
-    required String orderNumber,
-    required String tableId,
-  }) async {
-    if (_mesas.isEmpty) {
-      await cargarMesas();
-    }
-
-    try {
-      final mesa = _mesas.firstWhere(
-        (item) => item.id.toString() == tableId.toString(),
-      );
-
-      if (!_isAreaAllowed(mesa.area)) {
-        debugPrint(
-          'La mesa de esta orden no pertenece a las áreas permitidas.',
-        );
-        return;
-      }
-
-      _isExistingTable = true;
-      _orderType = OrderType.dineIn;
-      _selectedArea = mesa.area;
-      _selectedTableId = mesa.id.toString();
-
-      _selectedExistingOrderId = orderId;
-      _selectedExistingOrderNumber = orderNumber;
-
-      notifyListeners();
-    } catch (e) {
-      debugPrint('No se encontró la mesa de la orden: $e');
-    }
+ Future<void> seleccionarOrdenExistente({
+  required String orderId,
+  required String orderNumber,
+  required String tableId,
+  required double totalAmount,
+  required int itemsCount,
+}) async {
+  if (_mesas.isEmpty) {
+    await cargarMesas();
   }
+
+  try {
+    final mesa = _mesas.firstWhere(
+      (item) => item.id.toString() == tableId.toString(),
+    );
+
+    if (!_isAreaAllowed(mesa.area)) {
+      debugPrint(
+        'La mesa de esta orden no pertenece a las áreas permitidas.',
+      );
+      return;
+    }
+
+    _isExistingTable = true;
+    _orderType = OrderType.dineIn;
+    _selectedArea = mesa.area;
+    _selectedTableId = mesa.id.toString();
+
+    _selectedExistingOrderId = orderId;
+    _selectedExistingOrderNumber = orderNumber;
+    _selectedExistingOrderTotal = totalAmount;
+    _selectedExistingOrderItemsCount = itemsCount;
+
+    _cart.clear();
+    _notes = '';
+
+    notifyListeners();
+  } catch (e) {
+    debugPrint('No se encontró la mesa de la orden: $e');
+  }
+}
 
   Future<void> seleccionarMesaExistentePorId(String tableId) async {
     if (_mesas.isEmpty) {

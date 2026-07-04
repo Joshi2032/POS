@@ -159,6 +159,40 @@ class OrdenRepository {
     }
   }
 
+  Future<void> recalcularTotalOrden(String orderId) async {
+  try {
+    final response = await _client
+        .from('order_items')
+        .select('total_price, unit_price, quantity')
+        .eq('order_id', orderId);
+
+    final items = response as List<dynamic>;
+
+    final nuevoTotal = items.fold<double>(0, (sum, item) {
+      final map = item as Map<String, dynamic>;
+
+      final totalPrice = (map['total_price'] as num?)?.toDouble();
+      final unitPrice = (map['unit_price'] as num?)?.toDouble() ?? 0.0;
+      final quantity = (map['quantity'] as num?)?.toInt() ?? 1;
+
+      return sum + (totalPrice ?? (unitPrice * quantity));
+    });
+
+    await _client
+        .from('orders')
+        .update({
+          'subtotal': nuevoTotal,
+          'total': nuevoTotal,
+        })
+        .eq('id', orderId);
+
+    debugPrint('ORDEN_REPO: Total recalculado para $orderId = $nuevoTotal');
+  } catch (e) {
+    debugPrint('ORDEN_REPO: Error recalculando total de orden $orderId: $e');
+    throw Exception('Error recalculando total de orden: $e');
+  }
+}
+
 Future<RestaurantOrder?> obtenerOrdenActivaPorMesa(String tableId) async {
   final response = await _client
       .from('orders')
@@ -183,9 +217,7 @@ Future<void> agregarItemsAOrden(
   String orderId,
   List<Map<String, dynamic>> itemsMap,
 ) async {
-
   final itemsConRelacion = itemsMap.map((item) {
-
     final itemLimpio = Map<String, dynamic>.from(item);
 
     itemLimpio['order_id'] = orderId;
@@ -195,13 +227,18 @@ Future<void> agregarItemsAOrden(
       itemLimpio.remove('total');
     }
 
-    return itemLimpio;
+    itemLimpio.removeWhere(
+      (key, value) => value == null || value.toString().trim().isEmpty,
+    );
 
+    return itemLimpio;
   }).toList();
 
   await _client
       .from('order_items')
       .insert(itemsConRelacion);
+
+  await recalcularTotalOrden(orderId);
 }
 
   // UPDATE: Cambiar el estado de la comanda (ej: de 'pendiente' a 'preparando' o 'lista')

@@ -610,7 +610,7 @@ class _OrderCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Total: ${Formatters.money(order.totalAmount)}',
+                    'Total: ${Formatters.money(order.calculatedTotal)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -817,7 +817,7 @@ class _DetalleModal extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        Formatters.money(order.totalAmount),
+                        Formatters.money(order.calculatedTotal),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 17,
