@@ -172,62 +172,64 @@ class _MesasViewState extends State<_MesasView> {
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () async {
-                if (!(_formKey.currentState?.validate() ?? false)) {
-                  return;
-                }
+  onPressed: () async {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
 
-                final nuevaMesa = Mesa(
-                  id: mesa?.id ?? '',
-                  nombre: _nombreController.text.trim(),
-                  capacidad: int.parse(
-                    _capacidadController.text.trim(),
-                  ),
-                  area: _areaController.text.trim(),
-                  estado: mesa?.estado ?? 'Libre',
-                );
+    final rootMessenger = ScaffoldMessenger.of(context);
+    final dialogNavigator = Navigator.of(dialogContext);
+    final dialogMessenger = ScaffoldMessenger.of(dialogContext);
 
-                final guardada = esEdicion
-                    ? await provider.updateMesa(
-                        mesa.id,
-                        nuevaMesa,
-                      )
-                    : await provider.addMesa(nuevaMesa);
+    final nuevaMesa = Mesa(
+      id: mesa?.id ?? '',
+      nombre: _nombreController.text.trim(),
+      capacidad: int.parse(
+        _capacidadController.text.trim(),
+      ),
+      area: _areaController.text.trim(),
+      estado: mesa?.estado ?? 'Libre',
+    );
 
-                if (!dialogContext.mounted) return;
+    final guardada = esEdicion
+        ? await provider.updateMesa(
+            mesa.id,
+            nuevaMesa,
+          )
+        : await provider.addMesa(nuevaMesa);
 
-                if (guardada) {
-                  Navigator.pop(dialogContext);
+    if (!dialogContext.mounted) return;
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        esEdicion
-                            ? 'Mesa actualizada correctamente.'
-                            : 'Mesa creada correctamente.',
-                      ),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        provider.errorMessage ??
-                            'No se pudo guardar la mesa.',
-                      ),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    Theme.of(dialogContext).primaryColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Guardar'),
-            ),
+    if (guardada) {
+      dialogNavigator.pop();
+
+      rootMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            esEdicion
+                ? 'Mesa actualizada correctamente.'
+                : 'Mesa creada correctamente.',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      dialogMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            provider.errorMessage ?? 'No se pudo guardar la mesa.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Theme.of(dialogContext).primaryColor,
+    foregroundColor: Colors.white,
+  ),
+  child: const Text('Guardar'),
+),
           ],
         );
       },

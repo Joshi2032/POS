@@ -19,12 +19,30 @@ class ProductoRendimiento {
 class DashboardProvider extends ChangeNotifier {
   // Mantenemos la firma del constructor para no romper tu main.dart
   DashboardProvider(
-      dynamic repoOrdenes, dynamic repoGastos, dynamic repoPayments) {
+    dynamic repoOrdenes,
+    dynamic repoGastos,
+    dynamic repoPayments,
+  ) {
     cargarMetricasGlobales();
   }
 
   // Cliente directo de Supabase para consultas analíticas sin pérdida de datos
   final SupabaseClient _client = Supabase.instance.client;
+
+  void _logDashboardError(
+    String context,
+    Object error, [
+    StackTrace? stackTrace,
+  ]) {
+    debugPrint('DASHBOARD_PROVIDER: $context: $error');
+
+    if (stackTrace != null) {
+      debugPrintStack(
+        label: 'DASHBOARD_PROVIDER STACK: $context',
+        stackTrace: stackTrace,
+      );
+    }
+  }
 
   // --- ESTADOS INTERNOS ---
   bool _isLoading = false;
@@ -95,32 +113,52 @@ class DashboardProvider extends ChangeNotifier {
       List<dynamic> expensesRes = [];
       try {
         expensesRes = await _client.from('expenses').select('*');
-      } catch (_) {} // Ignoramos si la tabla está vacía o no existe aún
+      } catch (e, stackTrace) {
+        _logDashboardError(
+          'No se pudieron cargar expenses. Se continuará con lista vacía',
+          e,
+          stackTrace,
+        );
+      }
 
       // 3. Extraemos los pagos a proveedores
       List<dynamic> paymentsRes = [];
       try {
         paymentsRes = await _client.from('supplier_payments').select('*');
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        _logDashboardError(
+          'No se pudieron cargar supplier_payments. Se continuará con lista vacía',
+          e,
+          stackTrace,
+        );
+      }
 
       _allOrders = ordersRes;
       _allExpenses = expensesRes;
       _allSupplierPayments = paymentsRes;
 
-      // DEBUG: mostrar información básica para depuración
       try {
         debugPrint('✅ DASHBOARD: órdenes obtenidas: ${_allOrders.length}');
         if (_allOrders.isNotEmpty) {
-          // Muestra los primeros 3 estados para inspección rápida
           final sample = _allOrders.take(3).map((o) => o['status']).toList();
           debugPrint('✅ DASHBOARD: sample statuses: $sample');
         }
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        _logDashboardError(
+          'Error imprimiendo debug inicial de órdenes',
+          e,
+          stackTrace,
+        );
+      }
 
       _procesarOperacionesFinancieras();
-    } catch (e) {
+    } catch (e, stackTrace) {
       _errorMessage = e.toString();
-      debugPrint('Error analítico en Dashboard: $e');
+      _logDashboardError(
+        'Error analítico general al cargar métricas globales',
+        e,
+        stackTrace,
+      );
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -137,8 +175,12 @@ class DashboardProvider extends ChangeNotifier {
 
     final Map<String, ProductoRendimiento> mapaProductosFiltro = {};
 
-    bool cumpleFiltroFecha(DateTime fechaObjeto, DateTime inicioSemana,
-        String mesStr, String anioStr) {
+    bool cumpleFiltroFecha(
+      DateTime fechaObjeto,
+      DateTime inicioSemana,
+      String mesStr,
+      String anioStr,
+    ) {
       if (_filterType == 'semana') {
         return fechaObjeto
                 .isAfter(inicioSemana.subtract(const Duration(seconds: 1))) &&
@@ -151,7 +193,7 @@ class DashboardProvider extends ChangeNotifier {
     }
 
     // 1. CÁLCULO DE VENTAS DE HOY Y ÓRDENES ACTIVAS
-    for (var rawJson in _allOrders) {
+    for (final rawJson in _allOrders) {
       try {
         final String dateStr =
             rawJson['created_at']?.toString().substring(0, 10) ?? '';
@@ -167,12 +209,25 @@ class DashboardProvider extends ChangeNotifier {
         if (estado == 'pending' || estado == 'preparing' || estado == 'ready') {
           _ordenesActivas++;
         }
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        _logDashboardError(
+          'Error procesando orden para ventasHoy/ordenesActivas',
+          e,
+          stackTrace,
+        );
+      }
     }
 
-    final lunesDeEstaSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
+    final lunesDeEstaSemana = ahora.subtract(
+      Duration(days: ahora.weekday - 1),
+    );
+
     final inicioSemana = DateTime(
-        lunesDeEstaSemana.year, lunesDeEstaSemana.month, lunesDeEstaSemana.day);
+      lunesDeEstaSemana.year,
+      lunesDeEstaSemana.month,
+      lunesDeEstaSemana.day,
+    );
+
     final mesActualStr = ahora.toIso8601String().substring(0, 7);
     final anioActualStr = ahora.year.toString();
 
@@ -182,7 +237,7 @@ class DashboardProvider extends ChangeNotifier {
       _currentIngresos = List.generate(7, (_) => 0.0);
       _currentGastos = List.generate(7, (_) => 0.0);
 
-      for (var rawJson in _allOrders) {
+      for (final rawJson in _allOrders) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
           final double totalValue =
@@ -200,10 +255,16 @@ class DashboardProvider extends ChangeNotifier {
               }
             }
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          _logDashboardError(
+            'Error agrupando ingresos semanales desde orders',
+            e,
+            stackTrace,
+          );
+        }
       }
 
-      for (var rawJson in _allExpenses) {
+      for (final rawJson in _allExpenses) {
         try {
           final String dateStr =
               rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
@@ -220,10 +281,16 @@ class DashboardProvider extends ChangeNotifier {
               }
             }
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          _logDashboardError(
+            'Error agrupando gastos semanales desde expenses',
+            e,
+            stackTrace,
+          );
+        }
       }
 
-      for (var rawJson in _allSupplierPayments) {
+      for (final rawJson in _allSupplierPayments) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
           final double amountValue =
@@ -239,14 +306,20 @@ class DashboardProvider extends ChangeNotifier {
               }
             }
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          _logDashboardError(
+            'Error agrupando pagos semanales desde supplier_payments',
+            e,
+            stackTrace,
+          );
+        }
       }
     } else if (_filterType == 'mes') {
       _currentLabels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
       _currentIngresos = List.generate(4, (_) => 0.0);
       _currentGastos = List.generate(4, (_) => 0.0);
 
-      for (var rawJson in _allOrders) {
+      for (final rawJson in _allOrders) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
           final double totalValue =
@@ -259,10 +332,16 @@ class DashboardProvider extends ChangeNotifier {
             final indiceSemana = ((dia - 1) / 7).floor().clamp(0, 3);
             _currentIngresos[indiceSemana] += totalValue;
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          _logDashboardError(
+            'Error agrupando ingresos mensuales desde orders',
+            e,
+            stackTrace,
+          );
+        }
       }
 
-      for (var rawJson in _allExpenses) {
+      for (final rawJson in _allExpenses) {
         try {
           final String dateStr =
               rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
@@ -274,10 +353,16 @@ class DashboardProvider extends ChangeNotifier {
             final indiceSemana = ((dia - 1) / 7).floor().clamp(0, 3);
             _currentGastos[indiceSemana] += amountValue;
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          _logDashboardError(
+            'Error agrupando gastos mensuales desde expenses',
+            e,
+            stackTrace,
+          );
+        }
       }
 
-      for (var rawJson in _allSupplierPayments) {
+      for (final rawJson in _allSupplierPayments) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
           final double amountValue =
@@ -288,14 +373,20 @@ class DashboardProvider extends ChangeNotifier {
             final indiceSemana = ((dia - 1) / 7).floor().clamp(0, 3);
             _currentGastos[indiceSemana] += amountValue;
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          _logDashboardError(
+            'Error agrupando pagos mensuales desde supplier_payments',
+            e,
+            stackTrace,
+          );
+        }
       }
     } else {
       _currentLabels = ['Trim 1', 'Trim 2', 'Trim 3', 'Trim 4'];
       _currentIngresos = List.generate(4, (_) => 0.0);
       _currentGastos = List.generate(4, (_) => 0.0);
 
-      for (var rawJson in _allOrders) {
+      for (final rawJson in _allOrders) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
           final double totalValue =
@@ -308,10 +399,16 @@ class DashboardProvider extends ChangeNotifier {
             final indiceTrimestre = ((mes - 1) / 3).floor().clamp(0, 3);
             _currentIngresos[indiceTrimestre] += totalValue;
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          _logDashboardError(
+            'Error agrupando ingresos anuales desde orders',
+            e,
+            stackTrace,
+          );
+        }
       }
 
-      for (var rawJson in _allExpenses) {
+      for (final rawJson in _allExpenses) {
         try {
           final String dateStr =
               rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
@@ -323,10 +420,16 @@ class DashboardProvider extends ChangeNotifier {
             final indiceTrimestre = ((mes - 1) / 3).floor().clamp(0, 3);
             _currentGastos[indiceTrimestre] += amountValue;
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          _logDashboardError(
+            'Error agrupando gastos anuales desde expenses',
+            e,
+            stackTrace,
+          );
+        }
       }
 
-      for (var rawJson in _allSupplierPayments) {
+      for (final rawJson in _allSupplierPayments) {
         try {
           final String dateStr = rawJson['created_at'] ?? '';
           final double amountValue =
@@ -337,12 +440,18 @@ class DashboardProvider extends ChangeNotifier {
             final indiceTrimestre = ((mes - 1) / 3).floor().clamp(0, 3);
             _currentGastos[indiceTrimestre] += amountValue;
           }
-        } catch (_) {}
+        } catch (e, stackTrace) {
+          _logDashboardError(
+            'Error agrupando pagos anuales desde supplier_payments',
+            e,
+            stackTrace,
+          );
+        }
       }
     }
 
     // 3. EXTRACCIÓN REAL DE PRODUCTOS
-    for (var rawJson in _allOrders) {
+    for (final rawJson in _allOrders) {
       try {
         final String dateStr = rawJson['created_at'] ?? '';
         final String estado =
@@ -353,17 +462,23 @@ class DashboardProvider extends ChangeNotifier {
           final fechaOrd = DateTime.parse(dateStr);
 
           if (cumpleFiltroFecha(
-              fechaOrd, inicioSemana, mesActualStr, anioActualStr)) {
+            fechaOrd,
+            inicioSemana,
+            mesActualStr,
+            anioActualStr,
+          )) {
             // Leemos los order_items obtenidos gracias a la consulta '.select("*, order_items(*)")'
             final items = rawJson['order_items'] ?? [];
+
             if (items is List) {
-              for (var item in items) {
+              for (final item in items) {
                 final nombreProd =
                     (item['product_name'] ?? 'Producto Desconocido').toString();
 
                 // Lógica de clasificación automática
                 String categoriaProd = 'General';
                 final rawName = nombreProd.toLowerCase();
+
                 if (rawName.contains('arrachera') ||
                     rawName.contains('t-bone') ||
                     rawName.contains('corte')) {
@@ -377,13 +492,16 @@ class DashboardProvider extends ChangeNotifier {
                 }
 
                 final int cantidad = ((item['quantity'] ?? 1) as num).toInt();
+
                 final double precioSubtotal =
                     ((item['total_price'] ?? item['unit_price'] ?? 0.0) as num)
                         .toDouble();
 
                 if (mapaProductosFiltro.containsKey(nombreProd)) {
-                  mapaProductosFiltro[nombreProd]!.unidadesVendidas += cantidad;
-                  mapaProductosFiltro[nombreProd]!.montoTotal += precioSubtotal;
+                  mapaProductosFiltro[nombreProd]!.unidadesVendidas +=
+                      cantidad;
+                  mapaProductosFiltro[nombreProd]!.montoTotal +=
+                      precioSubtotal;
                 } else {
                   mapaProductosFiltro[nombreProd] = ProductoRendimiento(
                     nombre: nombreProd,
@@ -396,7 +514,13 @@ class DashboardProvider extends ChangeNotifier {
             }
           }
         }
-      } catch (_) {}
+      } catch (e, stackTrace) {
+        _logDashboardError(
+          'Error procesando rendimiento de productos',
+          e,
+          stackTrace,
+        );
+      }
     }
 
     _currentProductos = mapaProductosFiltro.values.toList();
@@ -414,10 +538,19 @@ class DashboardProvider extends ChangeNotifier {
     }
 
     _utilidadFiltroTotal = _ingresoFiltroTotal - totalGastosFiltro;
-    // DEBUG: resultado rápido de métricas calculadas
+
     try {
       debugPrint(
-          '✅ DASHBOARD: ventasHoy=${_ventasHoy.toStringAsFixed(2)}, ordenesActivas=$_ordenesActivas, ingresoFiltro=${_ingresoFiltroTotal.toStringAsFixed(2)}');
-    } catch (_) {}
+        '✅ DASHBOARD: ventasHoy=${_ventasHoy.toStringAsFixed(2)}, '
+        'ordenesActivas=$_ordenesActivas, '
+        'ingresoFiltro=${_ingresoFiltroTotal.toStringAsFixed(2)}',
+      );
+    } catch (e, stackTrace) {
+      _logDashboardError(
+        'Error imprimiendo debug final de métricas',
+        e,
+        stackTrace,
+      );
+    }
   }
 }
