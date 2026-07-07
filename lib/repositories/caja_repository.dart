@@ -91,19 +91,19 @@ class CajaRepository {
       r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
     );
 
-    // 1. Buscar primero la orden para obtener table_id antes de pagar
+    // 1. Buscar primero la orden para obtener table_id y status antes de pagar
     Map<String, dynamic>? ordenData;
 
     if (uuidRegExp.hasMatch(orderId)) {
       ordenData = await _client
           .from('orders')
-          .select('id, order_number, table_id, order_type')
+          .select('id, order_number, table_id, order_type, status')
           .eq('id', orderId)
           .maybeSingle();
     } else {
       ordenData = await _client
           .from('orders')
-          .select('id, order_number, table_id, order_type')
+          .select('id, order_number, table_id, order_type, status')
           .eq('order_number', orderId)
           .maybeSingle();
     }
@@ -113,11 +113,20 @@ class CajaRepository {
     }
 
     final String realOrderId = ordenData['id'].toString();
-
     final String? tableId = ordenData['table_id']?.toString();
 
+    final String statusActual =
+        ordenData['status']?.toString().toLowerCase().trim() ?? '';
+
+    // Evita cobrar órdenes que todavía no fueron entregadas
+    if (statusActual != 'delivered' && statusActual != 'entregada') {
+      throw Exception(
+        'La orden debe estar entregada antes de cobrar. Estado actual: $statusActual',
+      );
+    }
+
     debugPrint(
-      'CAJA_REPO: cobrando orden=$realOrderId table_id=$tableId metodo=$paymentMethodDb total=$total',
+      'CAJA_REPO: cobrando orden=$realOrderId table_id=$tableId metodo=$paymentMethodDb total=$total status=$statusActual',
     );
 
     // 2. Marcar orden como pagada
@@ -129,7 +138,7 @@ class CajaRepository {
       'subtotal': total,
     }).eq('id', realOrderId);
 
-    // 3. Liberar mesa si la orden tiene mesa
+    // 3. Liberar mesa solo después de haber cobrado una orden entregada
     if (tableId != null && tableId.trim().isNotEmpty) {
       await _client.from('restaurant_tables').update({
         'status': 'free',

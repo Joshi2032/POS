@@ -28,18 +28,12 @@ class CajaProvider extends ChangeNotifier {
   String? _errorMessage;
 
   // --- GETTERS (Exactamente idénticos a los que necesita tu UI original) ---
+// --- GETTERS (Exactamente idénticos a los que necesita tu UI original) ---
 List<CashOrder> get pendingOrders =>
     _ordenesProvider.orders.where((o) {
       final status = o.status.toLowerCase().trim();
 
-      return status == 'pending' ||
-          status == 'pendiente' ||
-          status == 'preparing' ||
-          status == 'preparando' ||
-          status == 'ready' ||
-          status == 'lista' ||
-          status == 'delivered' ||
-          status == 'entregada';
+      return status == 'delivered' || status == 'entregada';
     }).map(_mapRestaurantToCashOrder).toList();
 
 List<CashOrder> get paidToday =>
