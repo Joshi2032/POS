@@ -395,6 +395,7 @@ class _CombosViewState extends State<_CombosView> {
                                             color: isDark
                                                 ? Colors.white60
                                                 : Colors.blueGrey),
+                                        tooltip: 'Editar combo',
                                         onPressed: () => _abrirFormularioModal(
                                             provider,
                                             combo: combo),
@@ -402,6 +403,7 @@ class _CombosViewState extends State<_CombosView> {
                                       IconButton(
                                         icon: const Icon(Icons.delete_outline,
                                             size: 20, color: Colors.redAccent),
+                                        tooltip: 'Eliminar combo',
                                         onPressed: () =>
                                             _solicitarBorrado(provider, combo),
                                       ),

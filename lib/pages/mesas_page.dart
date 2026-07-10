@@ -661,6 +661,10 @@ class _FiltrosMesas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unselectedBg = isDark ? const Color(0xFF1E1E1E) : Colors.grey[200];
+    final unselectedText = isDark ? Colors.white70 : Colors.black87;
+
     return Wrap(
       spacing: 10,
       runSpacing: 10,
@@ -682,7 +686,7 @@ class _FiltrosMesas extends StatelessWidget {
             decoration: BoxDecoration(
               color: seleccionado
                   ? primaryColor
-                  : const Color(0xFF1E1E1E),
+                  : unselectedBg,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: seleccionado
@@ -697,7 +701,7 @@ class _FiltrosMesas extends StatelessWidget {
                 fontSize: isCompact ? 13 : 14,
                 color: seleccionado
                     ? Colors.white
-                    : Colors.white70,
+                    : unselectedText,
               ),
             ),
           ),
@@ -997,13 +1001,15 @@ class _KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         vertical: 20,
         horizontal: 12,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: isDark ? const Color(0xFF1A1A1A) : Colors.grey[100],
         border: Border.all(
           color: data.color,
         ),
@@ -1028,10 +1034,10 @@ class _KpiCard extends StatelessWidget {
             fit: BoxFit.scaleDown,
             child: Text(
               data.label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
           ),

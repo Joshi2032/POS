@@ -105,37 +105,18 @@ class DashboardProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Extraemos las órdenes con TODOS sus items relacionados
-      final ordersRes =
-          await _client.from('orders').select('*, order_items(*)');
+      // Las 3 consultas son independientes entre sí, así que corren en
+      // paralelo en vez de una tras otra (antes tardaba la suma de las 3
+      // consultas; ahora tarda lo que tarde la más lenta de las 3).
+      final resultados = await Future.wait<List<dynamic>>([
+        _cargarOrdersConItems(),
+        _cargarExpensesSeguro(),
+        _cargarSupplierPaymentsSeguro(),
+      ]);
 
-      // 2. Extraemos los gastos
-      List<dynamic> expensesRes = [];
-      try {
-        expensesRes = await _client.from('expenses').select('*');
-      } catch (e, stackTrace) {
-        _logDashboardError(
-          'No se pudieron cargar expenses. Se continuará con lista vacía',
-          e,
-          stackTrace,
-        );
-      }
-
-      // 3. Extraemos los pagos a proveedores
-      List<dynamic> paymentsRes = [];
-      try {
-        paymentsRes = await _client.from('supplier_payments').select('*');
-      } catch (e, stackTrace) {
-        _logDashboardError(
-          'No se pudieron cargar supplier_payments. Se continuará con lista vacía',
-          e,
-          stackTrace,
-        );
-      }
-
-      _allOrders = ordersRes;
-      _allExpenses = expensesRes;
-      _allSupplierPayments = paymentsRes;
+      _allOrders = resultados[0];
+      _allExpenses = resultados[1];
+      _allSupplierPayments = resultados[2];
 
       try {
         debugPrint('✅ DASHBOARD: órdenes obtenidas: ${_allOrders.length}');
@@ -162,6 +143,39 @@ class DashboardProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<List<dynamic>> _cargarOrdersConItems() async {
+    return await _client.from('orders').select('*, order_items(*)');
+  }
+
+  // Se degradan a lista vacía si fallan, en vez de tumbar toda la carga del
+  // dashboard (mismo comportamiento que antes, ahora extraído para poder
+  // correr las 3 consultas en paralelo con Future.wait).
+  Future<List<dynamic>> _cargarExpensesSeguro() async {
+    try {
+      return await _client.from('expenses').select('*');
+    } catch (e, stackTrace) {
+      _logDashboardError(
+        'No se pudieron cargar expenses. Se continuará con lista vacía',
+        e,
+        stackTrace,
+      );
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> _cargarSupplierPaymentsSeguro() async {
+    try {
+      return await _client.from('supplier_payments').select('*');
+    } catch (e, stackTrace) {
+      _logDashboardError(
+        'No se pudieron cargar supplier_payments. Se continuará con lista vacía',
+        e,
+        stackTrace,
+      );
+      return [];
     }
   }
 

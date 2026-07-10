@@ -66,4 +66,29 @@ class InventarioRepository {
       debugPrint('Advertencia Historial: $e');
     }
   }
+
+  /// Incremento/decremento ATÓMICO de stock (a diferencia de actualizarStock,
+  /// que sobreescribe con un valor absoluto calculado en el cliente y puede
+  /// perder ajustes concurrentes). Usa la función de Postgres
+  /// `adjust_inventory_stock` (ver supabase/inventory_functions.sql) para que
+  /// el cálculo `quantity + delta` ocurra en el servidor sobre el valor
+  /// actual, no sobre una copia potencialmente desactualizada en el cliente.
+  /// También registra el movimiento en inventory_movements dentro de la
+  /// misma función, así que NO debe llamarse registrarMovimiento aparte.
+  Future<double> ajustarStockAtomico(
+    String itemId,
+    double delta,
+    String razon,
+  ) async {
+    try {
+      final resultado = await _client.rpc('adjust_inventory_stock', params: {
+        'p_item_id': itemId,
+        'p_delta': delta,
+        'p_reason': razon,
+      });
+      return (resultado as num).toDouble();
+    } catch (e) {
+      throw Exception('Error al ajustar stock de forma atómica: $e');
+    }
+  }
 }

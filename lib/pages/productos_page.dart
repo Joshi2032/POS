@@ -124,6 +124,7 @@ class _ProductosView extends StatelessWidget {
                                         Icons.edit,
                                         color: Colors.blue,
                                       ),
+                                      tooltip: 'Editar producto',
                                       onPressed: () =>
                                           _mostrarDialogoFormulario(
                                               context, producto),
@@ -134,6 +135,7 @@ class _ProductosView extends StatelessWidget {
                                         Icons.delete,
                                         color: Colors.red,
                                       ),
+                                      tooltip: 'Eliminar producto',
                                       onPressed: () => _confirmarEliminar(
                                           context, provider, producto),
                                     ),

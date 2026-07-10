@@ -265,22 +265,29 @@ class PrinterService {
           final String primeraParte =
               nombreLimpio.substring(0, anchoDescDisponible);
 
-          final String segundaParte =
-              nombreLimpio.substring(anchoDescDisponible).trim();
-
           bytes.addAll(
             generator.text(
               filaProducto(cantTexto, primeraParte, importeTexto),
             ),
           );
 
-          if (segundaParte.isNotEmpty) {
+          // Líneas de continuación: se imprime el NOMBRE COMPLETO restante,
+          // envolviendo en tantas líneas como haga falta, en vez de
+          // truncarlo con "..." y perder el resto del texto (importante
+          // para combos con nombres descriptivos largos).
+          final String indentacion = ''.padRight(anchoCant + 1);
+          String resto = nombreLimpio.substring(anchoDescDisponible).trim();
+
+          while (resto.isNotEmpty) {
+            final int tomar = resto.length > anchoDescDisponible
+                ? anchoDescDisponible
+                : resto.length;
+
             bytes.addAll(
-              generator.text(
-                ''.padRight(anchoCant + 1) +
-                    _truncar(segundaParte, anchoDescDisponible),
-              ),
+              generator.text('$indentacion${resto.substring(0, tomar)}'),
             );
+
+            resto = resto.substring(tomar).trim();
           }
         }
       }
@@ -394,8 +401,12 @@ class PrinterService {
   // HELPERS DE TEXTO
   // ---------------------------------------------------------------------
   static String _filaDosColumnas(String izquierda, String derecha) {
-    final String izq = _limpiarTexto(izquierda);
-    final String der = _limpiarTexto(derecha);
+    // Truncamos cada lado individualmente al ancho del papel: si no, cuando
+    // uno de los dos (típicamente el nombre del mesero) es más largo que
+    // _anchoPapel por sí solo, la línea de abajo se pasaría del ancho físico
+    // del papel y la impresora la cortaría/enrollaría de forma incorrecta.
+    final String izq = _truncar(_limpiarTexto(izquierda), _anchoPapel);
+    final String der = _truncar(_limpiarTexto(derecha), _anchoPapel);
 
     final int espacioDisponible = _anchoPapel - izq.length - der.length;
 

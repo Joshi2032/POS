@@ -225,6 +225,35 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
 
+                      if (provider.hasError) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.red.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  color: Colors.red),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'No se pudieron cargar los pagos: '
+                                  '${provider.errorMessage}',
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
                       // ── HEADER ──────────────────────────────────────
                       if (isCompact) ...[
                         SectionHeader(
@@ -364,7 +393,7 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                               onEdit: () =>
                                   _openEditor(provider, payment: payment),
                               onDelete: () =>
-                                  provider.removePayment(payment.id),
+                                  _confirmarEliminarPago(provider, payment),
                             );
                           },
                         ),
@@ -424,6 +453,56 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
           },
         ),
       ),
+    );
+  }
+
+  void _confirmarEliminarPago(
+    PaymentsProvider provider,
+    ProviderPayment payment,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar pago'),
+          content: Text(
+            '¿Seguro que deseas eliminar el pago a "${payment.provider}" '
+            'por ${_money.format(payment.amount)}? '
+            'Esta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(dialogContext);
+
+                final exito = await provider.removePayment(payment.id);
+
+                if (!exito) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        provider.errorMessage ??
+                            'No se pudo eliminar el pago.',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -591,6 +670,7 @@ class _PaymentTile extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.edit_outlined,
                       color: Colors.blueGrey, size: 18),
+                  tooltip: 'Editar pago',
                   onPressed: onEdit,
                   padding: const EdgeInsets.all(4),
                   constraints: const BoxConstraints(),
@@ -599,6 +679,7 @@ class _PaymentTile extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.delete_outline,
                       color: Colors.redAccent, size: 18),
+                  tooltip: 'Eliminar pago',
                   onPressed: onDelete,
                   padding: const EdgeInsets.all(4),
                   constraints: const BoxConstraints(),
@@ -647,11 +728,13 @@ class _PaymentTile extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.edit_outlined,
                   color: Colors.blueGrey, size: 20),
+              tooltip: 'Editar pago',
               onPressed: onEdit,
             ),
             IconButton(
               icon: const Icon(Icons.delete_outline,
                   color: Colors.redAccent, size: 20),
+              tooltip: 'Eliminar pago',
               onPressed: onDelete,
             ),
           ],

@@ -59,21 +59,32 @@ class PaymentsProvider extends ChangeNotifier {
   }
 
   // --- ESTADÍSTICAS MÉTRICAS (KPI Cards de tu pantalla) ---
-  
+
+  // Offset fijo de México zona Centro (America/Mexico_City) respecto a UTC.
+  // Mismo criterio que caja_repository.dart, para que "hoy"/"esta semana" no
+  // se desfase cerca de medianoche si el reloj del dispositivo usa otra
+  // zona horaria.
+  static const Duration _offsetMexicoCentro = Duration(hours: -6);
+
+  DateTime get _ahoraMexico =>
+      DateTime.now().toUtc().add(_offsetMexicoCentro);
+
   double get todayTotal {
-    final String hoy = DateTime.now().toIso8601String().substring(0, 10);
+    final String hoy =
+        _ahoraMexico.toIso8601String().substring(0, 10);
     return _payments
         .where((p) => p.date == hoy)
         .fold(0.0, (sum, item) => sum + item.amount);
   }
 
   int get todayPaymentsCount {
-    final String hoy = DateTime.now().toIso8601String().substring(0, 10);
+    final String hoy =
+        _ahoraMexico.toIso8601String().substring(0, 10);
     return _payments.where((p) => p.date == hoy).length;
   }
 
   double get weekTotal {
-    final ahora = DateTime.now();
+    final ahora = _ahoraMexico;
     final sieteDiasAntes = ahora.subtract(const Duration(days: 7));
     return _payments.where((p) {
       try {
@@ -86,7 +97,8 @@ class PaymentsProvider extends ChangeNotifier {
   }
 
   double get monthTotal {
-    final String mesActual = DateTime.now().toIso8601String().substring(0, 7); // "YYYY-MM"
+    final String mesActual =
+        _ahoraMexico.toIso8601String().substring(0, 7); // "YYYY-MM"
     return _payments
         .where((p) => p.date.startsWith(mesActual))
         .fold(0.0, (sum, item) => sum + item.amount);

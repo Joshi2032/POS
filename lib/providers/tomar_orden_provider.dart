@@ -236,6 +236,10 @@ class TomarOrdenProvider extends ChangeNotifier {
     final search = _searchTerm.trim().toLowerCase();
 
     return _products.where((product) {
+      // Un producto desactivado no debe poder agregarse a una orden nueva,
+      // aunque siga existiendo en el catálogo para administración.
+      if (!product.active) return false;
+
       final matchesCategory =
           _selectedCategory == 'Todos' || product.category == _selectedCategory;
 
@@ -277,7 +281,7 @@ class TomarOrdenProvider extends ChangeNotifier {
           category: 'Combos',
           stock: 999,
           unit: 'combo',
-          active: true,
+          active: combo.active,
         );
       }).toList();
 
@@ -413,6 +417,11 @@ class TomarOrdenProvider extends ChangeNotifier {
   }
 
   Future<void> setOrderType(OrderType type) async {
+    // Si ya está seleccionado este tipo, no hacemos nada: evita que un
+    // doble-tap accidental sobre el mismo chip reasigne silenciosamente el
+    // área/mesa (y con ella el pedido) mientras el carrito ya tiene productos.
+    if (type == _orderType) return;
+
     _orderType = type;
 
     _selectedExistingOrderId = '';
@@ -459,6 +468,8 @@ class TomarOrdenProvider extends ChangeNotifier {
 
     _selectedExistingOrderId = '';
     _selectedExistingOrderNumber = '';
+    _selectedExistingOrderTotal = 0.0;
+    _selectedExistingOrderItemsCount = 0;
 
     _selectedTableId = '';
     _seleccionarPrimeraMesaDisponible();
@@ -490,6 +501,8 @@ class TomarOrdenProvider extends ChangeNotifier {
 
     _selectedExistingOrderId = '';
     _selectedExistingOrderNumber = '';
+    _selectedExistingOrderTotal = 0.0;
+    _selectedExistingOrderItemsCount = 0;
 
     notifyListeners();
   }

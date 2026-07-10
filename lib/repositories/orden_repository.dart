@@ -166,9 +166,41 @@ class OrdenRepository {
           }
           rethrow;
         }
+
+        await _descontarInventarioPorVenta(itemsMap);
       }
     } catch (e) {
       throw Exception('Error al insertar comanda en Supabase: $e');
+    }
+  }
+
+  /// Descuenta de inventory_items los insumos de receta de los productos
+  /// vendidos (ver supabase/inventory_functions.sql). Es "mejor esfuerzo":
+  /// si falla (ej. la función RPC no existe todavía porque no se ha corrido
+  /// ese script), NO debe bloquear ni revertir la venta, solo se registra
+  /// en el log de depuración.
+  Future<void> _descontarInventarioPorVenta(
+    List<Map<String, dynamic>> itemsMap,
+  ) async {
+    try {
+      final itemsValidos = itemsMap
+          .where((item) =>
+              item['product_id'] != null &&
+              item['product_id'].toString().trim().isNotEmpty)
+          .map((item) => {
+                'product_id': item['product_id'].toString(),
+                'quantity': item['quantity'] ?? 1,
+              })
+          .toList();
+
+      if (itemsValidos.isEmpty) return;
+
+      await _client.rpc('descontar_inventario_por_venta', params: {
+        'p_items': itemsValidos,
+      });
+    } catch (e) {
+      debugPrint(
+          'Advertencia: no se pudo descontar el inventario de la venta: $e');
     }
   }
 
@@ -250,6 +282,8 @@ Future<void> agregarItemsAOrden(
   await _client
       .from('order_items')
       .insert(itemsConRelacion);
+
+  await _descontarInventarioPorVenta(itemsMap);
 
   // Los productos ya quedaron guardados en este punto. Si el recálculo del
   // total falla (ej. corte de red momentáneo), reintentamos una vez antes

@@ -824,6 +824,7 @@ class _GastoModal extends StatelessWidget {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
+                        tooltip: 'Cerrar',
                         onPressed: onCerrar,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),

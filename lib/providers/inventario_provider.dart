@@ -129,13 +129,30 @@ class InventarioProvider extends ChangeNotifier {
     }
   }
 
+  // Usa el ajuste ATÓMICO (delta), no ajustarStock (valor absoluto), porque
+  // una compra es un incremento relativo: si dos compras del mismo insumo se
+  // registran casi al mismo tiempo, ambas deben sumarse, no que la segunda
+  // sobreescriba a la primera.
   Future<void> aumentarStockPorCompra(String itemId, double cantidad) async {
+    _setLoading(true);
+    _clearError();
     try {
-      final item = _items.firstWhere((i) => i.id == itemId);
-      await ajustarStock(item, item.stock + cantidad, 'Compra a proveedor');
+      if (cantidad <= 0) {
+        throw Exception('La cantidad de la compra debe ser mayor a 0.');
+      }
+
+      await _repository.ajustarStockAtomico(
+        itemId,
+        cantidad,
+        'Compra a proveedor',
+      );
+      await cargarInventario();
     } catch (e) {
-      _errorMessage = 'Insumo no localizado en el lote actual: $e';
+      _errorMessage = 'No se pudo registrar la compra: $e';
+      debugPrint('Error en aumentarStockPorCompra: $e');
       notifyListeners();
+    } finally {
+      _setLoading(false);
     }
   }
 

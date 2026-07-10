@@ -37,6 +37,34 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (provider.hasError) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.red.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: Colors.red),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'No se pudieron cargar las reservaciones: '
+                                '${provider.errorMessage}',
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     // ── HEADER ──────────────────────────────────────────
                     if (isCompact) ...[
                       _HeaderTitle(textColor: textColor, isDark: isDark),
@@ -631,7 +659,8 @@ class _AccionesRow extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.delete_outline,
                 color: Colors.redAccent, size: 18),
-            onPressed: () => provider.eliminarReservacion(res.id),
+            tooltip: 'Eliminar reservación',
+            onPressed: () => _confirmarEliminar(context, provider, res),
             padding: const EdgeInsets.all(4),
             constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
           ),
@@ -660,9 +689,60 @@ class _AccionesRow extends StatelessWidget {
         IconButton(
           icon:
               const Icon(Icons.delete_outline, color: Colors.redAccent),
-          onPressed: () => provider.eliminarReservacion(res.id),
+          tooltip: 'Eliminar reservación',
+          onPressed: () => _confirmarEliminar(context, provider, res),
         ),
       ],
+    );
+  }
+
+  void _confirmarEliminar(
+    BuildContext context,
+    ReservacionesProvider provider,
+    Reservacion res,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar reservación'),
+          content: Text(
+            '¿Seguro que deseas eliminar la reservación de '
+            '"${res.cliente}"? Esta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(dialogContext);
+
+                final exito = await provider.eliminarReservacion(res.id);
+
+                if (!exito) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        provider.errorMessage ??
+                            'No se pudo eliminar la reservación.',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -722,6 +802,7 @@ class _ReservacionModal extends StatelessWidget {
                   ),
                   IconButton(
                     icon: Icon(Icons.close, color: textColor),
+                    tooltip: 'Cerrar',
                     onPressed: () => provider.cerrarModal(),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/restaurant_order.dart';
 import '../providers/ordenes_provider.dart' ;
+import '../services/printer_service.dart';
 import '../utils/formatters.dart';
 import '../utils/ui_utils.dart';
 
@@ -95,6 +96,36 @@ class _OrdenesView extends StatelessWidget {
                       padding: EdgeInsets.fromLTRB(hPad, hPad, hPad, 0),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
+
+                          if (provider.errorMessage != null) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.red.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline,
+                                      color: Colors.red),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'No se pudieron cargar las órdenes: '
+                                      '${provider.errorMessage}',
+                                      style:
+                                          const TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
 
                           // ── HEADER ─────────────────────────────────────
                           if (isCompact) ...[
@@ -702,6 +733,7 @@ class _DetalleModal extends StatelessWidget {
                       ),
                       IconButton(
                         icon: const Icon(Icons.close),
+                        tooltip: 'Cerrar',
                         onPressed: provider.cerrarModal,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -916,6 +948,17 @@ class _DetalleModal extends StatelessWidget {
                             );
                           },
                         ),
+                      if (order.status == 'paid' ||
+                          order.status == 'pagada')
+                        OutlinedButton.icon(
+                          icon: const Icon(
+                            Icons.print_outlined,
+                            size: 16,
+                          ),
+                          label: const Text('Reimprimir ticket'),
+                          onPressed: () =>
+                              _reimprimirTicket(context, order),
+                        ),
                       if (order.status != 'entregada' &&
                           order.status != 'cancelada')
                         OutlinedButton.icon(
@@ -941,6 +984,35 @@ class _DetalleModal extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _reimprimirTicket(
+    BuildContext context,
+    RestaurantOrder order,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Imprimiendo ticket...'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+
+    final exito = await PrinterService.imprimirTicketCaja(order);
+
+    if (!context.mounted) return;
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          exito
+              ? 'Ticket reimpreso correctamente.'
+              : 'No se pudo reimprimir: revisa la conexión de la impresora.',
+        ),
+        backgroundColor: exito ? Colors.green : Colors.orange,
       ),
     );
   }

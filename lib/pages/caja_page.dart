@@ -5,9 +5,11 @@ import 'package:provider/provider.dart';
 import '../providers/ordenes_provider.dart';
 import '../providers/mesas_provider.dart';
 import '../providers/caja_provider.dart';
+import '../providers/historial_cortes_provider.dart';
 
 // Modelos
 import '../models/restaurant_order.dart';
+import '../models/corte_caja.dart';
 import '../ui_models/cash_order.dart';
 
 // Servicios y UI
@@ -74,7 +76,34 @@ class _CajaPageState extends State<CajaPage> {
               title: '💰 Módulo de Caja',
               subtitle:
                   '${ordenesPendientes.length} cuentas pendientes de cobro',
+              actionLabel: 'Cerrar Corte de Caja',
+              onAction: () => _abrirDialogoCerrarCorte(context),
             ),
+            if (ordenesProvider.errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No se pudieron cargar las cuentas: '
+                        '${ordenesProvider.errorMessage}',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             Expanded(
               child: RefreshIndicator(
@@ -964,5 +993,272 @@ class _CajaPageState extends State<CajaPage> {
     ).whenComplete(() {
       montoRecibidoCtrl.dispose();
     });
+  }
+
+  Widget _filaResumenCorte(String label, double valor, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label),
+          Text(
+            '\$${valor.toStringAsFixed(2)}',
+            style: TextStyle(fontWeight: FontWeight.w600, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _abrirDialogoCerrarCorte(BuildContext context) async {
+    final cajaProvider = context.read<CajaProvider>();
+    final historialProvider = context.read<HistorialCortesProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    Map<String, dynamic>? resumen;
+    String? errorResumen;
+
+    try {
+      resumen = await cajaProvider.obtenerResumenParaCorte();
+    } catch (e) {
+      errorResumen = e.toString();
+    }
+
+    if (!context.mounted) return;
+
+    if (resumen == null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se pudo calcular el resumen de ventas: $errorResumen',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final double ventasEfectivo = (resumen['cash'] as num).toDouble();
+    final double ventasTarjeta = (resumen['card'] as num).toDouble();
+    final double ventasTransferencia = (resumen['transfer'] as num).toDouble();
+    final int totalOrdenes = resumen['totalOrdenes'] as int;
+    final double pagosProveedores =
+        (resumen['supplierPayments'] as num).toDouble();
+
+    final fondoCtrl = TextEditingController(text: '0');
+    final contadoCtrl = TextEditingController();
+    final notasCtrl = TextEditingController();
+    bool guardando = false;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            final fondo = double.tryParse(fondoCtrl.text.trim()) ?? 0.0;
+            final contado = double.tryParse(contadoCtrl.text.trim()) ?? 0.0;
+            final esperado = fondo + ventasEfectivo - pagosProveedores;
+            final diferencia = contado - esperado;
+            final width = MediaQuery.sizeOf(dialogContext).width;
+
+            return AlertDialog(
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: width < 480 ? 16 : 40,
+                vertical: 24,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Cerrar Corte de Caja',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              content: SizedBox(
+                width: width < 480 ? double.infinity : 420,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Resumen de ventas de hoy ($totalOrdenes orden(es) pagada(s)):',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      _filaResumenCorte('Efectivo', ventasEfectivo),
+                      _filaResumenCorte('Tarjeta', ventasTarjeta),
+                      _filaResumenCorte('Transferencia', ventasTransferencia),
+                      _filaResumenCorte(
+                        'Pagos a proveedores',
+                        -pagosProveedores,
+                        color: Colors.red,
+                      ),
+                      const Divider(height: 24),
+                      TextField(
+                        controller: fondoCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Fondo inicial de caja',
+                          prefixText: '\$ ',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Efectivo esperado:'),
+                            Text(
+                              '\$${esperado.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: contadoCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: 'Efectivo contado físicamente',
+                          prefixText: '\$ ',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (_) => setDialogState(() {}),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (diferencia == 0
+                                  ? Colors.grey
+                                  : diferencia > 0
+                                      ? Colors.green
+                                      : Colors.red)
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Diferencia:'),
+                            Text(
+                              '\$${diferencia.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: diferencia == 0
+                                    ? null
+                                    : diferencia > 0
+                                        ? Colors.green
+                                        : Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: notasCtrl,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Notas (opcional)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancelar'),
+                ),
+                ElevatedButton(
+                  onPressed: guardando
+                      ? null
+                      : () async {
+                          setDialogState(() => guardando = true);
+
+                          final corte = CorteCaja(
+                            id: '',
+                            status: 'closed',
+                            openingAmount: fondo,
+                            cashSales: ventasEfectivo,
+                            cardSales: ventasTarjeta,
+                            transferSales: ventasTransferencia,
+                            supplierPaymentsTotal: pagosProveedores,
+                            expectedCash: esperado,
+                            actualCash: contado,
+                            difference: diferencia,
+                            totalOrders: totalOrdenes,
+                            notes: notasCtrl.text.trim().isEmpty
+                                ? null
+                                : notasCtrl.text.trim(),
+                          );
+
+                          final exito =
+                              await historialProvider.agregarCorte(corte);
+
+                          if (!dialogContext.mounted) return;
+
+                          if (exito) {
+                            Navigator.pop(dialogContext);
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Corte de caja registrado correctamente.',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            setDialogState(() => guardando = false);
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  historialProvider.errorMessage ??
+                                      'No se pudo guardar el corte.',
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                  child: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Text('Cerrar Corte'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    fondoCtrl.dispose();
+    contadoCtrl.dispose();
+    notasCtrl.dispose();
   }
 }

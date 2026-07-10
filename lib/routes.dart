@@ -1,4 +1,6 @@
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -30,9 +32,31 @@ final GlobalKey<NavigatorState> _rootNavigatorKey =
 final GlobalKey<NavigatorState> _shellNavigatorKey =
     GlobalKey<NavigatorState>();
 
+/// Convierte el stream de cambios de sesión de Supabase (login, logout,
+/// token expirado/refrescado) en un `Listenable` para GoRouter. Sin esto,
+/// `redirect` solo se evaluaba en navegaciones explícitas: si el token
+/// expiraba mientras el usuario estaba quieto en una pantalla, nunca se le
+/// mandaba de regreso a /login automáticamente.
+class _GoRouterRefreshStream extends ChangeNotifier {
+  _GoRouterRefreshStream(Stream<AuthState> stream) {
+    notifyListeners();
+    _subscription = stream.listen((_) => notifyListeners());
+  }
+
+  late final StreamSubscription<AuthState> _subscription;
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
 final GoRouter appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/login',
+  refreshListenable:
+      _GoRouterRefreshStream(Supabase.instance.client.auth.onAuthStateChange),
 
   redirect: (context, state) {
     final session =

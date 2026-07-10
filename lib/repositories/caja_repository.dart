@@ -58,6 +58,78 @@ class CajaRepository {
     }
   }
 
+  // Resumen de ventas de HOY desglosado por método de pago, para el corte
+  // de caja de fin de turno.
+  Future<Map<String, dynamic>> obtenerResumenVentasHoy() async {
+    try {
+      final inicioUtc = _inicioDiaHoyEnUtc();
+      final finUtc = inicioUtc.add(const Duration(days: 1));
+
+      final response = await _client
+          .from('orders')
+          .select('total, payment_method')
+          .eq('status', 'paid')
+          .gte('paid_at', inicioUtc.toIso8601String())
+          .lt('paid_at', finUtc.toIso8601String());
+
+      double cash = 0.0;
+      double card = 0.0;
+      double transfer = 0.0;
+      int totalOrdenes = 0;
+
+      for (final row in (response as List)) {
+        final total = (row['total'] as num?)?.toDouble() ?? 0.0;
+        final metodo = row['payment_method']?.toString() ?? 'cash';
+        totalOrdenes++;
+
+        switch (metodo) {
+          case 'card':
+            card += total;
+            break;
+          case 'transfer':
+            transfer += total;
+            break;
+          default:
+            cash += total;
+        }
+      }
+
+      return {
+        'cash': cash,
+        'card': card,
+        'transfer': transfer,
+        'totalOrdenes': totalOrdenes,
+      };
+    } catch (e) {
+      throw Exception('Error al calcular el resumen de ventas de hoy: $e');
+    }
+  }
+
+  // Total pagado a proveedores HOY. Es un dato complementario para el corte
+  // de caja: si falla, no debe impedir cerrar el corte, solo se reporta 0.
+  Future<double> obtenerPagosProveedoresHoy() async {
+    try {
+      final inicioUtc = _inicioDiaHoyEnUtc();
+      final finUtc = inicioUtc.add(const Duration(days: 1));
+
+      final response = await _client
+          .from('supplier_payments')
+          .select('amount')
+          .gte('created_at', inicioUtc.toIso8601String())
+          .lt('created_at', finUtc.toIso8601String());
+
+      double total = 0.0;
+      for (final row in (response as List)) {
+        total += (row['amount'] as num?)?.toDouble() ?? 0.0;
+      }
+      return total;
+    } catch (e) {
+      debugPrint(
+          'Advertencia: no se pudo calcular pagos a proveedores de hoy: $e');
+      return 0.0;
+    }
+  }
+
   /// Fecha de "hoy" en hora de México (YYYY-MM-DD), para columnas de tipo
   /// `date` como `cash_movements.date`. Usa el mismo offset fijo que
   /// [_rangoDeHoyEnUtc] para que ambas columnas queden consistentes entre sí.

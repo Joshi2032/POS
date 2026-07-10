@@ -61,9 +61,12 @@ class _InventarioViewState extends State<_InventarioView> {
 
     if (!mounted) return;
 
+    bool guardando = false;
+
     showDialog(
         context: context,
         builder: (dialogContext) {
+          return StatefulBuilder(builder: (dialogContext, setDialogState) {
           return AlertDialog(
             title: Text(item == null ? 'Agregar Insumo' : 'Editar Insumo'),
             content: SingleChildScrollView(
@@ -124,7 +127,9 @@ class _InventarioViewState extends State<_InventarioView> {
                   onPressed: () => Navigator.pop(dialogContext),
                   child: const Text('Cancelar')),
               ElevatedButton(
-                  onPressed: () async {
+                  onPressed: guardando
+                      ? null
+                      : () async {
                     if (nameController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
                         const SnackBar(
@@ -170,6 +175,8 @@ class _InventarioViewState extends State<_InventarioView> {
                       provider: providerController.text,
                     );
 
+                    setDialogState(() => guardando = true);
+
                     bool success = false;
                     if (item == null) {
                       success = await provider.addInventoryItem(inventoryItem);
@@ -184,6 +191,7 @@ class _InventarioViewState extends State<_InventarioView> {
                           Navigator.pop(dialogContext);
                         }
                       } else {
+                        setDialogState(() => guardando = false);
                         // MEJORA: Muestra un SnackBar si Supabase rechaza la petición
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -194,9 +202,16 @@ class _InventarioViewState extends State<_InventarioView> {
                       }
                     }
                   },
-                  child: const Text('Guardar'))
+                  child: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Text('Guardar'))
             ],
           );
+        });
         });
   }
 
@@ -212,6 +227,30 @@ class _InventarioViewState extends State<_InventarioView> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
+            if (provider.hasError) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No se pudo cargar el inventario: ${provider.errorMessage}',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextField(
               decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.search), hintText: 'Buscar insumos'),
@@ -233,14 +272,16 @@ class _InventarioViewState extends State<_InventarioView> {
                               Row(mainAxisSize: MainAxisSize.min, children: [
                             IconButton(
                               icon: const Icon(Icons.edit),
+                              tooltip: 'Editar insumo',
                               onPressed: () async {
                                 await openEditor(provider, item: it);
                               },
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete),
+                              tooltip: 'Eliminar insumo',
                               onPressed: () =>
-                                  provider.removeInventoryItem(it.id),
+                                  _confirmarEliminarInsumo(provider, it),
                             ),
                           ]),
                         );
@@ -256,6 +297,55 @@ class _InventarioViewState extends State<_InventarioView> {
           },
           icon: const Icon(Icons.add),
           label: const Text('Agregar')),
+    );
+  }
+
+  void _confirmarEliminarInsumo(
+    InventarioProvider provider,
+    InventoryItem item,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar insumo'),
+          content: Text(
+            '¿Seguro que deseas eliminar "${item.name}"? '
+            'Esta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(dialogContext);
+
+                final exito = await provider.removeInventoryItem(item.id);
+
+                if (!exito) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        provider.errorMessage ??
+                            'No se pudo eliminar el insumo.',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
