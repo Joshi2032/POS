@@ -5,6 +5,7 @@ import '../providers/ordenes_provider.dart' ;
 import '../services/printer_service.dart';
 import '../utils/formatters.dart';
 import '../utils/ui_utils.dart';
+import '../widgets/app_widgets.dart';
 
 class OrdenesPage extends StatelessWidget {
   const OrdenesPage({super.key});
@@ -370,14 +371,13 @@ class _OrdenesView extends StatelessWidget {
           // ── MODAL DETALLE ────────────────────────────────────────────────
           if (provider.showModal &&
               provider.selectedOrderForModal != null) ...[
-            GestureDetector(
-              onTap: provider.cerrarModal,
-              child: Container(color: Colors.black54),
-            ),
-            _DetalleModal(
-              provider: provider,
-              getStatusLabel: _getStatusLabel,
-              getServiceLabel: _getServiceLabel,
+            FadeInBarrier(onTap: provider.cerrarModal),
+            FadeScaleIn(
+              child: _DetalleModal(
+                provider: provider,
+                getStatusLabel: _getStatusLabel,
+                getServiceLabel: _getServiceLabel,
+              ),
             ),
           ],
         ],

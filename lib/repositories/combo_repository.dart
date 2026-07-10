@@ -37,13 +37,22 @@ class ComboRepository {
 
     // 2. Insertamos los productos asociados al combo
     if (productIds.isNotEmpty) {
-      final itemsToInsert = productIds.map((pId) => {
-            'combo_id': comboId,
-            'product_id': pId,
-            'quantity': 1,
-          }).toList();
+      try {
+        final itemsToInsert = productIds.map((pId) => {
+              'combo_id': comboId,
+              'product_id': pId,
+              'quantity': 1,
+            }).toList();
 
-      await _client.from('combo_items').insert(itemsToInsert);
+        await _client.from('combo_items').insert(itemsToInsert);
+      } catch (e) {
+        // El combo ya se creó pero sus productos no se pudieron guardar:
+        // lo eliminamos para no dejar un combo vendible con 0 productos.
+        try {
+          await _client.from('combos').delete().eq('id', comboId);
+        } catch (_) {}
+        rethrow;
+      }
     }
   } catch (e) {
     throw Exception('Error al guardar el combo: $e');
@@ -53,22 +62,48 @@ class ComboRepository {
   Future<void> update(String id, ComboItem combo, List<String> productIds) async {
     try {
       final data = combo.toJson();
-      data.remove('id'); 
+      data.remove('id');
       data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      
+
       // 1. Actualizar el combo principal
       await _client.from('combos').update(data).eq('id', id);
 
-      // 2. Borrar las relaciones viejas y meter las nuevas
+      // 2. Guardamos una copia de las relaciones viejas ANTES de borrarlas,
+      // por si hay que restaurarlas (si el insert de las nuevas falla justo
+      // después de borrar, no queremos dejar el combo con 0 productos).
+      final viejosResponse = await _client
+          .from('combo_items')
+          .select('product_id, quantity')
+          .eq('combo_id', id);
+      final viejosItems =
+          (viejosResponse as List).map((e) => Map<String, dynamic>.from(e)).toList();
+
       await _client.from('combo_items').delete().eq('combo_id', id);
-      
+
       if (productIds.isNotEmpty) {
-        final itemsToInsert = productIds.map((pId) => {
-          'combo_id': id,
-          'product_id': pId,
-          'quantity': 1
-        }).toList();
-        await _client.from('combo_items').insert(itemsToInsert);
+        try {
+          final itemsToInsert = productIds.map((pId) => {
+            'combo_id': id,
+            'product_id': pId,
+            'quantity': 1
+          }).toList();
+          await _client.from('combo_items').insert(itemsToInsert);
+        } catch (e) {
+          if (viejosItems.isNotEmpty) {
+            try {
+              await _client.from('combo_items').insert(
+                    viejosItems
+                        .map((item) => {
+                              'combo_id': id,
+                              'product_id': item['product_id'],
+                              'quantity': item['quantity'] ?? 1,
+                            })
+                        .toList(),
+                  );
+            } catch (_) {}
+          }
+          rethrow;
+        }
       }
     } catch (e) {
       throw Exception('Error al actualizar el combo: $e');

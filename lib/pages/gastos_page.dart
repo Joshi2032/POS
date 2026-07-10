@@ -4,6 +4,7 @@ import '../providers/gastos_provider.dart';
 import '../utils/formatters.dart';
 import '../utils/ui_utils.dart';
 import '../models/gasto.dart';
+import '../widgets/app_widgets.dart';
 
 class GastosPage extends StatelessWidget {
   const GastosPage({super.key});
@@ -510,36 +511,35 @@ class _GastosViewState extends State<_GastosView> {
 
           // ── MODAL ────────────────────────────────────────────────────────
           if (showModal) ...[
-            GestureDetector(
-              onTap: cerrarModal,
-              child: Container(color: Colors.black54),
-            ),
-            _GastoModal(
-              editingId: editingId,
-              formKey: _formKey,
-              formState: formState,
-              modalError: modalError,
-              formCategories: formCategories,
-              formMethods: formMethods,
-              isSaving: provider.isLoading,
-              onCerrar: cerrarModal,
-              onGuardar: provider.isLoading
-                  ? null
-                  : () => guardarGasto(context.read<GastosProvider>()),
-              onCategoryChanged: (val) =>
-                  setState(() => formState.category = val ?? 'General'),
-              onMethodChanged: (val) =>
-                  setState(() => formState.method = val ?? 'Efectivo'),
-              onFormChanged: (field, val) {
-                setState(() {
-                  if (field == 'date') formState.date = val;
-                  if (field == 'concept') formState.concept = val;
-                  if (field == 'amount') {
-                    formState.amount = double.tryParse(val) ?? 0.0;
-                  }
-                  if (field == 'notes') formState.notes = val;
-                });
-              },
+            FadeInBarrier(onTap: cerrarModal),
+            FadeScaleIn(
+              child: _GastoModal(
+                editingId: editingId,
+                formKey: _formKey,
+                formState: formState,
+                modalError: modalError,
+                formCategories: formCategories,
+                formMethods: formMethods,
+                isSaving: provider.isLoading,
+                onCerrar: cerrarModal,
+                onGuardar: provider.isLoading
+                    ? null
+                    : () => guardarGasto(context.read<GastosProvider>()),
+                onCategoryChanged: (val) =>
+                    setState(() => formState.category = val ?? 'General'),
+                onMethodChanged: (val) =>
+                    setState(() => formState.method = val ?? 'Efectivo'),
+                onFormChanged: (field, val) {
+                  setState(() {
+                    if (field == 'date') formState.date = val;
+                    if (field == 'concept') formState.concept = val;
+                    if (field == 'amount') {
+                      formState.amount = double.tryParse(val) ?? 0.0;
+                    }
+                    if (field == 'notes') formState.notes = val;
+                  });
+                },
+              ),
             ),
           ],
         ],

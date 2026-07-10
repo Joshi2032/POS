@@ -290,8 +290,10 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
 
           // ── MODAL ────────────────────────────────────────────────────────
           if (provider.showModal) ...[
-            Container(color: Colors.black45),
-            _ReservacionModal(provider: provider, cardBg: cardBg),
+            const FadeInBarrier(onTap: null),
+            FadeScaleIn(
+              child: _ReservacionModal(provider: provider, cardBg: cardBg),
+            ),
           ],
         ],
       ),

@@ -157,38 +157,24 @@ class MesasProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      var index = _mesas.indexWhere(
-        (mesa) => mesa.id.toString() == id.toString(),
-      );
+      // Verificamos que la mesa exista antes de intentar el update (si no
+      // está en caché, refrescamos una vez por si ya no está desactualizado).
+      var existe = _mesas.any((mesa) => mesa.id.toString() == id.toString());
 
-      if (index == -1) {
+      if (!existe) {
         _mesas = await _repository.getAll();
-
-        index = _mesas.indexWhere(
-          (mesa) => mesa.id.toString() == id.toString(),
-        );
+        existe = _mesas.any((mesa) => mesa.id.toString() == id.toString());
       }
 
-      if (index == -1) {
-        throw Exception(
-          'No se encontró la mesa con id: $id',
-        );
+      if (!existe) {
+        throw Exception('No se encontró la mesa con id: $id');
       }
 
-      final mesaActual = _mesas[index];
-
-      final mesaActualizada = Mesa(
-        id: mesaActual.id,
-        nombre: mesaActual.nombre,
-        capacidad: mesaActual.capacidad,
-        area: mesaActual.area,
-        estado: nuevoEstado,
-      );
-
-      await _repository.update(
-        mesaActual.id.toString(),
-        mesaActualizada,
-      );
+      // Ya no se reconstruye la mesa completa desde el caché local: eso
+      // podía sobreescribir nombre/capacidad/área con datos desactualizados
+      // si alguien más los había editado mientras tanto. Ahora se actualiza
+      // solo la columna de estado.
+      await _repository.actualizarEstado(id, nuevoEstado);
 
       _mesas = await _repository.getAll();
 

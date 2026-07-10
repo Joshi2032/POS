@@ -36,6 +36,32 @@ class MesaRepository {
     }
   }
 
+  /// Actualiza SOLO el estado de la mesa (a diferencia de update(), que
+  /// reenvía nombre/capacidad/área tomados de una copia en caché que podría
+  /// estar desactualizada si alguien más editó esos campos mientras tanto).
+  /// `estado` viene en el formato de UI ('Libre'/'Ocupada'/'Por cobrar', sin
+  /// importar mayúsculas) y se traduce al mismo valor que espera la columna
+  /// `status`, igual que hace Mesa.toJson().
+  Future<void> actualizarEstado(String id, String estado) async {
+    try {
+      final estadoNormalizado = estado.trim().toLowerCase();
+
+      String statusDb = 'free';
+      if (estadoNormalizado == 'ocupada') {
+        statusDb = 'occupied';
+      } else if (estadoNormalizado == 'por cobrar' ||
+          estadoNormalizado == 'cuenta') {
+        statusDb = 'pending_payment';
+      }
+
+      await _client
+          .from('restaurant_tables')
+          .update({'status': statusDb}).eq('id', id);
+    } catch (e) {
+      throw Exception('Error al actualizar el estado de la mesa: $e');
+    }
+  }
+
   Future<void> delete(String id) async {
     try {
       await _client.from('restaurant_tables').delete().eq('id', id);

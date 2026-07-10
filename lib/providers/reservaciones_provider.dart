@@ -6,7 +6,17 @@ class ReservacionesProvider extends ChangeNotifier {
   final ReservacionRepository _repository;
 
   final int pageSize = 10;
-  final String todayIso = DateTime.now().toIso8601String().substring(0, 10);
+
+  // Mismo offset fijo de México (UTC-6) que ya se usa en caja_repository.dart
+  // y provider_payment.dart: se calcula fresco en cada acceso (no como un
+  // `final` fijado una sola vez al arrancar) para que "hoy" no se quede
+  // obsoleto si la app se queda abierta después de medianoche, y para que
+  // no dependa de que el dispositivo tenga la zona horaria correcta.
+  String get todayIso {
+    final ahoraMexico =
+        DateTime.now().toUtc().add(const Duration(hours: -6));
+    return ahoraMexico.toIso8601String().substring(0, 10);
+  }
 
   // Listas de datos desde Supabase
   List<Reservacion> _reservations = [];

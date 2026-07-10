@@ -694,8 +694,8 @@ class _FiltrosMesas extends StatelessWidget {
                     : Colors.transparent,
               ),
             ),
-            child: Text(
-              filtro,
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 180),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: isCompact ? 13 : 14,
@@ -703,6 +703,7 @@ class _FiltrosMesas extends StatelessWidget {
                     ? Colors.white
                     : unselectedText,
               ),
+              child: Text(filtro),
             ),
           ),
         );

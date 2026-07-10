@@ -348,11 +348,16 @@ class _ProductosView extends StatelessWidget {
                                 icon: const Icon(Icons.refresh),
                                 label: const Text('Actualizar categorías'),
                                 onPressed: () async {
-                                  Navigator.pop(dialogContext);
+                                  // Antes esto hacía pop() del diálogo y
+                                  // luego intentaba reabrirlo comprobando
+                                  // dialogContext.mounted — pero como el pop
+                                  // ya lo había cerrado, esa comprobación
+                                  // casi siempre daba false y el diálogo
+                                  // nunca se reabría. Ahora simplemente se
+                                  // refresca en el mismo diálogo abierto.
                                   await provider.cargarDatosCompletos();
                                   if (!dialogContext.mounted) return;
-                                  _mostrarDialogoFormulario(
-                                      context, productoExistente);
+                                  setState(() {});
                                 },
                               ),
                             ],

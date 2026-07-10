@@ -1,6 +1,74 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
+/// Envuelve un modal/panel que se agrega y quita del árbol con una condición
+/// booleana (`if (showModal) ...[FadeScaleIn(child: ...)]`) en vez de con
+/// `showDialog`/`Navigator`, para darle una entrada suave (fade + escala) en
+/// vez de aparecer de golpe. Como el widget se vuelve a insertar en el árbol
+/// cada vez que la condición pasa de false a true, la animación se reinicia
+/// solita cada vez que el modal se abre.
+class FadeScaleIn extends StatelessWidget {
+  const FadeScaleIn({
+    super.key,
+    required this.child,
+    this.duration = const Duration(milliseconds: 220),
+  });
+
+  final Widget child;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.scale(
+            scale: 0.94 + (0.06 * value),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+/// Fondo oscuro semitransparente detrás de un modal/panel, con fade-in en
+/// vez de aparecer de golpe. Mismo `onTap` que un `GestureDetector` normal
+/// (`onTap` es opcional: pásalo como null si el fondo no debe cerrar nada
+/// al tocarlo).
+class FadeInBarrier extends StatelessWidget {
+  const FadeInBarrier({
+    super.key,
+    this.onTap,
+    this.duration = const Duration(milliseconds: 220),
+  });
+
+  final VoidCallback? onTap;
+  final Duration duration;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: duration,
+        curve: Curves.easeOut,
+        builder: (context, value, child) {
+          return Container(
+            color: Colors.black.withValues(alpha: 0.54 * value),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;

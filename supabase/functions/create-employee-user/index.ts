@@ -226,6 +226,10 @@ serve(async (req) => {
     const authUserId = authData.user.id;
 
     let createdEmployeeId: string | null = null;
+    // Solo se marca si ESTA petición creó el perfil (no si ya existía uno).
+    // Así, en el catch, sólo borramos el perfil que nosotros insertamos y
+    // nunca uno preexistente de otro usuario/flujo.
+    let createdProfileId: string | null = null;
 
     try {
       let profileId = "";
@@ -259,6 +263,7 @@ serve(async (req) => {
         }
 
         profileId = String(profileCreated.id);
+        createdProfileId = profileId;
       }
 
       const { data: employeeCreated, error: employeeError } =
@@ -321,6 +326,13 @@ serve(async (req) => {
           .from("employees")
           .delete()
           .eq("id", createdEmployeeId);
+      }
+
+      if (createdProfileId) {
+        await supabaseAdmin
+          .from("profiles")
+          .delete()
+          .eq("id", createdProfileId);
       }
 
       await supabaseAdmin.auth.admin.deleteUser(authUserId);

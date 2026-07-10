@@ -26,12 +26,22 @@ class RecipeRepository {
 
       // 2. Insertar los insumos vinculados a esta receta
       if (recipe.supplies.isNotEmpty) {
-        final suppliesData = recipe.supplies.map((s) {
-          final sData = s.toJson();
-          sData['recipe_id'] = recipeId;
-          return sData;
-        }).toList();
-        await _client.from('recipe_supplies').insert(suppliesData);
+        try {
+          final suppliesData = recipe.supplies.map((s) {
+            final sData = s.toJson();
+            sData['recipe_id'] = recipeId;
+            return sData;
+          }).toList();
+          await _client.from('recipe_supplies').insert(suppliesData);
+        } catch (e) {
+          // La receta ya se creó pero sus insumos no se pudieron guardar:
+          // la eliminamos para no dejar una receta sin insumos (rompería
+          // el descuento de inventario al vender).
+          try {
+            await _client.from('recipes').delete().eq('id', recipeId);
+          } catch (_) {}
+          rethrow;
+        }
       }
     } catch (e) {
       throw Exception('Error al crear la receta: $e');
@@ -47,17 +57,45 @@ class RecipeRepository {
       // 1. Actualizar datos base de la receta
       await _client.from('recipes').update(data).eq('id', id);
 
-      // 2. Borrar insumos viejos
+      // 2. Guardamos una copia de los insumos viejos ANTES de borrarlos,
+      // por si hay que restaurarlos (si el insert de los nuevos falla justo
+      // después de borrar, no queremos dejar la receta sin insumos).
+      final viejosResponse = await _client
+          .from('recipe_supplies')
+          .select('supply_id, supply_name, quantity, unit')
+          .eq('recipe_id', id);
+      final viejosSupplies =
+          (viejosResponse as List).map((e) => Map<String, dynamic>.from(e)).toList();
+
       await _client.from('recipe_supplies').delete().eq('recipe_id', id);
 
       // 3. Insertar los nuevos insumos
       if (recipe.supplies.isNotEmpty) {
-        final suppliesData = recipe.supplies.map((s) {
-          final sData = s.toJson();
-          sData['recipe_id'] = id;
-          return sData;
-        }).toList();
-        await _client.from('recipe_supplies').insert(suppliesData);
+        try {
+          final suppliesData = recipe.supplies.map((s) {
+            final sData = s.toJson();
+            sData['recipe_id'] = id;
+            return sData;
+          }).toList();
+          await _client.from('recipe_supplies').insert(suppliesData);
+        } catch (e) {
+          if (viejosSupplies.isNotEmpty) {
+            try {
+              await _client.from('recipe_supplies').insert(
+                    viejosSupplies
+                        .map((s) => {
+                              'recipe_id': id,
+                              'supply_id': s['supply_id'],
+                              'supply_name': s['supply_name'],
+                              'quantity': s['quantity'],
+                              'unit': s['unit'],
+                            })
+                        .toList(),
+                  );
+            } catch (_) {}
+          }
+          rethrow;
+        }
       }
     } catch (e) {
       throw Exception('Error al actualizar la receta: $e');
