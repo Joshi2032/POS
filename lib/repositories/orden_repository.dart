@@ -77,9 +77,11 @@ class OrdenRepository {
 
   Future<List<RestaurantOrder>> getAll() async {
     try {
-      final response = await _client
-          .from('orders')
-          .select('*, order_items(*), restaurant_tables(name)');
+      // Se pide también la categoría REAL del producto (usada por
+      // ReportesProvider para clasificar ventas/rendimiento por categoría,
+      // en vez de adivinarla por palabras clave en el nombre).
+      final response = await _client.from('orders').select(
+          '*, order_items(*, products(categories(name))), restaurant_tables(name)');
       final List<dynamic> ordenesData = response as List<dynamic>;
 
       debugPrint('✅ ORDEN_REPO: Cantidad de órdenes: ${ordenesData.length}');
