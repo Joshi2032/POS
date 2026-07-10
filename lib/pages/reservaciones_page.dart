@@ -184,12 +184,27 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
 
                     // ── LISTA ────────────────────────────────────────────
                     Expanded(
-                      child: provider.filteredReservations.isEmpty
-                          ? const EmptyState(
-                              message:
-                                  'No hay reservaciones para esta fecha',
-                              icon: Icons.inbox_outlined)
+                      child: RefreshIndicator(
+                        onRefresh: () => provider.cargarReservaciones(),
+                        child: provider.filteredReservations.isEmpty
+                          ? LayoutBuilder(
+                              builder: (context, constraints) {
+                                return SingleChildScrollView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  child: SizedBox(
+                                    height: constraints.maxHeight,
+                                    child: const EmptyState(
+                                      message:
+                                          'No hay reservaciones para esta fecha',
+                                      icon: Icons.inbox_outlined,
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
                           : ListView.separated(
+                              physics: const AlwaysScrollableScrollPhysics(),
                               itemCount:
                                   provider.paginatedReservations.length,
                               separatorBuilder: (_, __) =>
@@ -206,6 +221,7 @@ class _ReservacionesPageState extends State<ReservacionesPage> {
                                 );
                               },
                             ),
+                      ),
                     ),
 
                     // ── PAGINACIÓN ───────────────────────────────────────
@@ -806,25 +822,48 @@ class _ReservacionModal extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
-                  onPressed: () async {
-                    final success = await provider.guardarReservacion();
-                    if (!context.mounted) return;
-                    if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('Reservación procesada exitosamente'),
-                            backgroundColor: Colors.green),
-                      );
-                    }
-                  },
-                  child: Text(
-                    provider.editingId != null
-                        ? 'Actualizar Reservación'
-                        : 'Guardar Reservación',
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
+                  onPressed: provider.isLoading
+                      ? null
+                      : () async {
+                          final success = await provider.guardarReservacion();
+                          if (!context.mounted) return;
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'Reservación procesada exitosamente'),
+                                  backgroundColor: Colors.green),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  provider.errorMessage ??
+                                      'No se pudo guardar la reservación.',
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                  child: provider.isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          provider.editingId != null
+                              ? 'Actualizar Reservación'
+                              : 'Guardar Reservación',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
             ],

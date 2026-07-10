@@ -25,7 +25,7 @@ class Gasto {
       date: json['expense_date']?.toString() ?? '',
       concept: json['description'] ?? '',
       category: json['category'] ?? 'General',
-      amount: (json['amount'] as num).toDouble(),
+      amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
       // Como no están en la BD, ponemos valores por defecto
       method: 'Efectivo', 
       notes: '',

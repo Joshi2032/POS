@@ -1,6 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/corte_caja.dart';
-import 'package:flutter/foundation.dart';
 
 class CorteCajaRepository {
   final SupabaseClient _client;
@@ -55,15 +54,18 @@ class CorteCajaRepository {
     }
   }
 
-  // READ SINGLE: Buscar un arqueo por su identificador único
+  // READ SINGLE: Buscar un arqueo por su identificador único.
+  // Usa maybeSingle() para que "no existe" (0 filas) devuelva null de forma
+  // natural, sin confundirlo con un error real de red/permisos, que ahora
+  // sí se propaga en vez de tragarse en silencio.
   Future<CorteCaja?> getById(String id) async {
     try {
       final response =
-          await _client.from(_table).select().eq('id', id).single();
+          await _client.from(_table).select().eq('id', id).maybeSingle();
+      if (response == null) return null;
       return CorteCaja.fromJson(response);
     } catch (e) {
-      debugPrint('No se localizó el arqueo $id: $e');
-      return null;
+      throw Exception('Error al buscar el corte de caja $id: $e');
     }
   }
 }

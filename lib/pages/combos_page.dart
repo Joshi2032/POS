@@ -37,6 +37,7 @@ class _CombosViewState extends State<_CombosView> {
 
   void _abrirFormularioModal(CombosProvider provider, {ComboItem? combo}) {
     List<String> productosSeleccionados = [];
+    bool guardando = false;
 
     if (combo != null) {
       _nombreCtrl.text = combo.title;
@@ -77,7 +78,8 @@ class _CombosViewState extends State<_CombosView> {
                           decoration: const InputDecoration(
                               labelText: 'Nombre del Combo',
                               border: OutlineInputBorder()),
-                          validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
+                          validator: (v) =>
+                              (v == null || v.isEmpty) ? 'Campo requerido' : null,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -87,7 +89,8 @@ class _CombosViewState extends State<_CombosView> {
                           decoration: const InputDecoration(
                               labelText: 'Descripción pública',
                               border: OutlineInputBorder()),
-                          validator: (v) => v!.isEmpty ? 'Campo requerido' : null,
+                          validator: (v) =>
+                              (v == null || v.isEmpty) ? 'Campo requerido' : null,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -98,7 +101,14 @@ class _CombosViewState extends State<_CombosView> {
                               prefixText: '\$',
                               border: OutlineInputBorder()),
                           keyboardType: TextInputType.number,
-                          validator: (v) => v!.isEmpty ? 'Requerido' : null,
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Requerido';
+                            final parsed = double.tryParse(v);
+                            if (parsed == null || parsed <= 0) {
+                              return 'Ingresa un precio válido';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
                         const Divider(),
@@ -144,29 +154,59 @@ class _CombosViewState extends State<_CombosView> {
                     onPressed: () => Navigator.pop(context),
                     child: const Text('Cancelar')),
                 ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      final nuevo = ComboItem(
-                        id: combo?.id ??
-                            'CMB-${DateTime.now().millisecondsSinceEpoch}',
-                        title: _nombreCtrl.text,
-                        subtitle: _descripcionCtrl.text,
-                        tags: [], 
-                        price: double.tryParse(_precioCtrl.text) ?? 0,
-                        oldPrice: double.tryParse(_precioCtrl.text) ?? 0,
-                        ahorro: '',
-                      );
+                  onPressed: guardando
+                      ? null
+                      : () async {
+                          if (!_formKey.currentState!.validate()) {
+                            return;
+                          }
 
-                      if (combo != null) {
-                        provider.actualizarCombo(combo.id, nuevo, productosSeleccionados);
-                      } else {
-                        provider.agregarCombo(nuevo, productosSeleccionados);
-                      }
-                      Navigator.pop(context);
-                    }
-                  },
-                  child:
-                      Text(combo != null ? 'Guardar Cambios' : 'Crear Combo'),
+                          final nuevo = ComboItem(
+                            id: combo?.id ??
+                                'CMB-${DateTime.now().millisecondsSinceEpoch}',
+                            title: _nombreCtrl.text,
+                            subtitle: _descripcionCtrl.text,
+                            tags: [],
+                            price: double.tryParse(_precioCtrl.text) ?? 0,
+                            oldPrice: double.tryParse(_precioCtrl.text) ?? 0,
+                            ahorro: '',
+                          );
+
+                          final messenger = ScaffoldMessenger.of(context);
+
+                          setModalState(() => guardando = true);
+
+                          final exito = combo != null
+                              ? await provider.actualizarCombo(
+                                  combo.id, nuevo, productosSeleccionados)
+                              : await provider.agregarCombo(
+                                  nuevo, productosSeleccionados);
+
+                          if (!context.mounted) return;
+
+                          if (exito) {
+                            Navigator.pop(context);
+                          } else {
+                            setModalState(() => guardando = false);
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  provider.errorMessage ??
+                                      'No se pudo guardar el combo.',
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                  child: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : Text(
+                          combo != null ? 'Guardar Cambios' : 'Crear Combo'),
                 )
               ],
             );
@@ -177,23 +217,58 @@ class _CombosViewState extends State<_CombosView> {
   }
 
   void _solicitarBorrado(CombosProvider provider, ComboItem combo) {
+    bool eliminando = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar combo'),
-        content: Text('Se eliminará "${combo.title}". ¿Estás seguro?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar')),
-          TextButton(
-            onPressed: () {
-              provider.eliminarCombo(combo.id);
-              Navigator.pop(context);
-            },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          return AlertDialog(
+            title: const Text('Eliminar combo'),
+            content: Text('Se eliminará "${combo.title}". ¿Estás seguro?'),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancelar')),
+              TextButton(
+                onPressed: eliminando
+                    ? null
+                    : () async {
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        setDialogState(() => eliminando = true);
+
+                        final exito =
+                            await provider.eliminarCombo(combo.id);
+
+                        if (!dialogContext.mounted) return;
+
+                        Navigator.pop(dialogContext);
+
+                        if (!exito) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                provider.errorMessage ??
+                                    'No se pudo eliminar el combo.',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                child: eliminando
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2.5),
+                      )
+                    : const Text('Eliminar',
+                        style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -125,12 +125,48 @@ class _InventarioViewState extends State<_InventarioView> {
                   child: const Text('Cancelar')),
               ElevatedButton(
                   onPressed: () async {
+                    if (nameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(
+                          content: Text('El nombre es obligatorio.'),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                      return;
+                    }
+
+                    final stock = double.tryParse(stockController.text.trim());
+                    if (stock == null || stock < 0) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Ingresa un stock numérico válido (0 o mayor).',
+                          ),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                      return;
+                    }
+
+                    final cost = double.tryParse(costController.text.trim());
+                    if (cost == null || cost < 0) {
+                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Ingresa un costo numérico válido (0 o mayor).',
+                          ),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                      return;
+                    }
+
                     final inventoryItem = InventoryItem(
                       id: generatedId,
-                      name: nameController.text,
+                      name: nameController.text.trim(),
                       category: categoryController.text,
-                      stock: double.tryParse(stockController.text) ?? 0.0,
-                      cost: double.tryParse(costController.text) ?? 0.0,
+                      stock: stock,
+                      cost: cost,
                       provider: providerController.text,
                     );
 

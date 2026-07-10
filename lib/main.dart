@@ -71,21 +71,36 @@ Future<void> main() async {
       ? envAnonKey
       : Platform.environment['SUPABASE_ANON_KEY']?.trim() ?? '';
 
+  String? errorInicializacion;
+
   if (url.isEmpty || anonKey.isEmpty) {
     debugPrint(
         'ERROR CRITICO: SUPABASE_URL o SUPABASE_ANON_KEY faltan. url=${url.isEmpty ? 'MISSING' : url}, anonKey length=${anonKey.length}');
-    // En lugar de crashear la app con throw StateError, permitimos que la app inicie
-    // para evitar la pantalla negra. Puedes mostrar una alerta de error en el login si estas variables fallan.
+    errorInicializacion =
+        'Faltan las credenciales de Supabase (SUPABASE_URL / SUPABASE_ANON_KEY). '
+        'Verifica el archivo .env incluido en la app.';
   } else {
     debugPrint(
         'Supabase inicializado con URL=$url y anonKey length=${anonKey.length}');
+
+    // Si esto lanza (credenciales inválidas, problema de red al validar, etc.),
+    // NO debe tronar la app antes de runApp(): mostramos una pantalla de
+    // error controlada en vez de una pantalla negra o un crash silencioso.
+    try {
+      await SupabaseService.init(
+        url: url,
+        anonKey: anonKey,
+      );
+    } catch (e) {
+      debugPrint('ERROR CRITICO: Falló SupabaseService.init(): $e');
+      errorInicializacion = 'No se pudo inicializar la conexión con el servidor: $e';
+    }
   }
 
-  // Inicialización de Supabase usando las credenciales
-  await SupabaseService.init(
-    url: url,
-    anonKey: anonKey,
-  );
+  if (errorInicializacion != null) {
+    runApp(_AppDeErrorInicializacion(mensaje: errorInicializacion));
+    return;
+  }
 
   runApp(
     MultiProvider(
@@ -218,4 +233,54 @@ Future<void> main() async {
       child: const App(),
     ),
   );
+}
+
+/// Pantalla mínima que se muestra si Supabase no pudo inicializarse (faltan
+/// credenciales o falló la conexión). Evita que la app truene antes de
+/// llegar a runApp() o se quede en una pantalla negra sin explicación.
+class _AppDeErrorInicializacion extends StatelessWidget {
+  const _AppDeErrorInicializacion({required this.mensaje});
+
+  final String mensaje;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF121212),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: Colors.redAccent,
+                  size: 48,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'No se pudo iniciar Zapata POS',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  mensaje,
+                  style: const TextStyle(color: Colors.white70),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

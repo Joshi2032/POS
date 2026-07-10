@@ -30,6 +30,7 @@ class _RecetasViewState extends State<_RecetasView> {
 
     // Lista temporal de insumos para este formulario
     List<RecipeSupply> insumosTemporales = receta != null ? List.from(receta.supplies) : [];
+    bool guardando = false;
 
     showDialog(
       context: context,
@@ -129,7 +130,9 @@ class _RecetasViewState extends State<_RecetasView> {
               actions: [
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
                 ElevatedButton(
-                  onPressed: () async {
+                  onPressed: guardando
+                      ? null
+                      : () async {
                     if (formKey.currentState!.validate()) {
                       final nuevaReceta = Recipe(
                         id: receta?.id ?? '',
@@ -137,8 +140,10 @@ class _RecetasViewState extends State<_RecetasView> {
                         yieldPortions: double.tryParse(rindeCtrl.text) ?? 1.0,
                         prepMinutes: int.tryParse(tiempoCtrl.text) ?? 0,
                         description: descCtrl.text,
-                        supplies: insumosTemporales, 
+                        supplies: insumosTemporales,
                       );
+
+                      setStateModal(() => guardando = true);
 
                       bool exito;
                       if (receta != null) {
@@ -151,6 +156,7 @@ class _RecetasViewState extends State<_RecetasView> {
                         if (exito) {
                           Navigator.pop(context);
                         } else {
+                          setStateModal(() => guardando = false);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text(provider.errorMessage ?? 'Error'), backgroundColor: Colors.red)
                           );
@@ -158,7 +164,13 @@ class _RecetasViewState extends State<_RecetasView> {
                       }
                     }
                   },
-                  child: Text(receta != null ? 'Guardar Cambios' : 'Crear Receta'),
+                  child: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : Text(receta != null ? 'Guardar Cambios' : 'Crear Receta'),
                 )
               ],
             );
@@ -188,7 +200,30 @@ class _RecetasViewState extends State<_RecetasView> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateSub) {
-            final insumoMap = provider.inventarioDisponible.firstWhere((i) => i['id'].toString() == selectedInsumoId);
+            final listaInsumos = provider.inventarioDisponible;
+
+            if (listaInsumos.isEmpty) {
+              return AlertDialog(
+                title: const Text('Añadir Ingrediente', style: TextStyle(fontSize: 16)),
+                content: const Text('Ya no hay materia prima disponible.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cerrar'),
+                  ),
+                ],
+              );
+            }
+
+            if (!listaInsumos.any((i) => i['id'].toString() == selectedInsumoId)) {
+              selectedInsumoId = listaInsumos.first['id'].toString();
+              unidadElegida = null;
+            }
+
+            final insumoMap = listaInsumos.firstWhere(
+              (i) => i['id'].toString() == selectedInsumoId,
+              orElse: () => listaInsumos.first,
+            );
             final currentUnit = insumoMap['unit'] ?? 'ud';
 
             // 👇 2. Aseguramos que la unidad del inventario no crashee el Dropdown si no está en la lista 👇
@@ -334,7 +369,12 @@ class _RecetasViewState extends State<_RecetasView> {
                                       children: [
                                         const Icon(Icons.fiber_manual_record, size: 10),
                                         const SizedBox(width: 8),
-                                        Text('${s.quantity} ${s.unit} de ${s.supplyName}'),
+                                        Expanded(
+                                          child: Text(
+                                            '${s.quantity} ${s.unit} de ${s.supplyName}',
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
                                       ],
                                     )),
                                     const SizedBox(height: 16),
@@ -349,7 +389,7 @@ class _RecetasViewState extends State<_RecetasView> {
                                         TextButton.icon(
                                           icon: const Icon(Icons.delete, color: Colors.red),
                                           label: const Text('Eliminar', style: TextStyle(color: Colors.red)),
-                                          onPressed: () => provider.deleteRecipe(r.id),
+                                          onPressed: () => _confirmarEliminarReceta(provider, r),
                                         )
                                       ],
                                     )
@@ -365,6 +405,52 @@ class _RecetasViewState extends State<_RecetasView> {
                 ],
               ),
             ),
+    );
+  }
+
+  void _confirmarEliminarReceta(RecipeProvider provider, Recipe receta) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar receta'),
+          content: Text(
+            '¿Seguro que deseas eliminar "${receta.name}"? '
+            'También se eliminarán sus ingredientes configurados.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(dialogContext);
+
+                final exito = await provider.deleteRecipe(receta.id);
+
+                if (!exito) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        provider.errorMessage ??
+                            'No se pudo eliminar la receta.',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

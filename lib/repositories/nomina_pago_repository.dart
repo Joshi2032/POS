@@ -12,7 +12,7 @@ class NominaPagoRepository {
     try {
       final response = await _client
           .from('payroll') // Asegúrate de que coincida con el nombre de tu tabla en Supabase
-          .select('*');
+          .select('*, employees(first_name, last_name)');
 
       return (response as List).map((json) => NominaPago.fromJson(json)).toList();
     } catch (e) {

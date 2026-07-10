@@ -72,10 +72,12 @@ class _MesasViewState extends State<_MesasView> {
     }
 
     final esEdicion = mesa != null;
+    bool guardando = false;
 
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) {
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
         final width = MediaQuery.sizeOf(dialogContext).width;
 
         return AlertDialog(
@@ -172,7 +174,9 @@ class _MesasViewState extends State<_MesasView> {
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-  onPressed: () async {
+  onPressed: guardando
+      ? null
+      : () async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
@@ -190,6 +194,8 @@ class _MesasViewState extends State<_MesasView> {
       area: _areaController.text.trim(),
       estado: mesa?.estado ?? 'Libre',
     );
+
+    setDialogState(() => guardando = true);
 
     final guardada = esEdicion
         ? await provider.updateMesa(
@@ -214,6 +220,8 @@ class _MesasViewState extends State<_MesasView> {
         ),
       );
     } else {
+      setDialogState(() => guardando = false);
+
       dialogMessenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -228,11 +236,21 @@ class _MesasViewState extends State<_MesasView> {
     backgroundColor: Theme.of(dialogContext).primaryColor,
     foregroundColor: Colors.white,
   ),
-  child: const Text('Guardar'),
+  child: guardando
+      ? const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        )
+      : const Text('Guardar'),
 ),
           ],
         );
-      },
+        },
+      ),
     );
   }
 

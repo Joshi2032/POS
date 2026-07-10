@@ -131,28 +131,41 @@ class OrdenRepository {
 
       // Procesamos los artículos de la comanda
       if (itemsMap.isNotEmpty) {
-        final itemsConRelacion = itemsMap.map((item) {
-          // Clonamos el mapa para poder modificarlo
-          final Map<String, dynamic> itemLimpio =
-              Map<String, dynamic>.from(item);
+        try {
+          final itemsConRelacion = itemsMap.map((item) {
+            // Clonamos el mapa para poder modificarlo
+            final Map<String, dynamic> itemLimpio =
+                Map<String, dynamic>.from(item);
 
-          itemLimpio['order_id'] =
-              orderIdAsignado; // Asignamos la llave foránea
+            itemLimpio['order_id'] =
+                orderIdAsignado; // Asignamos la llave foránea
 
-          // CORRECCIÓN DE ESQUEMA: Tu base de datos espera 'total_price', no 'total'
-          if (itemLimpio.containsKey('total')) {
-            itemLimpio['total_price'] = itemLimpio['total'];
-            itemLimpio.remove('total');
+            // CORRECCIÓN DE ESQUEMA: Tu base de datos espera 'total_price', no 'total'
+            if (itemLimpio.containsKey('total')) {
+              itemLimpio['total_price'] = itemLimpio['total'];
+              itemLimpio.remove('total');
+            }
+
+            // Limpieza nuclear también para los artículos (limpia product_id, combo_id, etc. si van vacíos)
+            itemLimpio.removeWhere((key, value) =>
+                value == null || value.toString().trim().isEmpty);
+
+            return itemLimpio;
+          }).toList();
+
+          await _client.from('order_items').insert(itemsConRelacion);
+        } catch (e) {
+          // La orden ya se creó pero sus items no se pudieron guardar: la
+          // eliminamos para no dejar una orden fantasma (con total, sin
+          // productos) atorada en caja/mesas.
+          try {
+            await _client.from('orders').delete().eq('id', orderIdAsignado);
+          } catch (_) {
+            // Si tampoco se pudo borrar, seguimos y dejamos que el error
+            // original se propague; ya se hizo el mejor esfuerzo posible.
           }
-
-          // Limpieza nuclear también para los artículos (limpia product_id, combo_id, etc. si van vacíos)
-          itemLimpio.removeWhere(
-              (key, value) => value == null || value.toString().trim().isEmpty);
-
-          return itemLimpio;
-        }).toList();
-
-        await _client.from('order_items').insert(itemsConRelacion);
+          rethrow;
+        }
       }
     } catch (e) {
       throw Exception('Error al insertar comanda en Supabase: $e');
@@ -238,7 +251,23 @@ Future<void> agregarItemsAOrden(
       .from('order_items')
       .insert(itemsConRelacion);
 
-  await recalcularTotalOrden(orderId);
+  // Los productos ya quedaron guardados en este punto. Si el recálculo del
+  // total falla (ej. corte de red momentáneo), reintentamos una vez antes
+  // de avisar con un mensaje claro de que el total podría estar
+  // desactualizado, en vez de dejar la excepción cruda de recalcularTotalOrden.
+  try {
+    await recalcularTotalOrden(orderId);
+  } catch (_) {
+    try {
+      await recalcularTotalOrden(orderId);
+    } catch (e) {
+      throw Exception(
+        'Los productos se agregaron correctamente, pero no se pudo '
+        'actualizar el total de la orden. Refresca la pantalla para '
+        'verificarlo. ($e)',
+      );
+    }
+  }
 }
 
   // UPDATE: Cambiar el estado de la comanda (ej: de 'pendiente' a 'preparando' o 'lista')

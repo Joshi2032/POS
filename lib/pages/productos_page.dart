@@ -87,67 +87,105 @@ class _ProductosView extends StatelessWidget {
                               itemBuilder: (context, index) {
                                 final producto =
                                     provider.productosFiltrados[index];
+
+                                final acciones = Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '\$${producto.price.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      icon: Icon(
+                                        producto.active
+                                            ? Icons.visibility
+                                            : Icons.visibility_off,
+                                        color: producto.active
+                                            ? Colors.green
+                                            : Colors.orange,
+                                      ),
+                                      tooltip: producto.active
+                                          ? 'Desactivar'
+                                          : 'Activar',
+                                      onPressed: () async {
+                                        await provider.toggleProducto(
+                                          producto.id,
+                                          !producto.active,
+                                        );
+                                      },
+                                    ),
+                                    IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      icon: const Icon(
+                                        Icons.edit,
+                                        color: Colors.blue,
+                                      ),
+                                      onPressed: () =>
+                                          _mostrarDialogoFormulario(
+                                              context, producto),
+                                    ),
+                                    IconButton(
+                                      visualDensity: VisualDensity.compact,
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () => _confirmarEliminar(
+                                          context, provider, producto),
+                                    ),
+                                  ],
+                                );
+
                                 return Card(
                                   margin: const EdgeInsets.symmetric(
                                       horizontal: 16.0, vertical: 8.0),
-                                  child: ListTile(
-                                    title: Text(producto.name,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold)),
-                                    subtitle: Text(
-                                        '${producto.category} | Stock: ${producto.stock} ${producto.unit}'),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                     children: [
-  Text(
-    '\$${producto.price.toStringAsFixed(2)}',
-    style: const TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.bold,
-    ),
-  ),
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final esAngosta =
+                                          constraints.maxWidth < 420;
 
-  IconButton(
-    icon: Icon(
-      producto.active
-          ? Icons.visibility
-          : Icons.visibility_off,
-      color: producto.active
-          ? Colors.green
-          : Colors.orange,
-    ),
-    tooltip: producto.active
-        ? 'Desactivar'
-        : 'Activar',
-    onPressed: () async {
-      await provider.toggleProducto(
-        producto.id,
-        !producto.active,
-      );
-    },
-  ),
+                                      if (esAngosta) {
+                                        return Padding(
+                                          padding: const EdgeInsets.fromLTRB(
+                                              16, 12, 8, 4),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                producto.name,
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                '${producto.category} | Stock: ${producto.stock} ${producto.unit}',
+                                              ),
+                                              Align(
+                                                alignment:
+                                                    Alignment.centerRight,
+                                                child: acciones,
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
 
-  IconButton(
-    icon: const Icon(
-      Icons.edit,
-      color: Colors.blue,
-    ),
-    onPressed: () =>
-        _mostrarDialogoFormulario(
-            context, producto),
-  ),
-
-  IconButton(
-    icon: const Icon(
-      Icons.delete,
-      color: Colors.red,
-    ),
-    onPressed: () =>
-        provider.deleteProducto(producto.id),
-  ),
-],
+                                      return ListTile(
+                                        title: Text(producto.name,
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
+                                        subtitle: Text(
+                                            '${producto.category} | Stock: ${producto.stock} ${producto.unit}'),
+                                        trailing: acciones,
+                                      );
+                                    },
                                   ),
-                                  )
                                 );
                               },
                             ),
@@ -374,6 +412,43 @@ class _ProductosView extends StatelessWidget {
                 onPressed: categoriasDisponibles.isEmpty
                     ? null
                     : () async {
+                        if (nombreCtrl.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text('El nombre es obligatorio.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+
+                        final precio =
+                            double.tryParse(precioCtrl.text.trim());
+                        if (precio == null || precio <= 0) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Ingresa un precio numérico mayor a 0.',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+
+                        final stock = int.tryParse(stockCtrl.text.trim());
+                        if (stock == null || stock < 0) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Ingresa un stock numérico válido (0 o mayor).',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+
                         final uuidCategoria = provider
                             .getCategoryIdByName(categoriaSeleccionada!);
                         final uuidReceta =
@@ -381,12 +456,12 @@ class _ProductosView extends StatelessWidget {
 
                         final nuevoProducto = Producto(
                           id: productoExistente?.id ?? '',
-                          name: nombreCtrl.text,
+                          name: nombreCtrl.text.trim(),
                           description: descCtrl.text,
                           category: categoriaSeleccionada!,
                           categoryId: uuidCategoria,
-                          price: double.tryParse(precioCtrl.text) ?? 0.0,
-                          stock: int.tryParse(stockCtrl.text) ?? 0,
+                          price: precio,
+                          stock: stock,
                           active: productoExistente?.active ?? true,
                           unit: unidadCtrl.text,
                           recipeId: uuidReceta, // Vinculamos la receta
@@ -418,6 +493,56 @@ class _ProductosView extends StatelessWidget {
             ],
           );
         });
+      },
+    );
+  }
+
+  void _confirmarEliminar(
+    BuildContext context,
+    ProductosProvider provider,
+    Producto producto,
+  ) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Eliminar producto'),
+          content: Text(
+            '¿Seguro que deseas eliminar "${producto.name}"? '
+            'Esta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(dialogContext);
+
+                final exito = await provider.deleteProducto(producto.id);
+
+                if (!exito) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        provider.errorMessage ??
+                            'No se pudo eliminar el producto.',
+                      ),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Eliminar'),
+            ),
+          ],
+        );
       },
     );
   }

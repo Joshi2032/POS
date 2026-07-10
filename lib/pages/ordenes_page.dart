@@ -86,7 +86,10 @@ class _OrdenesView extends StatelessWidget {
                 final isCompact = w < 600;
                 final cols = _gridColumns(w);
 
-                return CustomScrollView(
+                return RefreshIndicator(
+                  onRefresh: () => provider.cargarOrdenes(),
+                  child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   slivers: [
                     SliverPadding(
                       padding: EdgeInsets.fromLTRB(hPad, hPad, hPad, 0),
@@ -327,6 +330,7 @@ class _OrdenesView extends StatelessWidget {
                       ),
                     ),
                   ],
+                  ),
                 );
               },
             ),
@@ -927,18 +931,8 @@ class _DetalleModal extends StatelessWidget {
                           ),
                           label:
                               const Text('Cancelar Orden'),
-                          onPressed: () {
-                            provider.cambiarEstadoOrden(
-                              order.id,
-                              'cancelada',
-                            );
-
-                            UiUtils.showToast(
-                              context,
-                              'Orden cancelada',
-                              color: Colors.red,
-                            );
-                          },
+                          onPressed: () =>
+                              _confirmarCancelarOrden(context, order.id),
                         ),
                     ],
                   ),
@@ -948,6 +942,52 @@ class _DetalleModal extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _confirmarCancelarOrden(BuildContext context, String orderId) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Cancelar orden'),
+          content: const Text(
+            '¿Seguro que deseas cancelar esta orden? '
+            'Esta acción no se puede deshacer.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Volver'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+
+                final exito = await provider.cambiarEstadoOrden(
+                  orderId,
+                  'cancelada',
+                );
+
+                if (!context.mounted) return;
+
+                UiUtils.showToast(
+                  context,
+                  exito
+                      ? 'Orden cancelada'
+                      : provider.errorMessage ?? 'No se pudo cancelar la orden.',
+                  color: Colors.red,
+                );
+              },
+              child: const Text('Sí, cancelar'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

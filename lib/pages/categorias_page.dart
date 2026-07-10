@@ -76,15 +76,29 @@ class _CategoriasView extends StatelessWidget {
   tooltip: categoria['active'] == true
       ? 'Desactivar'
       : 'Activar',
-  onPressed: () async {
-    final id = categoria['id']?.toString();
-    if (id == null) return;
+  onPressed: provider.isLoading
+      ? null
+      : () async {
+          final id = categoria['id']?.toString();
+          if (id == null) return;
 
-    await provider.toggleCategoria(
-      id,
-      !(categoria['active'] == true),
-    );
-  },
+          final exito = await provider.toggleCategoria(
+            id,
+            !(categoria['active'] == true),
+          );
+
+          if (!exito && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  provider.errorMessage ??
+                      'No se pudo actualizar la categoría.',
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
 ),
                               IconButton(
                                 icon:

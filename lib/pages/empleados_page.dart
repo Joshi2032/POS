@@ -88,13 +88,20 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
     }
 
     _obscurePassword = true;
+    bool guardando = false;
 
     showDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final anchoPantalla = MediaQuery.sizeOf(dialogContext).width;
+
             return AlertDialog(
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: anchoPantalla < 480 ? 16 : 40,
+                vertical: 24,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -103,7 +110,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               content: SizedBox(
-                width: 520,
+                width: anchoPantalla < 560 ? double.infinity : 520,
                 child: SingleChildScrollView(
                   child: Form(
                     key: _formKey,
@@ -363,7 +370,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                   child: const Text('Cancelar'),
                 ),
                 ElevatedButton(
-                  onPressed: provider.isLoading
+                  onPressed: guardando
                       ? null
                       : () async {
                           if (!_formKey.currentState!.validate()) {
@@ -402,6 +409,8 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                                 : null,
                             active: _formActive,
                           );
+
+                          setModalState(() => guardando = true);
 
                           bool exito;
 
@@ -445,6 +454,8 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                               ),
                             );
                           } else {
+                            setModalState(() => guardando = false);
+
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -457,9 +468,15 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                             );
                           }
                         },
-                  child: Text(
-                    empleado != null ? 'Guardar Cambios' : 'Añadir',
-                  ),
+                  child: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : Text(
+                          empleado != null ? 'Guardar Cambios' : 'Añadir',
+                        ),
                 ),
               ],
             );

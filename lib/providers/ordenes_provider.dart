@@ -245,21 +245,21 @@ Future<void> agregarItemsAOrden(
   String orderId,
   List<Map<String, dynamic>> itemsMap,
 ) async {
-  await _repository.agregarItemsAOrden(
-    orderId,
-    itemsMap,
-  );
+  await ejecutarOperacion(() async {
+    await _repository.agregarItemsAOrden(
+      orderId,
+      itemsMap,
+    );
 
-  await cargarOrdenes();
+    await cargarOrdenes();
 
-  if (_selectedOrderForModal?.id == orderId) {
-    final idx = _orders.indexWhere((o) => o.id == orderId);
-    if (idx != -1) {
-      _selectedOrderForModal = _orders[idx];
+    if (_selectedOrderForModal?.id == orderId) {
+      final idx = _orders.indexWhere((o) => o.id == orderId);
+      if (idx != -1) {
+        _selectedOrderForModal = _orders[idx];
+      }
     }
-  }
-
-  notifyListeners();
+  });
 }
 
   String _mapEstadoUiToDb(String estado) {

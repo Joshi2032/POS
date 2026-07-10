@@ -26,6 +26,7 @@ class CustomSidebar extends StatelessWidget {
     final controlPanelPaths = [
       '/dashboard',
       '/productos',
+      '/categorias',
       '/combos',
       '/recetas',
       '/empleados',

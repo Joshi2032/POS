@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
@@ -27,6 +29,20 @@ class PrinterService {
   // Cambia esto a false si tu impresora NO tiene cortador automático.
   static const bool _usarCorteAutomatico = true;
 
+  // Tiempos máximos de espera para no dejar la app colgada si la impresora
+  // está apagada o desconectada.
+  static const Duration _timeoutConexion = Duration(seconds: 8);
+  static const Duration _timeoutEnvio = Duration(seconds: 15);
+  static const Duration _timeoutDesconexion = Duration(seconds: 5);
+
+  // El perfil de capacidades no cambia entre impresiones: se carga una sola
+  // vez y se reutiliza en cada ticket.
+  static CapabilityProfile? _cachedProfile;
+
+  static Future<CapabilityProfile> _obtenerProfile() async {
+    return _cachedProfile ??= await CapabilityProfile.load();
+  }
+
   // ---------------------------------------------------------------------
   // TICKET COMPLETO PARA CAJA
   // ---------------------------------------------------------------------
@@ -35,7 +51,7 @@ class PrinterService {
     bool conectado = false;
 
     try {
-      final profile = await CapabilityProfile.load();
+      final profile = await _obtenerProfile();
       final generator = Generator(PaperSize.mm58, profile);
 
       final List<int> bytes = _armarDisenoTicket(generator, orden);
@@ -45,19 +61,28 @@ class PrinterService {
         return false;
       }
 
+      // Se marca ANTES de esperar la respuesta: si connect() excede el
+      // timeout pero la conexión nativa se establece un instante después,
+      // igual queremos intentar desconectar en el finally para no dejar el
+      // puerto USB reclamado.
+      conectado = true;
+
       await printerManager.connect(
         type: PrinterType.usb,
         model: UsbPrinterInput(
           name: 'POS-58',
         ),
-      );
+      ).timeout(_timeoutConexion);
 
-      conectado = true;
-
+      // Nota: si send() excede _timeoutEnvio, se reporta como fallo aunque
+      // los bytes ya se hayan transmitido físicamente (el plugin no expone
+      // forma de confirmar el estado real de la impresora tras un timeout).
+      // Se prefiere el falso negativo (avisar "revisa la impresora") sobre
+      // dejar la app colgada indefinidamente.
       final bool success = await printerManager.send(
         type: PrinterType.usb,
         bytes: bytes,
-      );
+      ).timeout(_timeoutEnvio);
 
       debugPrint('PRINTER_SERVICE: imprimirTicketCaja success=$success');
       return success;
@@ -67,7 +92,9 @@ class PrinterService {
     } finally {
       if (conectado) {
         try {
-          await printerManager.disconnect(type: PrinterType.usb);
+          await printerManager
+              .disconnect(type: PrinterType.usb)
+              .timeout(_timeoutDesconexion);
         } catch (e) {
           debugPrint('PRINTER_SERVICE: Error al desconectar impresora: $e');
         }
@@ -225,8 +252,8 @@ class PrinterService {
         final int anchoImporte =
             importeTexto.length > 7 ? importeTexto.length : 7;
 
-        final int anchoDescDisponible =
-            _anchoPapel - anchoCant - 1 - anchoImporte - 1;
+        final int anchoDescDisponible = (_anchoPapel - anchoCant - 1 - anchoImporte - 1)
+            .clamp(1, _anchoPapel);
 
         if (nombreLimpio.length <= anchoDescDisponible) {
           bytes.addAll(
@@ -364,175 +391,6 @@ class PrinterService {
   }
 
   // ---------------------------------------------------------------------
-  // TICKET RÁPIDO
-  // ---------------------------------------------------------------------
-  static Future<bool> imprimirTicketRapido({
-    required String ticketContent,
-    String? nombreMesa,
-    String? nombreMesero,
-    double total = 0.0,
-  }) async {
-    final printerManager = PrinterManager.instance;
-    bool conectado = false;
-
-    try {
-      final profile = await CapabilityProfile.load();
-      final generator = Generator(PaperSize.mm58, profile);
-
-      final List<int> bytes = _armarDisenoTicketRapido(
-        generator,
-        ticketContent: ticketContent,
-        nombreMesa: nombreMesa,
-        nombreMesero: nombreMesero,
-        total: total,
-      );
-
-      if (bytes.isEmpty) {
-        debugPrint('PRINTER_SERVICE: No se generaron bytes para imprimir.');
-        return false;
-      }
-
-      await printerManager.connect(
-        type: PrinterType.usb,
-        model: UsbPrinterInput(
-          name: 'POS-58',
-        ),
-      );
-
-      conectado = true;
-
-      final bool success = await printerManager.send(
-        type: PrinterType.usb,
-        bytes: bytes,
-      );
-
-      debugPrint('PRINTER_SERVICE: imprimirTicketRapido success=$success');
-      return success;
-    } catch (e) {
-      debugPrint('PRINTER_SERVICE: Error de impresión rápida: $e');
-      return false;
-    } finally {
-      if (conectado) {
-        try {
-          await printerManager.disconnect(type: PrinterType.usb);
-        } catch (e) {
-          debugPrint('PRINTER_SERVICE: Error al desconectar impresora: $e');
-        }
-      }
-    }
-  }
-
-  static List<int> _armarDisenoTicketRapido(
-    Generator generator, {
-    required String ticketContent,
-    String? nombreMesa,
-    String? nombreMesero,
-    required double total,
-  }) {
-    final List<int> bytes = [];
-
-    bytes.addAll(generator.reset());
-
-    bytes.addAll(
-      generator.text(
-        _limpiarTexto(_nombreNegocio),
-        styles: const PosStyles(
-          align: PosAlign.center,
-          bold: true,
-        ),
-      ),
-    );
-
-    bytes.addAll(
-      generator.text(
-        _limpiarTexto(_razonSocial),
-        styles: const PosStyles(align: PosAlign.center),
-      ),
-    );
-
-    bytes.addAll(
-      generator.text(
-        _limpiarTexto(_rfc),
-        styles: const PosStyles(align: PosAlign.center),
-      ),
-    );
-
-    bytes.addAll(generator.hr());
-
-    if (nombreMesa != null && nombreMesa.trim().isNotEmpty) {
-      bytes.addAll(
-        generator.text(
-          'MESA: ${_limpiarTexto(nombreMesa)}',
-          styles: const PosStyles(bold: true),
-        ),
-      );
-    }
-
-    if (nombreMesero != null && nombreMesero.trim().isNotEmpty) {
-      bytes.addAll(
-        generator.text(
-          'ATENDIDO POR: ${_limpiarTexto(nombreMesero)}',
-        ),
-      );
-    }
-
-    bytes.addAll(generator.hr());
-
-    final String contenidoLimpio = _limpiarTexto(ticketContent);
-
-    if (contenidoLimpio.trim().isEmpty) {
-      bytes.addAll(generator.text('SIN CONTENIDO'));
-    } else {
-      for (final linea in contenidoLimpio.split('\n')) {
-        bytes.addAll(generator.text(linea));
-      }
-    }
-
-    bytes.addAll(generator.hr());
-
-    bytes.addAll(
-      generator.text(
-        _filaDosColumnas('TOTAL:', '\$${total.toStringAsFixed(2)}'),
-        styles: const PosStyles(bold: true),
-      ),
-    );
-
-    bytes.addAll(
-      generator.text(
-        'SON: ${_montoEnLetras(total)}',
-        styles: const PosStyles(align: PosAlign.left),
-      ),
-    );
-
-    bytes.addAll(generator.emptyLines(1));
-
-    bytes.addAll(
-      generator.text(
-        'GRACIAS POR SU PREFERENCIA',
-        styles: const PosStyles(align: PosAlign.center),
-      ),
-    );
-
-    bytes.addAll(
-      generator.text(
-        'ESTE NO ES UN COMPROBANTE FISCAL',
-        styles: const PosStyles(
-          align: PosAlign.center,
-          bold: true,
-        ),
-      ),
-    );
-
-    bytes.addAll(generator.feed(3));
-
-    if (_usarCorteAutomatico) {
-      bytes.addAll(generator.cut());
-    }
-
-    return bytes;
-  }
-
-  // ---------------------------------------------------------------------
   // HELPERS DE TEXTO
   // ---------------------------------------------------------------------
   static String _filaDosColumnas(String izquierda, String derecha) {
@@ -590,8 +448,12 @@ class PrinterService {
   // MONTO EN LETRAS
   // ---------------------------------------------------------------------
   static String _montoEnLetras(double monto) {
-    final int pesos = monto.floor();
-    final int centavos = ((monto - pesos) * 100).round();
+    final double montoSeguro = monto.isNaN || monto.isInfinite || monto < 0
+        ? 0.0
+        : monto;
+
+    final int pesos = montoSeguro.floor();
+    final int centavos = ((montoSeguro - pesos) * 100).round();
 
     if (pesos == 0) {
       return 'CERO PESOS ${centavos.toString().padLeft(2, '0')}/100 M.N.';

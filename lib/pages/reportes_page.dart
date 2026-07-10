@@ -54,6 +54,36 @@ class _ReportesView extends StatelessWidget {
                             ),
                           ],
 
+                          if (provider.errorMessage != null) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.red.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline,
+                                      color: Colors.red),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'No se pudo cargar el reporte: '
+                                      '${provider.errorMessage}',
+                                      style:
+                                          const TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
                           const SizedBox(height: 22),
 
                           // ── STAT CARDS ──────────────────────────────────
@@ -780,11 +810,14 @@ class _TransaccionCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(venta.concept,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                Expanded(
+                  child: Text(venta.concept,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ),
+                const SizedBox(width: 8),
                 Text(
                   Formatters.money(venta.amount),
                   style: const TextStyle(

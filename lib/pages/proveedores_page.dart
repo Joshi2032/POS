@@ -42,6 +42,7 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
     final cashierCtrl =
         TextEditingController(text: payment?.cashier ?? 'Laura S.');
     String method = payment?.method ?? 'Transferencia';
+    bool saving = false;
 
     final w = MediaQuery.of(context).size.width;
 
@@ -127,34 +128,71 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                 child: const Text('Cancelar'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  final data = ProviderPayment(
-                    id: idCtrl.text,
-                    provider: providerCtrl.text.trim(),
-                    category: categoryCtrl.text.trim(),
-                    method: method,
-                    amount: double.tryParse(amountCtrl.text) ?? 0.0,
-                    date: dateCtrl.text,
-                    time: timeCtrl.text,
-                    cashier: cashierCtrl.text,
-                  );
-                  if (data.provider.isNotEmpty &&
-                      data.category.isNotEmpty &&
-                      data.amount > 0) {
-                    if (payment == null) {
-                      final inv = Provider.of<InventarioProvider>(ctx,
-                          listen: false);
-                      provider.addPayment(data, inv);
-                    } else {
-                      provider.updatePayment(payment.id, data);
-                    }
-                    Navigator.pop(ctx);
-                  }
-                },
+                onPressed: saving
+                    ? null
+                    : () async {
+                        final data = ProviderPayment(
+                          id: idCtrl.text,
+                          provider: providerCtrl.text.trim(),
+                          category: categoryCtrl.text.trim(),
+                          method: method,
+                          amount: double.tryParse(amountCtrl.text) ?? 0.0,
+                          date: dateCtrl.text,
+                          time: timeCtrl.text,
+                          cashier: cashierCtrl.text,
+                        );
+
+                        if (data.provider.isEmpty ||
+                            data.category.isEmpty ||
+                            data.amount <= 0) {
+                          return;
+                        }
+
+                        final messenger = ScaffoldMessenger.of(context);
+
+                        setDialogState(() => saving = true);
+
+                        bool exito;
+                        if (payment == null) {
+                          final inv = Provider.of<InventarioProvider>(ctx,
+                              listen: false);
+                          exito = await provider.addPayment(data, inv);
+                        } else {
+                          exito =
+                              await provider.updatePayment(payment.id, data);
+                        }
+
+                        if (!ctx.mounted) return;
+
+                        if (exito) {
+                          Navigator.pop(ctx);
+                        } else {
+                          setDialogState(() => saving = false);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                provider.errorMessage ??
+                                    'No se pudo guardar el pago.',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(ctx).primaryColor,
                     foregroundColor: Colors.white),
-                child: const Text('Guardar'),
+                child: saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Guardar'),
               ),
             ],
           );

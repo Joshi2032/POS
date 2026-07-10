@@ -31,6 +31,14 @@ class TomarOrdenProvider extends ChangeNotifier {
   OrderType _orderType = OrderType.dineIn;
   bool _isExistingTable = false;
 
+  bool _isSendingOrder = false;
+  bool get isSendingOrder => _isSendingOrder;
+
+  void setSendingOrder(bool value) {
+    _isSendingOrder = value;
+    notifyListeners();
+  }
+
   String _selectedArea = '';
   String _selectedTableId = '';
   String _selectedCategory = 'Todos';
@@ -465,9 +473,14 @@ class TomarOrdenProvider extends ChangeNotifier {
       return;
     }
 
-    final mesa = _mesas.firstWhere(
-      (item) => item.id.toString() == mesaId,
-    );
+    Mesa? mesa;
+    try {
+      mesa = _mesas.firstWhere(
+        (item) => item.id.toString() == mesaId,
+      );
+    } catch (_) {
+      return;
+    }
 
     if (!_isAreaAllowed(mesa.area)) {
       return;

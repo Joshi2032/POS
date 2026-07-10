@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../models/empleado.dart';
 import '../models/nomina_pago.dart';
+import '../providers/empleados_provider.dart';
 import '../providers/nominas_provider.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/layout_widgets.dart';
@@ -38,9 +40,16 @@ class _NominasViewState extends State<_NominasView> {
           DateTime.now().toIso8601String().split('T').first,
     );
 
-    final empleadoCtrl = TextEditingController(
-      text: nomina?.empleado ?? '',
-    );
+    String? selectedEmpleadoId = nomina?.empleadoId;
+
+    // Incluimos también al empleado ya asignado aunque esté inactivo, para
+    // no bloquear la edición de una nómina antigua (solo cambiar el monto o
+    // la fecha) por haber dado de baja a ese empleado después.
+    final empleadosDisponibles = context
+        .read<EmpleadosProvider>()
+        .empleados
+        .where((e) => e.active || e.id == nomina?.empleadoId)
+        .toList();
 
     final montoCtrl = TextEditingController(
       text: nomina == null ? '' : nomina.monto.toString(),
@@ -67,7 +76,6 @@ class _NominasViewState extends State<_NominasView> {
               Future<void> guardar() async {
                 if (guardando) return;
 
-                final empleado = empleadoCtrl.text.trim();
                 final fechaTexto = fechaCtrl.text.trim();
 
                 final montoTexto = montoCtrl.text
@@ -77,11 +85,19 @@ class _NominasViewState extends State<_NominasView> {
                 final fecha = DateTime.tryParse(fechaTexto);
                 final monto = double.tryParse(montoTexto) ?? 0;
 
-                if (empleado.isEmpty) {
+                Empleado? empleadoSeleccionado;
+                for (final e in empleadosDisponibles) {
+                  if (e.id == selectedEmpleadoId) {
+                    empleadoSeleccionado = e;
+                    break;
+                  }
+                }
+
+                if (empleadoSeleccionado == null) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
                       content: Text(
-                        'Ingresa el nombre del empleado.',
+                        'Selecciona el empleado que recibe el pago.',
                       ),
                       backgroundColor: Colors.red,
                     ),
@@ -115,8 +131,11 @@ class _NominasViewState extends State<_NominasView> {
 
                 final nuevaNomina = NominaPago(
                   id: nomina?.id ?? '',
+                  empleadoId: empleadoSeleccionado.id,
                   fecha: fechaTexto,
-                  empleadoNombre: empleado,
+                  empleadoNombre:
+                      '${empleadoSeleccionado.firstName} ${empleadoSeleccionado.lastName}'
+                          .trim(),
                   tipo: tipo,
                   periodo: periodo,
                   monto: monto,
@@ -205,9 +224,15 @@ class _NominasViewState extends State<_NominasView> {
                             label: 'Fecha',
                           ),
                           const SizedBox(height: 12),
-                          _DField(
-                            ctrl: empleadoCtrl,
-                            label: 'Empleado',
+                          _EmpleadoDropdown(
+                            empleados: empleadosDisponibles,
+                            selectedId: selectedEmpleadoId,
+                            enabled: !guardando,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                selectedEmpleadoId = value;
+                              });
+                            },
                           ),
                         ] else
                           Row(
@@ -220,9 +245,15 @@ class _NominasViewState extends State<_NominasView> {
                               ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: _DField(
-                                  ctrl: empleadoCtrl,
-                                  label: 'Empleado',
+                                child: _EmpleadoDropdown(
+                                  empleados: empleadosDisponibles,
+                                  selectedId: selectedEmpleadoId,
+                                  enabled: !guardando,
+                                  onChanged: (value) {
+                                    setDialogState(() {
+                                      selectedEmpleadoId = value;
+                                    });
+                                  },
                                 ),
                               ),
                             ],
@@ -427,7 +458,6 @@ class _NominasViewState extends State<_NominasView> {
       );
     } finally {
       fechaCtrl.dispose();
-      empleadoCtrl.dispose();
       montoCtrl.dispose();
       notasCtrl.dispose();
     }
@@ -1077,6 +1107,53 @@ class _DField extends StatelessWidget {
         prefixText: prefixText,
         border: const OutlineInputBorder(),
       ),
+    );
+  }
+}
+
+class _EmpleadoDropdown extends StatelessWidget {
+  const _EmpleadoDropdown({
+    required this.empleados,
+    required this.selectedId,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  final List<Empleado> empleados;
+  final String? selectedId;
+  final bool enabled;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final valorValido =
+        empleados.any((e) => e.id == selectedId) ? selectedId : null;
+
+    return DropdownButtonFormField<String>(
+      dropdownColor: Theme.of(context).cardColor,
+      initialValue: valorValido,
+      isExpanded: true,
+      items: empleados
+          .map(
+            (e) => DropdownMenuItem<String>(
+              value: e.id,
+              child: Text(
+                e.active
+                    ? '${e.firstName} ${e.lastName}'.trim()
+                    : '${'${e.firstName} ${e.lastName}'.trim()} (inactivo)',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
+      onChanged: enabled ? onChanged : null,
+      decoration: const InputDecoration(
+        labelText: 'Empleado',
+        border: OutlineInputBorder(),
+      ),
+      hint: empleados.isEmpty
+          ? const Text('No hay empleados activos')
+          : const Text('Selecciona un empleado'),
     );
   }
 }

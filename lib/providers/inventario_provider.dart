@@ -111,10 +111,12 @@ class InventarioProvider extends ChangeNotifier {
     _setLoading(true);
     _clearError();
     try {
-      await _repository.actualizarStock(item.id, nuevaCantidad);
+      final cantidadSegura = nuevaCantidad < 0 ? 0.0 : nuevaCantidad;
+
+      await _repository.actualizarStock(item.id, cantidadSegura);
 
       // La diferencia es double, igual que tu modelo
-      final diferencia = nuevaCantidad - item.stock;
+      final diferencia = cantidadSegura - item.stock;
 
       await _repository.registrarMovimiento(item.id, diferencia, razon);
       await cargarInventario();

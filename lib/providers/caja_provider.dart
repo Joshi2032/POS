@@ -22,6 +22,7 @@ class CajaProvider extends ChangeNotifier {
   String _selectedMethod = 'Efectivo';
   double _receivedAmount = 0.0;
   String _cashError = '';
+  String? _cashWarning;
 
   // --- ESTADOS CENTRALIZADOS DE RED Y FLUJO ---
   bool _isLoading = false;
@@ -49,6 +50,7 @@ CashOrder? get selectedOrder => _selectedOrder;
 String get selectedMethod => _selectedMethod;
 double get orderSubtotal => _selectedOrder?.total ?? 0.0;
 String get cashError => _cashError;
+String? get cashWarning => _cashWarning;
 int get paidTodayCount => paidToday.length;
 
   bool get isLoading => _isLoading;
@@ -83,6 +85,7 @@ int get paidTodayCount => paidToday.length;
     _selectedOrder = order;
     _receivedAmount = 0.0;
     _cashError = '';
+    _cashWarning = null;
     notifyListeners();
   }
 
@@ -126,17 +129,34 @@ int get paidTodayCount => paidToday.length;
     // Operación ahora espera la confirmación del servidor y sincroniza el estado
     _setLoading(true);
     _cashError = '';
+    _cashWarning = null;
 
     final String orderId = _selectedOrder!.id;
     final String metodo = _selectedMethod;
     final double total = _selectedOrder!.total;
 
     try {
-      await _repository.registrarCobro(orderId, metodo, total);
+      final movimientoRegistrado =
+          await _repository.registrarCobro(orderId, metodo, total);
 
-      // Re-sincronizar órdenes y totales desde las fuentes canónicas
+      if (!movimientoRegistrado) {
+        _cashWarning =
+            'El cobro se registró correctamente, pero no se pudo guardar '
+            'el movimiento de caja. Revisa el corte del día.';
+      }
+
+      // Re-sincronizar órdenes y totales desde las fuentes canónicas. El
+      // cobro (registrarCobro) YA se completó en este punto: si esta
+      // sincronización falla, no debe reportarse como que el cobro falló.
       await _ordenesProvider.cargarOrdenes();
-      _totalInCash = await _repository.obtenerTotalEnCaja();
+      try {
+        _totalInCash = await _repository.obtenerTotalEnCaja();
+      } catch (e) {
+        debugPrint('Advertencia: no se pudo refrescar el total de caja: $e');
+        _cashWarning ??=
+            'El cobro se registró correctamente, pero no se pudo '
+            'actualizar el total en caja. Refresca la pantalla.';
+      }
 
       closeSelectedOrderPanel();
       _setLoading(false);

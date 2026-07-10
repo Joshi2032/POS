@@ -524,7 +524,13 @@ Future<void> _mostrarOrdenesExistentes(
           context,
           setDialogState,
         ) {
+          final tamanoPantalla = MediaQuery.sizeOf(dialogContext);
+
           return AlertDialog(
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: tamanoPantalla.width < 600 ? 16 : 40,
+              vertical: 24,
+            ),
             title: const Text(
               'Seleccionar orden existente',
               style: TextStyle(
@@ -532,8 +538,12 @@ Future<void> _mostrarOrdenesExistentes(
               ),
             ),
             content: SizedBox(
-              width: 560,
-              height: 500,
+              width: tamanoPantalla.width < 600
+                  ? double.infinity
+                  : 560,
+              height: tamanoPantalla.height < 600
+                  ? tamanoPantalla.height * 0.7
+                  : 500,
               child: Column(
                 children: [
                   const Align(
@@ -1111,7 +1121,7 @@ class _CartSection extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: cart.isEmpty
+                  onPressed: cart.isEmpty || provider.isSendingOrder
                       ? null
                       : () {
                           _confirmarOrden(
@@ -1127,15 +1137,27 @@ class _CartSection extends StatelessWidget {
                     ),
                     elevation: 0,
                   ),
-                  child: Text(
-                    provider.isExistingTable && provider.hasSelectedExistingOrder
-                        ? 'Agregar a Cocina'
-                        : 'Enviar a Cocina',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: provider.isSendingOrder
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          provider.isExistingTable &&
+                                  provider.hasSelectedExistingOrder
+                              ? 'Agregar a Cocina'
+                              : 'Enviar a Cocina',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -1231,6 +1253,10 @@ class _CartSection extends StatelessWidget {
     final cartSnapshot = List<CartItem>.from(provider.cart);
     final total = provider.total;
 
+    if (provider.isSendingOrder) {
+      return;
+    }
+
     if (cartSnapshot.isEmpty) {
       messenger.showSnackBar(
         const SnackBar(
@@ -1302,6 +1328,8 @@ class _CartSection extends StatelessWidget {
     );
 
     String mensajeExito = 'Orden creada exitosamente';
+
+    provider.setSendingOrder(true);
 
     try {
       if (orderType == OrderType.dineIn && isExistingTable) {
@@ -1394,6 +1422,8 @@ class _CartSection extends StatelessWidget {
           duration: const Duration(seconds: 5),
         ),
       );
+    } finally {
+      provider.setSendingOrder(false);
     }
   }
 }

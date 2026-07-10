@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: SizedBox(
-            width: 390,
+            width: MediaQuery.sizeOf(context).width < 438 ? double.infinity : 390,
             child: Card(
               color: cardColor,
               elevation: 8,

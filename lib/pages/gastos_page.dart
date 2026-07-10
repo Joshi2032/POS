@@ -99,29 +99,66 @@ class _GastosViewState extends State<_GastosView> {
       return;
     }
     if (editingId != null) {
+      final idAActualizar = editingId!;
       UiUtils.showConfirmDialog(
           context, 'Actualizar Gasto',
-          '¿Actualizar el gasto ${formState.concept}?', () {
-        provider.actualizarGasto(editingId!, formState);
-        UiUtils.showToast(context, 'Gasto actualizado', color: Colors.green);
-        cerrarModal();
+          '¿Actualizar el gasto ${formState.concept}?', () async {
+        final exito = await provider.actualizarGasto(idAActualizar, formState);
+        if (!mounted) return;
+        if (exito) {
+          UiUtils.showToast(context, 'Gasto actualizado', color: Colors.green);
+          cerrarModal();
+        } else {
+          UiUtils.showToast(
+            context,
+            provider.errorMessage ?? 'No se pudo actualizar el gasto.',
+            color: Colors.red,
+          );
+        }
       });
     } else {
       UiUtils.showConfirmDialog(
           context, 'Registrar Gasto',
-          '¿Registrar gasto ${formState.concept}?', () {
-        provider.crearGasto(formState);
-        UiUtils.showToast(context, 'Gasto registrado', color: Colors.green);
-        cerrarModal();
+          '¿Registrar gasto ${formState.concept}?', () async {
+        final exito = await provider.crearGasto(formState);
+        if (!mounted) return;
+        if (exito) {
+          UiUtils.showToast(context, 'Gasto registrado', color: Colors.green);
+          cerrarModal();
+        } else {
+          UiUtils.showToast(
+            context,
+            provider.errorMessage ?? 'No se pudo registrar el gasto.',
+            color: Colors.red,
+          );
+        }
       });
     }
   }
 
   void eliminarGastoConfirmado(GastosProvider provider, Gasto g) {
+    final id = g.id;
+    if (id == null) {
+      UiUtils.showToast(
+        context,
+        'Este gasto no tiene un identificador válido.',
+        color: Colors.red,
+      );
+      return;
+    }
     UiUtils.showConfirmDialog(
-        context, 'Eliminar Gasto', '¿Eliminar gasto ${g.concept}?', () {
-      provider.eliminarGasto(g.id!);
-      UiUtils.showToast(context, 'Gasto eliminado', color: Colors.orange);
+        context, 'Eliminar Gasto', '¿Eliminar gasto ${g.concept}?', () async {
+      final exito = await provider.eliminarGasto(id);
+      if (!mounted) return;
+      if (exito) {
+        UiUtils.showToast(context, 'Gasto eliminado', color: Colors.orange);
+      } else {
+        UiUtils.showToast(
+          context,
+          provider.errorMessage ?? 'No se pudo eliminar el gasto.',
+          color: Colors.red,
+        );
+      }
     });
   }
 
@@ -484,9 +521,11 @@ class _GastosViewState extends State<_GastosView> {
               modalError: modalError,
               formCategories: formCategories,
               formMethods: formMethods,
+              isSaving: provider.isLoading,
               onCerrar: cerrarModal,
-              onGuardar: () =>
-                  guardarGasto(context.read<GastosProvider>()),
+              onGuardar: provider.isLoading
+                  ? null
+                  : () => guardarGasto(context.read<GastosProvider>()),
               onCategoryChanged: (val) =>
                   setState(() => formState.category = val ?? 'General'),
               onMethodChanged: (val) =>
@@ -733,6 +772,7 @@ class _GastoModal extends StatelessWidget {
     required this.onCategoryChanged,
     required this.onMethodChanged,
     required this.onFormChanged,
+    this.isSaving = false,
   });
 
   final String? editingId;
@@ -741,8 +781,9 @@ class _GastoModal extends StatelessWidget {
   final String modalError;
   final List<String> formCategories;
   final List<String> formMethods;
+  final bool isSaving;
   final VoidCallback onCerrar;
-  final VoidCallback onGuardar;
+  final VoidCallback? onGuardar;
   final ValueChanged<String?> onCategoryChanged;
   final ValueChanged<String?> onMethodChanged;
   final void Function(String field, String val) onFormChanged;
@@ -943,7 +984,18 @@ class _GastoModal extends StatelessWidget {
                                 Theme.of(context).primaryColor,
                             foregroundColor: Colors.white),
                         onPressed: onGuardar,
-                        child: const Text('Guardar Gasto'),
+                        child: isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text('Guardar Gasto'),
                       ),
                     ],
                   ),

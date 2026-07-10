@@ -77,10 +77,22 @@ class _CajaPageState extends State<CajaPage> {
             ),
             const SizedBox(height: 24),
             Expanded(
-              child: ordenesPendientes.isEmpty
-                  ? const EmptyState(
-                      message: 'No hay cuentas pendientes por cobrar.',
-                      icon: Icons.check_circle_outline,
+              child: RefreshIndicator(
+                onRefresh: () => context.read<OrdenesProvider>().cargarOrdenes(),
+                child: ordenesPendientes.isEmpty
+                  ? LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: SizedBox(
+                            height: constraints.maxHeight,
+                            child: const EmptyState(
+                              message: 'No hay cuentas pendientes por cobrar.',
+                              icon: Icons.check_circle_outline,
+                            ),
+                          ),
+                        );
+                      },
                     )
                   : LayoutBuilder(
                       builder: (context, constraints) {
@@ -88,6 +100,7 @@ class _CajaPageState extends State<CajaPage> {
                         const cardWidth = 340.0;
 
                         return SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           child: Wrap(
                             spacing: spacing,
                             runSpacing: spacing,
@@ -452,6 +465,7 @@ class _CajaPageState extends State<CajaPage> {
                         );
                       },
                     ),
+              ),
             ),
           ],
         ),
@@ -603,7 +617,13 @@ class _CajaPageState extends State<CajaPage> {
                     ? 'Mesa sin identificar'
                     : orden.tableOrCustomer;
 
+            final anchoPantalla = MediaQuery.sizeOf(dialogContext).width;
+
             return AlertDialog(
+              insetPadding: EdgeInsets.symmetric(
+                horizontal: anchoPantalla < 480 ? 16 : 40,
+                vertical: 24,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -615,7 +635,7 @@ class _CajaPageState extends State<CajaPage> {
               ),
               content: SingleChildScrollView(
                 child: SizedBox(
-                  width: 400,
+                  width: anchoPantalla < 440 ? double.infinity : 400,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -862,8 +882,11 @@ class _CajaPageState extends State<CajaPage> {
                     ).pop();
 
                     if (exito) {
-                      await context.read<MesasProvider>().cargarMesas();
-                      await context.read<OrdenesProvider>().cargarOrdenes();
+                      final mesasProvider = context.read<MesasProvider>();
+                      final ordenesProvider = context.read<OrdenesProvider>();
+
+                      await mesasProvider.cargarMesas();
+                      await ordenesProvider.cargarOrdenes();
 
                       if (!context.mounted) {
                         return;
@@ -883,6 +906,16 @@ class _CajaPageState extends State<CajaPage> {
                           ),
                         ),
                       );
+
+                      if (cajaProvider.cashWarning != null) {
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text(cajaProvider.cashWarning!),
+                            backgroundColor: Colors.orange,
+                            duration: const Duration(seconds: 5),
+                          ),
+                        );
+                      }
 
                       final printSuccess =
                           await PrinterService.imprimirTicketCaja(
