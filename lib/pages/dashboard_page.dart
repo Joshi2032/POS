@@ -39,6 +39,12 @@ class _DashboardView extends StatelessWidget {
         .toList();
   }
 
+  /// Formatea el % de cambio real contra el período anterior, con signo.
+  String _formatCambioPct(double pct) {
+    final signo = pct >= 0 ? '+' : '';
+    return '$signo${pct.toStringAsFixed(1)}%';
+  }
+
   // ─── HELPERS DE ESCALA ────────────────────────────────────────────────────
 
   /// Formatea un valor al label más legible según su magnitud.
@@ -414,9 +420,10 @@ class _DashboardView extends StatelessWidget {
                               title: 'Ventas Hoy',
                               value:
                                   '\$${provider.ventasHoy.toStringAsFixed(2)}',
-                              change: '+12.5%',
+                              change:
+                                  _formatCambioPct(provider.ventasHoyCambioPct),
                               icon: Icons.attach_money,
-                              isPositive: true),
+                              isPositive: provider.ventasHoyCambioPct >= 0),
                           _buildMetricCard(context,
                               title: 'Órdenes Activas',
                               value: '${provider.ordenesActivas}',
@@ -427,14 +434,17 @@ class _DashboardView extends StatelessWidget {
                               title: 'Ingreso ${provider.labelFiltro}',
                               value:
                                   '\$${provider.ingresoFiltroTotal.toStringAsFixed(2)}',
-                              change: '+8.2%',
+                              change: _formatCambioPct(
+                                  provider.ingresoFiltroCambioPct),
                               icon: Icons.trending_up,
-                              isPositive: true),
+                              isPositive:
+                                  provider.ingresoFiltroCambioPct >= 0),
                           _buildMetricCard(context,
                               title: 'Utilidad ${provider.labelFiltro}',
                               value:
                                   '\$${provider.utilidadFiltroTotal.toStringAsFixed(2)}',
-                              change: '+15.3%',
+                              change: _formatCambioPct(
+                                  provider.utilidadFiltroCambioPct),
                               icon: Icons.account_balance_wallet,
                               isPositive: provider.utilidadFiltroTotal >= 0),
                         ],

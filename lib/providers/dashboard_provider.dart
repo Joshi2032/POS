@@ -56,9 +56,12 @@ class DashboardProvider extends ChangeNotifier {
 
   // Tarjetas analíticas superiores
   double _ventasHoy = 0.0;
+  double _ventasAyer = 0.0;
   int _ordenesActivas = 0;
   double _ingresoFiltroTotal = 0.0;
   double _utilidadFiltroTotal = 0.0;
+  double _ingresoPeriodoAnteriorTotal = 0.0;
+  double _utilidadPeriodoAnteriorTotal = 0.0;
 
   // Listas estructuradas para las gráficas
   List<String> _currentLabels = [];
@@ -73,6 +76,22 @@ class DashboardProvider extends ChangeNotifier {
   int get ordenesActivas => _ordenesActivas;
   double get ingresoFiltroTotal => _ingresoFiltroTotal;
   double get utilidadFiltroTotal => _utilidadFiltroTotal;
+
+  // Cambio porcentual REAL contra el período anterior (antes las tarjetas
+  // del dashboard mostraban "+12.5%"/"+8.2%"/"+15.3%" fijos en el código,
+  // sin ninguna relación con los datos reales).
+  double get ventasHoyCambioPct => _cambioPorcentual(_ventasHoy, _ventasAyer);
+  double get ingresoFiltroCambioPct =>
+      _cambioPorcentual(_ingresoFiltroTotal, _ingresoPeriodoAnteriorTotal);
+  double get utilidadFiltroCambioPct =>
+      _cambioPorcentual(_utilidadFiltroTotal, _utilidadPeriodoAnteriorTotal);
+
+  double _cambioPorcentual(double actual, double anterior) {
+    if (anterior == 0) {
+      return actual == 0 ? 0.0 : 100.0;
+    }
+    return ((actual - anterior) / anterior.abs()) * 100;
+  }
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -146,8 +165,45 @@ class DashboardProvider extends ChangeNotifier {
     }
   }
 
+  // Extrae 'categories.name' del embed anidado
+  // 'order_items(*, products(categories(name)))'. PostgREST puede devolver
+  // los embeds como Map (relación 1:1) o como List (por seguridad, si
+  // llegara a tratarse como 1:N), así que se manejan ambos casos.
+  String? _extraerCategoriaReal(Map<String, dynamic> item) {
+    final productosEmbed = item['products'];
+
+    Map<String, dynamic>? productoMap;
+    if (productosEmbed is Map<String, dynamic>) {
+      productoMap = productosEmbed;
+    } else if (productosEmbed is List && productosEmbed.isNotEmpty) {
+      final primero = productosEmbed.first;
+      if (primero is Map<String, dynamic>) productoMap = primero;
+    }
+
+    if (productoMap == null) return null;
+
+    final categoriasEmbed = productoMap['categories'];
+    if (categoriasEmbed is Map<String, dynamic>) {
+      return categoriasEmbed['name']?.toString();
+    } else if (categoriasEmbed is List && categoriasEmbed.isNotEmpty) {
+      final primero = categoriasEmbed.first;
+      if (primero is Map<String, dynamic>) {
+        return primero['name']?.toString();
+      }
+    }
+
+    return null;
+  }
+
   Future<List<dynamic>> _cargarOrdersConItems() async {
-    return await _client.from('orders').select('*, order_items(*)');
+    // Se pide también la categoría REAL del producto (vía su categoría
+    // asignada en el catálogo) para clasificar el rendimiento de productos,
+    // en vez de adivinarla por palabras clave en el nombre (que fallaba
+    // silenciosamente a "General" para cualquier producto que no contuviera
+    // literalmente "arrachera"/"cerveza"/"combo", etc.).
+    return await _client
+        .from('orders')
+        .select('*, order_items(*, products(categories(name)))');
   }
 
   // Se degradan a lista vacía si fallan, en vez de tumbar toda la carga del
@@ -182,9 +238,20 @@ class DashboardProvider extends ChangeNotifier {
   // --- MOTOR ANALÍTICO Y CRUCE DE TABLAS ---
   void _procesarOperacionesFinancieras() {
     final ahora = DateTime.now();
-    final hoyStr = ahora.toIso8601String().substring(0, 10);
+
+    // Mismo offset fijo de México (UTC-6) que ya se usa en caja_repository.dart,
+    // provider_payment.dart y reservaciones_provider.dart: "hoy"/"ayer" se
+    // calculan con este offset para que Ventas Hoy no dependa de la zona
+    // horaria del dispositivo ni se desfase cerca de medianoche.
+    final ahoraMexico = DateTime.now().toUtc().add(const Duration(hours: -6));
+    final hoyStr = ahoraMexico.toIso8601String().substring(0, 10);
+    final ayerStr = ahoraMexico
+        .subtract(const Duration(days: 1))
+        .toIso8601String()
+        .substring(0, 10);
 
     _ventasHoy = 0.0;
+    _ventasAyer = 0.0;
     _ordenesActivas = 0;
 
     final Map<String, ProductoRendimiento> mapaProductosFiltro = {};
@@ -218,6 +285,10 @@ class DashboardProvider extends ChangeNotifier {
         // Solo sumamos dinero de órdenes que ya están pagadas (paid)
         if (dateStr.startsWith(hoyStr) && estado == 'paid') {
           _ventasHoy += totalValue;
+        }
+
+        if (dateStr.startsWith(ayerStr) && estado == 'paid') {
+          _ventasAyer += totalValue;
         }
 
         if (estado == 'pending' || estado == 'preparing' || estado == 'ready') {
@@ -489,20 +560,32 @@ class DashboardProvider extends ChangeNotifier {
                 final nombreProd =
                     (item['product_name'] ?? 'Producto Desconocido').toString();
 
-                // Lógica de clasificación automática
-                String categoriaProd = 'General';
-                final rawName = nombreProd.toLowerCase();
+                // Usamos la categoría REAL asignada al producto en el
+                // catálogo (Productos > Categoría) en vez de adivinarla por
+                // palabras clave en el nombre, que fallaba en silencio a
+                // "General" para cualquier producto sin esas palabras
+                // exactas en el nombre.
+                String? categoriaProd = _extraerCategoriaReal(item);
 
-                if (rawName.contains('arrachera') ||
-                    rawName.contains('t-bone') ||
-                    rawName.contains('corte')) {
-                  categoriaProd = 'Parrilla';
-                } else if (rawName.contains('cerveza') ||
-                    rawName.contains('agua') ||
-                    rawName.contains('refresco')) {
-                  categoriaProd = 'Bebidas';
-                } else if (rawName.contains('combo')) {
-                  categoriaProd = 'Combos';
+                // Si el producto ya no existe/fue borrado (sin join
+                // disponible), caemos al heurístico anterior como respaldo
+                // en vez de dejarlo sin categoría.
+                if (categoriaProd == null || categoriaProd.trim().isEmpty) {
+                  final rawName = nombreProd.toLowerCase();
+
+                  if (rawName.contains('arrachera') ||
+                      rawName.contains('t-bone') ||
+                      rawName.contains('corte')) {
+                    categoriaProd = 'Parrilla';
+                  } else if (rawName.contains('cerveza') ||
+                      rawName.contains('agua') ||
+                      rawName.contains('refresco')) {
+                    categoriaProd = 'Bebidas';
+                  } else if (rawName.contains('combo')) {
+                    categoriaProd = 'Combos';
+                  } else {
+                    categoriaProd = 'General';
+                  }
                 }
 
                 final int cantidad = ((item['quantity'] ?? 1) as num).toInt();
@@ -553,6 +636,8 @@ class DashboardProvider extends ChangeNotifier {
 
     _utilidadFiltroTotal = _ingresoFiltroTotal - totalGastosFiltro;
 
+    _calcularTotalesPeriodoAnterior(ahora);
+
     try {
       debugPrint(
         '✅ DASHBOARD: ventasHoy=${_ventasHoy.toStringAsFixed(2)}, '
@@ -566,5 +651,81 @@ class DashboardProvider extends ChangeNotifier {
         stackTrace,
       );
     }
+  }
+
+  // Calcula el ingreso y la utilidad del período INMEDIATO ANTERIOR al
+  // seleccionado (semana pasada / mes pasado / año pasado), para poder
+  // mostrar un % de cambio real en las tarjetas del dashboard en vez del
+  // valor fijo que había antes.
+  void _calcularTotalesPeriodoAnterior(DateTime ahora) {
+    late DateTime inicioAnterior;
+    late DateTime finAnteriorExclusivo;
+
+    if (_filterType == 'semana') {
+      final lunesDeEstaSemana = DateTime(
+        ahora.year,
+        ahora.month,
+        ahora.day,
+      ).subtract(Duration(days: ahora.weekday - 1));
+      inicioAnterior = lunesDeEstaSemana.subtract(const Duration(days: 7));
+      finAnteriorExclusivo = lunesDeEstaSemana;
+    } else if (_filterType == 'mes') {
+      inicioAnterior = DateTime(ahora.year, ahora.month - 1, 1);
+      finAnteriorExclusivo = DateTime(ahora.year, ahora.month, 1);
+    } else {
+      inicioAnterior = DateTime(ahora.year - 1, 1, 1);
+      finAnteriorExclusivo = DateTime(ahora.year, 1, 1);
+    }
+
+    double ingresoAnterior = 0.0;
+    double gastosAnterior = 0.0;
+
+    bool enRango(DateTime fecha) =>
+        !fecha.isBefore(inicioAnterior) && fecha.isBefore(finAnteriorExclusivo);
+
+    for (final rawJson in _allOrders) {
+      try {
+        final dateStr = rawJson['created_at']?.toString() ?? '';
+        final estado = (rawJson['status'] ?? '').toString().toLowerCase();
+        if (dateStr.isEmpty || estado != 'paid') continue;
+
+        final fecha = DateTime.parse(dateStr);
+        if (enRango(fecha)) {
+          ingresoAnterior += (rawJson['total'] as num?)?.toDouble() ?? 0.0;
+        }
+      } catch (_) {
+        // Se ignoran filas individuales con fecha inválida, igual que en
+        // el resto de esta clase.
+      }
+    }
+
+    for (final rawJson in _allExpenses) {
+      try {
+        final dateStr =
+            (rawJson['expense_date'] ?? rawJson['created_at'] ?? '')
+                .toString();
+        if (dateStr.isEmpty) continue;
+
+        final fecha = DateTime.parse(dateStr);
+        if (enRango(fecha)) {
+          gastosAnterior += (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
+        }
+      } catch (_) {}
+    }
+
+    for (final rawJson in _allSupplierPayments) {
+      try {
+        final dateStr = (rawJson['created_at'] ?? '').toString();
+        if (dateStr.isEmpty) continue;
+
+        final fecha = DateTime.parse(dateStr);
+        if (enRango(fecha)) {
+          gastosAnterior += (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
+        }
+      } catch (_) {}
+    }
+
+    _ingresoPeriodoAnteriorTotal = ingresoAnterior;
+    _utilidadPeriodoAnteriorTotal = ingresoAnterior - gastosAnterior;
   }
 }
