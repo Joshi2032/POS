@@ -57,6 +57,17 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
     super.dispose();
   }
 
+  /// Interpreta el texto del campo Salario como monto en pesos: acepta
+  /// separadores de miles con coma (ej. "12,000" -> 12000), consistente con
+  /// cómo Formatters.money() los muestra. Devuelve null si el texto está
+  /// vacío o no es un número válido (en vez de guardar silenciosamente
+  /// null cuando el formato no coincide con lo esperado).
+  double? _parsearSalario(String texto) {
+    final limpio = texto.trim();
+    if (limpio.isEmpty) return null;
+    return double.tryParse(limpio.replaceAll(',', ''));
+  }
+
   Future<void> _abrirFormularioModal(
     EmpleadosProvider provider, {
     Empleado? empleado,
@@ -352,7 +363,24 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                             border: OutlineInputBorder(),
                             prefixText: '\$',
                           ),
-                          keyboardType: TextInputType.number,
+                          keyboardType:
+                              const TextInputType.numberWithOptions(
+                                  decimal: true),
+                          validator: (value) {
+                            final texto = (value ?? '').trim();
+                            if (texto.isEmpty) {
+                              return null; // Campo opcional
+                            }
+
+                            final monto = _parsearSalario(texto);
+                            if (monto == null) {
+                              return 'Ingresa un monto numérico válido.';
+                            }
+                            if (monto < 0) {
+                              return 'El salario no puede ser negativo.';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -422,8 +450,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
                             email: _emailCtrl.text.trim().toLowerCase(),
                             position: _formPosition,
                             hireDate: empleado?.hireDate ?? fechaHoy,
-                            salary:
-                                double.tryParse(_salaryCtrl.text.trim()),
+                            salary: _parsearSalario(_salaryCtrl.text.trim()),
                             notes: _notesCtrl.text.trim().isNotEmpty
                                 ? _notesCtrl.text.trim()
                                 : null,

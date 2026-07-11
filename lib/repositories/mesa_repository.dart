@@ -26,10 +26,16 @@ class MesaRepository {
     }
   }
 
+  // No incluye 'status': editar nombre/capacidad/área no debe tocar el
+  // estado. Si mientras el formulario de edición está abierto un mesero
+  // ocupa/libera la mesa, un update() de fila completa con el estado
+  // capturado al abrir el formulario revertiría ese cambio concurrente. Los
+  // cambios de estado van por [actualizarEstado].
   Future<void> update(String id, Mesa mesa) async {
     try {
       final data = mesa.toJson();
       data.remove('id');
+      data.remove('status');
       limpiarCamposUuidVacios(data);
       await _client.from('restaurant_tables').update(data).eq('id', id);
     } catch (e) {

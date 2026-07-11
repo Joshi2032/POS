@@ -80,10 +80,17 @@ class ProductoRepository {
     }
   }
 
+  // No incluye 'active': editar nombre/precio/categoría/etc. no debe tocar
+  // si el producto está activo. Si mientras el formulario de edición está
+  // abierto alguien más lo activa/desactiva desde el switch rápido de la
+  // lista, un update() de fila completa con el 'active' capturado al abrir
+  // el formulario revertiría ese cambio concurrente. Los cambios de estado
+  // van por [toggleActive].
   Future<void> update(String id, Producto product) async {
     try {
       final data = product.toJson();
       data.remove('id');
+      data.remove('active');
       limpiarCamposUuidVacios(data);
       await _client.from('products').update(data).eq('id', id);
     } catch (e) {

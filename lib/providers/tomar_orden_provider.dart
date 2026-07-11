@@ -663,6 +663,17 @@ class TomarOrdenProvider extends ChangeNotifier {
     _cart.clear();
     _notes = '';
 
+    // Este provider vive a nivel de app (no se recrea por página), así que
+    // si no se limpia la orden existente seleccionada aquí, la próxima vez
+    // que se abra "Tomar Orden" —aunque sea para una mesa distinta— seguiría
+    // mostrando "Existente" con el id/total/cantidad de la orden que se
+    // acaba de enviar, arriesgando que se agreguen productos a la orden
+    // equivocada.
+    _selectedExistingOrderId = '';
+    _selectedExistingOrderNumber = '';
+    _selectedExistingOrderTotal = 0.0;
+    _selectedExistingOrderItemsCount = 0;
+
     notifyListeners();
   }
 }

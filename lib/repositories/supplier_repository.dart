@@ -25,14 +25,19 @@ class SupplierRepository {
   Future<Supplier> obtenerOCrearPorNombre(String nombre) async {
     final nombreLimpio = nombre.trim();
     try {
-      final existente = await _client
+      // ilike() trata '%' y '_' del texto como comodines de patrón, no como
+      // caracteres literales: sin escaparlos, un nombre como "Coca_Cola"
+      // podría emparejar con un proveedor completamente distinto (el '_'
+      // coincide con cualquier caracter). Se busca como lista (no
+      // .maybeSingle()) para no lanzar una excepción si, por datos ya
+      // existentes sin restricción de unicidad, hubiera 2+ coincidencias.
+      final coincidencias = await _client
           .from(_table)
           .select()
-          .ilike('name', nombreLimpio)
-          .maybeSingle();
+          .ilike('name', _escaparPatronLike(nombreLimpio));
 
-      if (existente != null) {
-        return Supplier.fromJson(existente);
+      if (coincidencias is List && coincidencias.isNotEmpty) {
+        return Supplier.fromJson(coincidencias.first);
       }
 
       final creado = await _client
@@ -46,5 +51,15 @@ class SupplierRepository {
       throw Exception(
           'Error al obtener o crear el proveedor "$nombreLimpio": $e');
     }
+  }
+
+  /// Escapa los comodines de ILIKE ('%', '_' y la barra invertida como
+  /// caracter de escape) para que la búsqueda sea una comparación EXACTA
+  /// (insensible a mayúsculas) del texto, no un patrón.
+  String _escaparPatronLike(String texto) {
+    return texto
+        .replaceAll('\\', '\\\\')
+        .replaceAll('%', '\\%')
+        .replaceAll('_', '\\_');
   }
 }
