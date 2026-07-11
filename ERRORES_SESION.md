@@ -178,13 +178,9 @@ Búsqueda con 5 agentes en paralelo cubriendo páginas restantes, servicios/auth
 
 ---
 
-## Nota sobre scripts SQL pendientes de correr manualmente
+## Estado de los scripts SQL (verificado contra Supabase real)
 
-Estos archivos deben ejecutarse en el SQL Editor de Supabase para que las funciones correspondientes existan en producción:
-
-- `supabase/inventory_functions.sql` — ajuste atómico de stock y descuento de inventario por receta (actualizado: ahora registra el delta real aplicado, vuelve a correrlo aunque ya lo hayas corrido antes)
-- `supabase/rls_lockdown.sql` — políticas de seguridad RLS (actualizado: agrega los `drop policy if exists` faltantes de `employee_areas`)
-- `supabase/restaurant_settings.sql` — tabla para que Ajustes persista de verdad
-- `supabase/employees_email_unique.sql` — restricción única en `employees.email`; revisa primero si ya hay correos duplicados (el script trae la consulta para checarlo)
-
-Sin correr `restaurant_settings.sql`, el fix de Ajustes cargará valores en blanco y el guardado no tendrá ninguna fila que actualizar.
+- ✅ `supabase/restaurant_settings.sql` — **confirmado corrido**: la tabla `restaurant_settings` existe (verificado con una consulta de solo lectura contra el proyecto real; una tabla inexistente da un error de "schema cache" muy distinto al que se obtuvo).
+- ✅ `supabase/inventory_functions.sql` — **confirmado corrido**: `adjust_inventory_stock` y `descontar_inventario_por_venta` responden correctamente vía RPC (no dan error de "function does not exist").
+- ✅ `supabase/employees_email_unique.sql` — **confirmado corrido**: al intentar correrlo salió `ERROR: 42P07: relation "employees_email_unique" already exists`, es decir la restricción YA estaba creada de un intento anterior. Se corrigió el script para que sea idempotente (usa un `do $$ ... if not exists ... $$` en vez de `ALTER TABLE ADD CONSTRAINT` directo) y no vuelva a fallar si se corre de nuevo.
+- ❓ `supabase/rls_lockdown.sql` — no se pudo verificar si se volvió a correr la versión de hoy (con los `drop policy if exists` nuevos de `employee_areas`); no truena si no se ha corrido, solo falla en re-ejecuciones futuras del script. Vuelve a correrlo cuando puedas para dejarlo repetible.

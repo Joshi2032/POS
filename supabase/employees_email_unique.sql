@@ -10,6 +10,20 @@
 -- Nota: si ya existen empleados con correos duplicados en la tabla, este
 -- script fallará al crear la restricción. Revisa primero con:
 --   select email, count(*) from public.employees group by email having count(*) > 1;
-
-alter table public.employees
-  add constraint employees_email_unique unique (email);
+--
+-- Postgres no soporta "ADD CONSTRAINT IF NOT EXISTS", así que se checa
+-- manualmente antes de intentar crearla (para poder volver a correr este
+-- script sin que truene con "relation already exists" si ya se había
+-- aplicado antes).
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.table_constraints
+    where constraint_name = 'employees_email_unique'
+      and table_name = 'employees'
+      and table_schema = 'public'
+  ) then
+    alter table public.employees
+      add constraint employees_email_unique unique (email);
+  end if;
+end $$;
