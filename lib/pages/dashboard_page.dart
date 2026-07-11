@@ -160,7 +160,8 @@ class _DashboardView extends StatelessWidget {
   // ─── GRÁFICA DE LÍNEAS ───────────────────────────────────────────────────
 
   LineChartData _buildLineChartData(
-      BuildContext context, DashboardProvider provider) {
+      BuildContext context, DashboardProvider provider,
+      {double pulseValue = 0}) {
     final primaryColor = Theme.of(context).primaryColor;
     final errorColor = Theme.of(context).colorScheme.error;
     final textStyle = TextStyle(
@@ -170,6 +171,15 @@ class _DashboardView extends StatelessWidget {
     final double maxTicks = provider.currentLabels.isNotEmpty
         ? (provider.currentLabels.length - 1).toDouble()
         : 0.0;
+
+    // Último punto con datos reales de cada línea: es el que "respira" con
+    // el pulso continuo, para dar la sensación de flujo de datos en vivo.
+    final int ultimoIndiceIngresos = provider.currentIngresos.isEmpty
+        ? -1
+        : provider.currentIngresos.length - 1;
+    final int ultimoIndiceGastos = provider.currentGastos.isEmpty
+        ? -1
+        : provider.currentGastos.length - 1;
 
     // Escala basada en los valores REALES de ingresos y gastos combinados
     final allValues = [...provider.currentIngresos, ...provider.currentGastos];
@@ -236,12 +246,16 @@ class _DashboardView extends StatelessWidget {
           barWidth: 3,
           dotData: FlDotData(
               show: true,
-              getDotPainter: (spot, percent, barData, index) =>
-                  FlDotCirclePainter(
-                      radius: 4,
-                      color: Theme.of(context).cardColor,
-                      strokeWidth: 2,
-                      strokeColor: primaryColor)),
+              getDotPainter: (spot, percent, barData, index) {
+                final bool esActual = index == ultimoIndiceIngresos;
+                return FlDotCirclePainter(
+                    radius: esActual ? 4 + (3 * pulseValue) : 4,
+                    color: Theme.of(context).cardColor,
+                    strokeWidth: esActual ? 2 + (1.5 * pulseValue) : 2,
+                    strokeColor: esActual
+                        ? primaryColor.withValues(alpha: 0.6 + 0.4 * pulseValue)
+                        : primaryColor);
+              }),
           belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(colors: [
@@ -256,12 +270,16 @@ class _DashboardView extends StatelessWidget {
           barWidth: 3,
           dotData: FlDotData(
               show: true,
-              getDotPainter: (spot, percent, barData, index) =>
-                  FlDotCirclePainter(
-                      radius: 4,
-                      color: Theme.of(context).cardColor,
-                      strokeWidth: 2,
-                      strokeColor: errorColor)),
+              getDotPainter: (spot, percent, barData, index) {
+                final bool esActual = index == ultimoIndiceGastos;
+                return FlDotCirclePainter(
+                    radius: esActual ? 4 + (3 * pulseValue) : 4,
+                    color: Theme.of(context).cardColor,
+                    strokeWidth: esActual ? 2 + (1.5 * pulseValue) : 2,
+                    strokeColor: esActual
+                        ? errorColor.withValues(alpha: 0.6 + 0.4 * pulseValue)
+                        : errorColor);
+              }),
           belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(colors: [
@@ -554,11 +572,20 @@ class _DashboardView extends StatelessWidget {
                                                   const SizedBox(height: 24),
                                                   SizedBox(
                                                       height: 300,
-                                                      child: _flowReveal(
-                                                          LineChart(
-                                                              _buildLineChartData(
-                                                                  context,
-                                                                  provider))))
+                                                      child: _ScanningGlow(
+                                                          color: Theme.of(
+                                                                  context)
+                                                              .primaryColor,
+                                                          child: _flowReveal(
+                                                              _ContinuousPulse(
+                                                                  builder: (context,
+                                                                          t) =>
+                                                                      LineChart(
+                                                                          _buildLineChartData(
+                                                                              context,
+                                                                              provider,
+                                                                              pulseValue:
+                                                                                  t))))))
                                                 ])))),
                                 const SizedBox(width: 16),
                                 SizedBox(
@@ -582,11 +609,15 @@ class _DashboardView extends StatelessWidget {
                                                   const SizedBox(height: 24),
                                                   SizedBox(
                                                       height: 300,
-                                                      child: _flowReveal(
-                                                          BarChart(
-                                                              _buildBarChartData(
-                                                                  context,
-                                                                  provider))))
+                                                      child: _ScanningGlow(
+                                                          color: Theme.of(
+                                                                  context)
+                                                              .primaryColor,
+                                                          child: _flowReveal(
+                                                              BarChart(
+                                                                  _buildBarChartData(
+                                                                      context,
+                                                                      provider)))))
                                                 ])))),
                               ],
                             )
@@ -607,9 +638,19 @@ class _DashboardView extends StatelessWidget {
                                               const SizedBox(height: 24),
                                               SizedBox(
                                                   height: 260,
-                                                  child: _flowReveal(LineChart(
-                                                      _buildLineChartData(
-                                                          context, provider))))
+                                                  child: _ScanningGlow(
+                                                      color: Theme.of(context)
+                                                          .primaryColor,
+                                                      child: _flowReveal(
+                                                          _ContinuousPulse(
+                                                              builder: (context,
+                                                                      t) =>
+                                                                  LineChart(
+                                                                      _buildLineChartData(
+                                                                          context,
+                                                                          provider,
+                                                                          pulseValue:
+                                                                              t))))))
                                             ]))),
                                 const SizedBox(height: 16),
                                 AnimatedSwitcher(
@@ -630,9 +671,14 @@ class _DashboardView extends StatelessWidget {
                                               const SizedBox(height: 24),
                                               SizedBox(
                                                   height: 260,
-                                                  child: _flowReveal(BarChart(
-                                                      _buildBarChartData(
-                                                          context, provider))))
+                                                  child: _ScanningGlow(
+                                                      color: Theme.of(context)
+                                                          .primaryColor,
+                                                      child: _flowReveal(
+                                                          BarChart(
+                                                              _buildBarChartData(
+                                                                  context,
+                                                                  provider)))))
                                             ]))),
                               ],
                             );
@@ -660,8 +706,16 @@ class _DashboardView extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text('Flujo Financiero',
-              style: Theme.of(context).textTheme.titleMedium),
+          child: Row(
+            children: [
+              Flexible(
+                child: Text('Flujo Financiero',
+                    style: Theme.of(context).textTheme.titleMedium),
+              ),
+              const SizedBox(width: 10),
+              _LiveBadge(color: primary),
+            ],
+          ),
         ),
         _legendDot(color: primary, label: 'Ingresos', context: context),
         const SizedBox(width: 16),
@@ -923,6 +977,203 @@ class _DashboardView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── ANIMACIÓN CONTINUA ──────────────────────────────────────────────────
+
+/// Franja de brillo translúcida que recorre la gráfica de izquierda a
+/// derecha en loop indefinido, por encima del contenido (sin ocultarlo ni
+/// reiniciarlo), dando la sensación de que los datos se siguen graficando
+/// continuamente en vez de una sola vez al cargar.
+class _ScanningGlow extends StatefulWidget {
+  const _ScanningGlow({required this.child, required this.color});
+
+  final Widget child;
+  final Color color;
+
+  @override
+  State<_ScanningGlow> createState() => _ScanningGlowState();
+}
+
+class _ScanningGlowState extends State<_ScanningGlow>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 3200))
+      ..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double width = constraints.maxWidth;
+        const double bandWidth = 110;
+
+        return ClipRect(
+          child: Stack(
+            children: [
+              widget.child,
+              // AnimatedBuilder debe ser el hijo directo del Stack: si se
+              // envuelve el Positioned dentro de un widget que sí tiene su
+              // propio RenderObject (como IgnorePointer) ANTES del
+              // Positioned, Flutter pierde la relación Positioned->Stack y
+              // lanza "Incorrect use of ParentDataWidget" en vez de animar
+              // la franja. IgnorePointer debe ir DENTRO del Positioned.
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) {
+                  final double left = -bandWidth +
+                      (width + bandWidth) * _controller.value;
+                  return Positioned(
+                    left: left,
+                    top: 0,
+                    bottom: 0,
+                    width: bandWidth,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              widget.color.withValues(alpha: 0),
+                              widget.color.withValues(alpha: 0.10),
+                              widget.color.withValues(alpha: 0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Reproduce un valor 0↔1 en loop indefinido (ida y vuelta) y reconstruye
+/// [builder] en cada tick, para animaciones continuas (no solo de entrada)
+/// como el pulso del punto "actual" en la gráfica de líneas.
+class _ContinuousPulse extends StatefulWidget {
+  const _ContinuousPulse({required this.builder});
+
+  final Widget Function(BuildContext context, double t) builder;
+
+  @override
+  State<_ContinuousPulse> createState() => _ContinuousPulseState();
+}
+
+class _ContinuousPulseState extends State<_ContinuousPulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1400))
+      ..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) =>
+          widget.builder(context, Curves.easeInOut.transform(_controller.value)),
+    );
+  }
+}
+
+/// Badge "EN VIVO" con un punto que respira en loop continuo, indicando que
+/// el dashboard refleja datos en tiempo real.
+class _LiveBadge extends StatefulWidget {
+  const _LiveBadge({required this.color});
+
+  final Color color;
+
+  @override
+  State<_LiveBadge> createState() => _LiveBadgeState();
+}
+
+class _LiveBadgeState extends State<_LiveBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))
+          ..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final t = Curves.easeInOut.transform(_controller.value);
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.color.withValues(alpha: 0.35 + 0.55 * t),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.color.withValues(alpha: 0.35 * t),
+                    blurRadius: 5 * t,
+                    spreadRadius: 1 * t,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              'EN VIVO',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.4,
+                color: widget.color.withValues(alpha: 0.65),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
