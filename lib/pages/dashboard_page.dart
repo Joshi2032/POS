@@ -31,9 +31,19 @@ class _DashboardPageState extends State<DashboardPage> {
 class _DashboardView extends StatelessWidget {
   const _DashboardView();
 
-  /// Transición de fade + escala sutil, usada al alternar entre semana/mes/
-  /// año en las gráficas y al cargar el contenido del dashboard por primera
-  /// vez, en vez del reemplazo instantáneo que había antes.
+  /// Duración y curva de la transición INTERNA de fl_chart entre un set de
+  /// datos y el siguiente (ej. al cambiar semana/mes/año, o al refrescar).
+  /// Con la MISMA instancia de LineChart/BarChart persistiendo (sin
+  /// ValueKey que la fuerce a recrearse), fl_chart interpola los puntos y
+  /// barras del valor viejo al nuevo en vez de solo reemplazar la imagen
+  /// final: así "los datos se van graficando" de forma fluida en vez de
+  /// saltar de golpe. easeInOutCubic da una aceleración/desaceleración
+  /// suave en vez del linear por defecto (más rápido pero mecánico).
+  static const Duration _dataTransitionDuration = Duration(milliseconds: 850);
+  static const Curve _dataTransitionCurve = Curves.easeInOutCubic;
+
+  /// Transición de fade + escala sutil, usada en las tarjetas de métricas
+  /// al cambiar de valor, en vez del reemplazo instantáneo que había antes.
   static Widget _fadeScaleTransition(Widget child, Animation<double> animation) {
     return FadeTransition(
       opacity: animation,
@@ -377,6 +387,62 @@ class _DashboardView extends StatelessWidget {
     );
   }
 
+  // ─── TARJETAS DE GRÁFICAS ─────────────────────────────────────────────────
+
+  Widget _buildLineCard(
+      BuildContext context, DashboardProvider provider, double height) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildChartLegend(context),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: height,
+            child: _ScanningGlow(
+              color: Theme.of(context).primaryColor,
+              child: _flowReveal(
+                _ContinuousPulse(
+                  builder: (context, t) => LineChart(
+                    _buildLineChartData(context, provider, pulseValue: t),
+                    duration: _dataTransitionDuration,
+                    curve: _dataTransitionCurve,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBarCard(
+      BuildContext context, DashboardProvider provider, double height) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Utilidad neta', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: height,
+            child: _ScanningGlow(
+              color: Theme.of(context).primaryColor,
+              child: _flowReveal(
+                BarChart(
+                  _buildBarChartData(context, provider),
+                  duration: _dataTransitionDuration,
+                  curve: _dataTransitionCurve,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─── BUILD PRINCIPAL ─────────────────────────────────────────────────────
 
   @override
@@ -549,6 +615,7 @@ class _DashboardView extends StatelessWidget {
                       final barW = isWide
                           ? constraints.maxWidth * 0.38
                           : constraints.maxWidth;
+                      final chartHeight = isWide ? 300.0 : 260.0;
 
                       return isWide
                           ? Row(
@@ -556,130 +623,20 @@ class _DashboardView extends StatelessWidget {
                               children: [
                                 SizedBox(
                                     width: lineW,
-                                    child: AnimatedSwitcher(
-                                        duration:
-                                            const Duration(milliseconds: 300),
-                                        transitionBuilder:
-                                            _fadeScaleTransition,
-                                        child: AppCard(
-                                            key: ValueKey(
-                                                'line_${provider.filterType}'),
-                                            child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  _buildChartLegend(context),
-                                                  const SizedBox(height: 24),
-                                                  SizedBox(
-                                                      height: 300,
-                                                      child: _ScanningGlow(
-                                                          color: Theme.of(
-                                                                  context)
-                                                              .primaryColor,
-                                                          child: _flowReveal(
-                                                              _ContinuousPulse(
-                                                                  builder: (context,
-                                                                          t) =>
-                                                                      LineChart(
-                                                                          _buildLineChartData(
-                                                                              context,
-                                                                              provider,
-                                                                              pulseValue:
-                                                                                  t))))))
-                                                ])))),
+                                    child: _buildLineCard(
+                                        context, provider, chartHeight)),
                                 const SizedBox(width: 16),
                                 SizedBox(
                                     width: barW,
-                                    child: AnimatedSwitcher(
-                                        duration:
-                                            const Duration(milliseconds: 300),
-                                        transitionBuilder:
-                                            _fadeScaleTransition,
-                                        child: AppCard(
-                                            key: ValueKey(
-                                                'bar_${provider.filterType}'),
-                                            child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text('Utilidad neta',
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .titleMedium),
-                                                  const SizedBox(height: 24),
-                                                  SizedBox(
-                                                      height: 300,
-                                                      child: _ScanningGlow(
-                                                          color: Theme.of(
-                                                                  context)
-                                                              .primaryColor,
-                                                          child: _flowReveal(
-                                                              BarChart(
-                                                                  _buildBarChartData(
-                                                                      context,
-                                                                      provider)))))
-                                                ])))),
+                                    child: _buildBarCard(
+                                        context, provider, chartHeight)),
                               ],
                             )
                           : Column(
                               children: [
-                                AnimatedSwitcher(
-                                    duration:
-                                        const Duration(milliseconds: 300),
-                                    transitionBuilder: _fadeScaleTransition,
-                                    child: AppCard(
-                                        key: ValueKey(
-                                            'line_mobile_${provider.filterType}'),
-                                        child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              _buildChartLegend(context),
-                                              const SizedBox(height: 24),
-                                              SizedBox(
-                                                  height: 260,
-                                                  child: _ScanningGlow(
-                                                      color: Theme.of(context)
-                                                          .primaryColor,
-                                                      child: _flowReveal(
-                                                          _ContinuousPulse(
-                                                              builder: (context,
-                                                                      t) =>
-                                                                  LineChart(
-                                                                      _buildLineChartData(
-                                                                          context,
-                                                                          provider,
-                                                                          pulseValue:
-                                                                              t))))))
-                                            ]))),
+                                _buildLineCard(context, provider, chartHeight),
                                 const SizedBox(height: 16),
-                                AnimatedSwitcher(
-                                    duration:
-                                        const Duration(milliseconds: 300),
-                                    transitionBuilder: _fadeScaleTransition,
-                                    child: AppCard(
-                                        key: ValueKey(
-                                            'bar_mobile_${provider.filterType}'),
-                                        child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text('Utilidad neta',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .titleMedium),
-                                              const SizedBox(height: 24),
-                                              SizedBox(
-                                                  height: 260,
-                                                  child: _ScanningGlow(
-                                                      color: Theme.of(context)
-                                                          .primaryColor,
-                                                      child: _flowReveal(
-                                                          BarChart(
-                                                              _buildBarChartData(
-                                                                  context,
-                                                                  provider)))))
-                                            ]))),
+                                _buildBarCard(context, provider, chartHeight),
                               ],
                             );
                     },
