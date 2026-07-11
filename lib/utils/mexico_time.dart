@@ -68,6 +68,27 @@ DateTime? diaMexicoDesde(dynamic timestamp) {
   }
 }
 
+/// Convierte un timestamp de Supabase (timestamptz) a su hora de pared
+/// completa en México (conserva hora/minuto/segundo, a diferencia de
+/// [diaMexicoDesde] que trunca al día). Útil para mostrar fecha Y hora de un
+/// evento (ej. la hora real en que se cerró un corte de caja), no solo para
+/// agrupar por día. Si el valor es una fecha simple sin hora (columna
+/// `date`), se devuelve tal cual a medianoche, igual que [diaMexicoDesde].
+DateTime? wallClockMexicoDesde(dynamic timestamp) {
+  if (timestamp == null) return null;
+  final str = timestamp.toString();
+  if (str.isEmpty) return null;
+  try {
+    if (!str.contains('T')) {
+      return DateTime.parse(str);
+    }
+
+    return DateTime.parse(str).toUtc().add(offsetMexicoCentro);
+  } catch (_) {
+    return null;
+  }
+}
+
 /// Instante UTC real correspondiente al inicio (medianoche) del día indicado
 /// en hora de México. Útil para construir rangos de consulta contra columnas
 /// timestamptz (ej. `paid_at >= inicioUtc`). [diaMexico] debe ser un

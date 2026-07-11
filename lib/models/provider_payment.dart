@@ -45,7 +45,10 @@ class ProviderPayment {
     if (createdAt.isNotEmpty && createdAt.contains('T')) {
       final parts = createdAt.split('T');
       dateUi = parts[0];
-      timeUi = parts[1].substring(0, 5); // Formato HH:mm
+      // Formato HH:mm; se protege contra un timestamp corto/malformado que
+      // no tenga al menos 5 caracteres de hora (evita RangeError).
+      final horaCruda = parts.length > 1 ? parts[1] : '';
+      timeUi = horaCruda.length >= 5 ? horaCruda.substring(0, 5) : horaCruda;
     }
 
     final nombreProveedorEmbed = asEmbedMap(json['suppliers'])?['name']?.toString();

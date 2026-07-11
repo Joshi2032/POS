@@ -468,6 +468,8 @@ class _RecetasViewState extends State<_RecetasView> {
 
                 final exito = await provider.deleteRecipe(receta.id);
 
+                if (!mounted) return;
+
                 if (!exito) {
                   messenger.showSnackBar(
                     SnackBar(

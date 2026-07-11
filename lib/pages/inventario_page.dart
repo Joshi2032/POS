@@ -335,6 +335,8 @@ class _InventarioViewState extends State<_InventarioView> {
 
                 final exito = await provider.removeInventoryItem(item.id);
 
+                if (!mounted) return;
+
                 if (!exito) {
                   messenger.showSnackBar(
                     SnackBar(

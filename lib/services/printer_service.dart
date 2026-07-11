@@ -5,6 +5,7 @@ import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter_pos_printer_platform_image_3/flutter_pos_printer_platform_image_3.dart';
 
 import '../models/restaurant_order.dart';
+import '../utils/mexico_time.dart';
 
 class PrinterService {
   // ---------------------------------------------------------------------
@@ -196,7 +197,11 @@ class PrinterService {
 
     bytes.addAll(
       generator.text(
-        _formatearFecha(DateTime.now()),
+        // Hora de México centralizada, no la del reloj del dispositivo: si
+        // el equipo POS no tiene la zona horaria correcta, el ticket
+        // impreso mostraría una hora distinta a la de todos los reportes
+        // del sistema para la misma venta.
+        _formatearFecha(ahoraComoWallClockMexico()),
         styles: const PosStyles(align: PosAlign.center),
       ),
     );
@@ -463,8 +468,14 @@ class PrinterService {
         ? 0.0
         : monto;
 
-    final int pesos = montoSeguro.floor();
-    final int centavos = ((montoSeguro - pesos) * 100).round();
+    // Se redondea a centavos ANTES de separar pesos/centavos, en un entero
+    // de centavos totales: hacerlo con floor()/resta directa sobre el
+    // double puede acumular imprecisión de punto flotante (ej. $20.00
+    // llega como 19.999999999999996 tras sumar varios items) y producir
+    // "DIECINUEVE PESOS 100/100" en vez de "VEINTE PESOS 00/100".
+    final int totalCentavos = (montoSeguro * 100).round();
+    final int pesos = totalCentavos ~/ 100;
+    final int centavos = totalCentavos % 100;
 
     if (pesos == 0) {
       return 'CERO PESOS ${centavos.toString().padLeft(2, '0')}/100 M.N.';

@@ -693,4 +693,29 @@ class TomarOrdenProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  // Este provider vive a nivel de app y NO se recreaba al cerrar sesión, así
+  // que en una terminal compartida el carrito/mesa/orden-existente de un
+  // empleado quedaba visible para el siguiente que iniciara sesión (riesgo
+  // de enviar productos a la mesa u orden equivocada). Se llama desde
+  // main.dart cuando AuthProvider detecta que ya no hay usuario logueado.
+  void limpiarSesion() {
+    _cart.clear();
+    _notes = '';
+    _selectedTableId = '';
+    _selectedArea = '';
+    _orderType = OrderType.dineIn;
+    _isExistingTable = false;
+    _selectedExistingOrderId = '';
+    _selectedExistingOrderNumber = '';
+    _selectedExistingOrderTotal = 0.0;
+    _selectedExistingOrderItemsCount = 0;
+    _assignedAreas = [];
+    _currentEmployeePosition = '';
+    _canSeeAllAreas = false;
+    _lastAuthUserIdLoaded = '';
+    _ultimaCargaAreas = null;
+
+    notifyListeners();
+  }
 }

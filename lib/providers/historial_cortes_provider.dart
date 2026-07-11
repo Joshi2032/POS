@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/corte_caja.dart';
 import '../repositories/corte_caja_repository.dart';
+import '../utils/mexico_time.dart';
 
 class HistorialCortesProvider extends ChangeNotifier {
   final CorteCajaRepository _repository;
@@ -21,11 +22,16 @@ class HistorialCortesProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get hasError => _errorMessage != null;
 
-  // Filtramos únicamente por fecha, ya que un corte resume todo el turno
+  // Filtramos únicamente por fecha, ya que un corte resume todo el turno.
+  // Antes se comparaba el prefijo UTC crudo de cutAt: un corte cerrado
+  // pasada la medianoche UTC (ej. las 11:30pm hora México) aparecía con la
+  // fecha del día siguiente y no coincidía con lo que el usuario buscaba.
   List<CorteCaja> get cortesFiltrados {
     return _cortes.where((c) {
       if (_filterDate.isEmpty) return true;
-      final dateStr = c.cutAt?.split('T').first ?? '';
+      final fechaMexico = diaMexicoDesde(c.cutAt);
+      if (fechaMexico == null) return false;
+      final dateStr = fechaMexico.toIso8601String().substring(0, 10);
       return dateStr.contains(_filterDate);
     }).toList();
   }

@@ -541,6 +541,8 @@ class _ProductosView extends StatelessWidget {
 
                 final exito = await provider.deleteProducto(producto.id);
 
+                if (!context.mounted) return;
+
                 if (!exito) {
                   messenger.showSnackBar(
                     SnackBar(

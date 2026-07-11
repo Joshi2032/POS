@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/historial_cortes_provider.dart';
 import '../utils/formatters.dart';
+import '../utils/mexico_time.dart';
 
 class HistorialCortesPage extends StatelessWidget {
   const HistorialCortesPage({super.key});
@@ -98,10 +99,15 @@ class _HistorialCortesView extends StatelessWidget {
                         // Calculamos el total de ventas sumando los campos exactos
                         final totalVentas = corte.cashSales + corte.cardSales + corte.transferSales;
                         
-                        // Formateo de fecha y hora
-                        final dateStr = corte.cutAt?.split('T').first ?? 'Sin fecha';
-                        final timeStr = (corte.cutAt != null && corte.cutAt!.contains('T')) 
-                            ? corte.cutAt!.split('T').last.substring(0, 5) 
+                        // Formateo de fecha y hora en hora de México (antes
+                        // se mostraba el prefijo UTC crudo, desfasado hasta
+                        // 6 horas de la hora real en que se cerró el corte).
+                        final horaMexico = wallClockMexicoDesde(corte.cutAt);
+                        final dateStr = horaMexico != null
+                            ? '${horaMexico.year.toString().padLeft(4, '0')}-${horaMexico.month.toString().padLeft(2, '0')}-${horaMexico.day.toString().padLeft(2, '0')}'
+                            : 'Sin fecha';
+                        final timeStr = horaMexico != null
+                            ? '${horaMexico.hour.toString().padLeft(2, '0')}:${horaMexico.minute.toString().padLeft(2, '0')}'
                             : '';
                             
                         // Recorte visual del UUID para el avatar

@@ -66,17 +66,54 @@ final GoRouter appRouter = GoRouter(
     final isLoggedIn = session != null;
     final isLoginPage =
         state.uri.path == '/login';
+    // La ruta raíz "/" no tiene un GoRoute propio (ver 'routes' abajo): sin
+    // este caso, un usuario logueado que abre la app en "/" (recarga de
+    // build web, deep link) no coincide con ninguna ruta registrada y
+    // GoRouter muestra su pantalla de error por defecto en vez del dashboard.
+    final isRootPath = state.uri.path == '/';
 
     if (!isLoggedIn && !isLoginPage) {
       return '/login';
     }
 
-    if (isLoggedIn && isLoginPage) {
+    if (isLoggedIn && (isLoginPage || isRootPath)) {
       return '/dashboard';
     }
 
     return null;
   },
+
+  // Cualquier enlace roto o mal escrito (bookmark viejo, deep link inválido)
+  // caía en la pantalla de error genérica de GoRouter, sin barra de
+  // navegación ni forma de volver a la app salvo editando la URL a mano.
+  errorBuilder: (context, state) => Scaffold(
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text(
+              'Esta página no existe.',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              state.uri.toString(),
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => context.go('/dashboard'),
+              child: const Text('Ir al inicio'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
 
   routes: [
     GoRoute(

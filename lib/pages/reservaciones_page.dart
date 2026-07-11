@@ -728,6 +728,8 @@ class _AccionesRow extends StatelessWidget {
 
                 final exito = await provider.eliminarReservacion(res.id);
 
+                if (!context.mounted) return;
+
                 if (!exito) {
                   messenger.showSnackBar(
                     SnackBar(

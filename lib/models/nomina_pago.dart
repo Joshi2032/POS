@@ -1,3 +1,5 @@
+import '../utils/embed_utils.dart';
+
 class NominaPago {
   final String id;
   final String? empleadoId; // BD: employee_id (UUID)
@@ -32,9 +34,10 @@ class NominaPago {
 
     // Extraemos nombre si viene del JOIN con employees
     String nombreEmp = 'Empleado Desconocido';
-    if (json['employees'] != null && json['employees']['first_name'] != null) {
+    final empleadoEmbed = asEmbedMap(json['employees']);
+    if (empleadoEmbed != null && empleadoEmbed['first_name'] != null) {
       nombreEmp =
-          '${json['employees']['first_name']} ${json['employees']['last_name'] ?? ''}'
+          '${empleadoEmbed['first_name']} ${empleadoEmbed['last_name'] ?? ''}'
               .trim();
     } else if (json['empleadoNombre'] != null) {
       nombreEmp = json['empleadoNombre'];

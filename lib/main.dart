@@ -225,6 +225,11 @@ Future<void> main() async {
                 authUserId: authUserId,
                 empleadoRepository: context.read<EmpleadoRepository>(),
               );
+            } else {
+              // Sin esto, el carrito/mesa/orden-existente del empleado que
+              // acaba de cerrar sesión quedaba visible para el siguiente
+              // que iniciara sesión en la misma terminal.
+              provider.limpiarSesion();
             }
 
             return provider;

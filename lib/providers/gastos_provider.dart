@@ -42,7 +42,11 @@ class GastosProvider extends ChangeNotifier {
   setSearchTerm(value);
 };
 
-  int get totalGastosLength => gastosFiltrados.length;
+  // Antes estaba definido igual a gastosFiltrados.length (el mismo total ya
+  // filtrado), así que el contador "X de Y gastos" en la UI siempre
+  // mostraba algo como "3 de 3" sin importar cuántos gastos hubiera en
+  // total ni qué filtro estuviera activo.
+  int get totalGastosLength => _gastos.length;
   List<Gasto> get filteredGastos => gastosFiltrados;
 
   List<Gasto> get paginatedGastos {

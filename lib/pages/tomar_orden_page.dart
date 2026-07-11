@@ -1363,6 +1363,8 @@ class _CartSection extends StatelessWidget {
             : 'Orden para llevar creada correctamente';
       }
 
+      if (!context.mounted) return;
+
       if (ordenesProvider.errorMessage != null) {
         messenger.showSnackBar(
           SnackBar(
@@ -1382,6 +1384,8 @@ class _CartSection extends StatelessWidget {
           selectedTable,
           'ocupada',
         );
+
+        if (!context.mounted) return;
 
         if (!actualizada) {
           messenger.showSnackBar(

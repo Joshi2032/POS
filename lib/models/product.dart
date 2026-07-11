@@ -1,3 +1,5 @@
+import '../utils/embed_utils.dart';
+
 class Producto {
   final String id;
   final String name;
@@ -30,7 +32,7 @@ class Producto {
       id: (json['id'] ?? '').toString(),
       name: json['name'] ?? 'Sin nombre',
       description: json['description'] ?? '',
-      category: json['categories'] != null ? json['categories']['name'] : 'General',
+      category: asEmbedMap(json['categories'])?['name']?.toString() ?? 'General',
       categoryId: json['category_id']?.toString(),
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       stock: (json['stock'] as num?)?.toInt() ?? 0,

@@ -284,6 +284,15 @@ serve(async (req) => {
           .single();
 
       if (employeeError) {
+        // 23505 = violación de restricción única (ver
+        // supabase/employees_email_unique.sql). Dos altas casi simultáneas
+        // con el mismo correo pasan ambas el chequeo previo de "ya existe"
+        // (que es solo lectura, sin bloqueo); esta restricción a nivel de
+        // base de datos es la que realmente evita el duplicado, y aquí se
+        // traduce a un mensaje claro en vez del genérico de más abajo.
+        if (employeeError.code === "23505") {
+          throw new Error("Ya existe un empleado registrado con ese correo");
+        }
         throw employeeError;
       }
 
@@ -316,26 +325,47 @@ serve(async (req) => {
         200,
       );
     } catch (dbError) {
+      // Cada paso de la limpieza va en su propio try/catch: antes, si el
+      // primer delete fallaba (ej. red intermitente), los siguientes pasos
+      // nunca se ejecutaban, dejando registros huérfanos (employees,
+      // profiles, o el usuario de Auth) que después chocan con un nuevo
+      // intento de alta para ese mismo correo.
       if (createdEmployeeId) {
-        await supabaseAdmin
-          .from("employee_areas")
-          .delete()
-          .eq("employee_id", createdEmployeeId);
+        try {
+          await supabaseAdmin
+            .from("employee_areas")
+            .delete()
+            .eq("employee_id", createdEmployeeId);
+        } catch (cleanupError) {
+          console.error("Rollback employee_areas falló:", cleanupError);
+        }
 
-        await supabaseAdmin
-          .from("employees")
-          .delete()
-          .eq("id", createdEmployeeId);
+        try {
+          await supabaseAdmin
+            .from("employees")
+            .delete()
+            .eq("id", createdEmployeeId);
+        } catch (cleanupError) {
+          console.error("Rollback employees falló:", cleanupError);
+        }
       }
 
       if (createdProfileId) {
-        await supabaseAdmin
-          .from("profiles")
-          .delete()
-          .eq("id", createdProfileId);
+        try {
+          await supabaseAdmin
+            .from("profiles")
+            .delete()
+            .eq("id", createdProfileId);
+        } catch (cleanupError) {
+          console.error("Rollback profiles falló:", cleanupError);
+        }
       }
 
-      await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      } catch (cleanupError) {
+        console.error("Rollback auth user falló:", cleanupError);
+      }
 
       return jsonResponse(
         {

@@ -44,7 +44,7 @@ class CorteCaja {
       expectedCash: (json['expected_cash'] as num?)?.toDouble() ?? 0.0,
       actualCash: (json['actual_cash'] as num?)?.toDouble() ?? 0.0,
       difference: (json['difference'] as num?)?.toDouble() ?? 0.0,
-      totalOrders: json['total_orders'] as int? ?? 0,
+      totalOrders: (json['total_orders'] as num?)?.toInt() ?? 0,
       notes: json['notes']?.toString(),
       cutAt: json['cut_at']?.toString() ?? json['created_at']?.toString(),
     );

@@ -591,6 +591,8 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
 
                 final exito = await provider.removePayment(payment.id);
 
+                if (!mounted) return;
+
                 if (!exito) {
                   messenger.showSnackBar(
                     SnackBar(

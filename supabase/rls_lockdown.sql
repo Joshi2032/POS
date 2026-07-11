@@ -119,12 +119,16 @@ create policy "employees_admin_delete" on public.employees
   for delete using (public.is_admin_or_manager());
 
 drop policy if exists "employee_areas_admin_all" on public.employee_areas;
+drop policy if exists "employee_areas_read" on public.employee_areas;
 create policy "employee_areas_read" on public.employee_areas
   for select using (auth.uid() is not null);
+drop policy if exists "employee_areas_admin_write" on public.employee_areas;
 create policy "employee_areas_admin_write" on public.employee_areas
   for insert with check (public.is_admin_or_manager());
+drop policy if exists "employee_areas_admin_update" on public.employee_areas;
 create policy "employee_areas_admin_update" on public.employee_areas
   for update using (public.is_admin_or_manager()) with check (public.is_admin_or_manager());
+drop policy if exists "employee_areas_admin_delete" on public.employee_areas;
 create policy "employee_areas_admin_delete" on public.employee_areas
   for delete using (public.is_admin_or_manager());
 

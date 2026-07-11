@@ -164,9 +164,14 @@ class _LoginPageState extends State<LoginPage> {
                           : () async {
                               final routeContext = context;
 
+                              // La contraseña NO se recorta: a diferencia
+                              // del correo, un espacio al inicio/final
+                              // podría ser parte real de la contraseña, y
+                              // recortarla la cambia silenciosamente antes
+                              // de enviarla a Supabase.
                               final ok = await auth.login(
                                 emailCtrl.text.trim(),
-                                passwordCtrl.text.trim(),
+                                passwordCtrl.text,
                               );
 
                               if (!mounted || !routeContext.mounted) return;
