@@ -22,9 +22,7 @@ class _OrdenesView extends StatelessWidget {
   String _getStatusLabel(OrderStatus status) {
     const labels = {
       'pendiente': 'Pendiente',
-      'preparando': 'En Cocina',
-      'lista': 'Lista para Entrega',
-      'entregada': 'Entregada',
+      'pagada': 'Pagada',
       'cancelada': 'Cancelada',
     };
     return labels[status] ?? status;
@@ -34,12 +32,8 @@ class _OrdenesView extends StatelessWidget {
     switch (status) {
       case 'pendiente':
         return Colors.orange;
-      case 'preparando':
-        return Colors.blue;
-      case 'lista':
+      case 'pagada':
         return Colors.green;
-      case 'entregada':
-        return Colors.grey;
       case 'cancelada':
         return Colors.red;
       default:
@@ -139,12 +133,6 @@ class _OrdenesView extends StatelessWidget {
                                   count: '${provider.activeOrdersCount}',
                                   color: Colors.blue,
                                 ),
-                                const SizedBox(width: 10),
-                                _StatusBadge(
-                                  title: 'Listas',
-                                  count: '${provider.readyOrdersCount}',
-                                  color: Colors.green,
-                                ),
                               ],
                             ),
                           ] else ...[
@@ -158,12 +146,6 @@ class _OrdenesView extends StatelessWidget {
                                   title: 'Activas',
                                   count: '${provider.activeOrdersCount}',
                                   color: Colors.blue,
-                                ),
-                                const SizedBox(width: 10),
-                                _StatusBadge(
-                                  title: 'Listas',
-                                  count: '${provider.readyOrdersCount}',
-                                  color: Colors.green,
                                 ),
                               ],
                             ),
@@ -187,9 +169,7 @@ class _OrdenesView extends StatelessWidget {
                                           items: const [
                                             'Todos',
                                             'Pendiente',
-                                            'Preparando',
-                                            'Lista',
-                                            'Entregada',
+                                            'Pagada',
                                             'Cancelada',
                                           ],
                                           onChanged: (v) => provider
@@ -231,9 +211,7 @@ class _OrdenesView extends StatelessWidget {
                                             items: const [
                                               'Todos',
                                               'Pendiente',
-                                              'Preparando',
-                                              'Lista',
-                                              'Entregada',
+                                              'Pagada',
                                               'Cancelada',
                                             ],
                                             onChanged: (v) => provider
@@ -863,91 +841,10 @@ class _DetalleModal extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Flujo de estados de cocina:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      if (order.status == 'pendiente')
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: const Icon(
-                            Icons.soup_kitchen,
-                            size: 16,
-                          ),
-                          label: const Text('Cocinar'),
-                          onPressed: () {
-                            provider.cambiarEstadoOrden(
-                              order.id,
-                              'preparando',
-                            );
-
-                            UiUtils.showToast(
-                              context,
-                              'Orden movida a cocina',
-                              color: Colors.blue,
-                            );
-                          },
-                        ),
-                      if (order.status == 'preparando')
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: const Icon(
-                            Icons.check,
-                            size: 16,
-                          ),
-                          label: const Text('Listo'),
-                          onPressed: () {
-                            provider.cambiarEstadoOrden(
-                              order.id,
-                              'lista',
-                            );
-
-                            UiUtils.showToast(
-                              context,
-                              'Orden marcada como lista',
-                              color: Colors.green,
-                            );
-                          },
-                        ),
-                      if (order.status == 'lista')
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey,
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: const Icon(
-                            Icons.delivery_dining,
-                            size: 16,
-                          ),
-                          label: const Text('Entregar'),
-                          onPressed: () {
-                            provider.cambiarEstadoOrden(
-                              order.id,
-                              'entregada',
-                            );
-
-                            UiUtils.showToast(
-                              context,
-                              'Orden despachada',
-                              color: Colors.grey,
-                            );
-                          },
-                        ),
                       if (order.status == 'paid' ||
                           order.status == 'pagada')
                         OutlinedButton.icon(
@@ -959,7 +856,7 @@ class _DetalleModal extends StatelessWidget {
                           onPressed: () =>
                               _reimprimirTicket(context, order),
                         ),
-                      if (order.status != 'entregada' &&
+                      if (order.status != 'pagada' &&
                           order.status != 'cancelada')
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(

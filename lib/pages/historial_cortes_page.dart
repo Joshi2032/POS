@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/historial_cortes_provider.dart';
+import '../utils/formatters.dart';
 
 class HistorialCortesPage extends StatelessWidget {
   const HistorialCortesPage({super.key});
@@ -17,7 +17,6 @@ class _HistorialCortesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final money = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
     final provider = context.watch<HistorialCortesProvider>();
     final cortes = provider.cortesFiltrados;
 
@@ -66,19 +65,19 @@ class _HistorialCortesView extends StatelessWidget {
               children: [
                 _StatCard(
                     label: 'Efectivo',
-                    value: money.format(provider.totalEfectivo),
+                    value: Formatters.money(provider.totalEfectivo),
                     color: Colors.green),
                 _StatCard(
                     label: 'Tarjeta',
-                    value: money.format(provider.totalTarjeta),
+                    value: Formatters.money(provider.totalTarjeta),
                     color: Colors.blue),
                 _StatCard(
                     label: 'Transferencias',
-                    value: money.format(provider.totalTransferencia),
+                    value: Formatters.money(provider.totalTransferencia),
                     color: Colors.orange),
                 _StatCard(
                     label: 'Total Ventas',
-                    value: money.format(provider.totalFiltrado),
+                    value: Formatters.money(provider.totalFiltrado),
                     color: Colors.purple),
               ],
             ),
@@ -111,8 +110,8 @@ class _HistorialCortesView extends StatelessWidget {
                         return ListTile(
                           leading: CircleAvatar(child: Text(shortId.toUpperCase())),
                           title: Text('Turno ${corte.status == 'closed' ? 'Cerrado' : 'Abierto'}'),
-                          subtitle: Text('$dateStr $timeStr\nDiferencia en caja: ${money.format(corte.difference)}'),
-                          trailing: Text(money.format(totalVentas),
+                          subtitle: Text('$dateStr $timeStr\nDiferencia en caja: ${Formatters.money(corte.difference)}'),
+                          trailing: Text(Formatters.money(totalVentas),
                               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                         );
                       },

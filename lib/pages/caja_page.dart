@@ -6,12 +6,10 @@ import '../providers/ordenes_provider.dart';
 import '../providers/mesas_provider.dart';
 import '../providers/caja_provider.dart';
 import '../providers/historial_cortes_provider.dart';
-import '../providers/movimiento_caja_provider.dart';
 
 // Modelos
 import '../models/restaurant_order.dart';
 import '../models/corte_caja.dart';
-import '../models/movimiento_caja.dart';
 import '../ui_models/cash_order.dart';
 
 // Servicios y UI
@@ -54,17 +52,15 @@ class _CajaPageState extends State<CajaPage> {
     final ordenesProvider = context.watch<OrdenesProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Ya no hay flujo de cocina: toda orden creada queda disponible para
+    // cobrar de inmediato, hasta que se paga o se cancela.
     final ordenesPendientes = ordenesProvider.orders.where((o) {
       final status = o.status.toLowerCase().trim();
 
-      return status == 'pending' ||
-          status == 'pendiente' ||
-          status == 'preparing' ||
-          status == 'preparando' ||
-          status == 'ready' ||
-          status == 'lista' ||
-          status == 'delivered' ||
-          status == 'entregada';
+      return status != 'paid' &&
+          status != 'pagada' &&
+          status != 'cancelled' &&
+          status != 'cancelada';
     }).toList();
 
     return Scaffold(
@@ -80,15 +76,6 @@ class _CajaPageState extends State<CajaPage> {
                   '${ordenesPendientes.length} cuentas pendientes de cobro',
               actionLabel: 'Cerrar Corte de Caja',
               onAction: () => _abrirDialogoCerrarCorte(context),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => _abrirDialogoMovimientos(context),
-                icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                label: const Text('Ver Movimientos de Caja'),
-              ),
             ),
             if (ordenesProvider.errorMessage != null) ...[
               const SizedBox(height: 12),
@@ -1276,250 +1263,5 @@ class _CajaPageState extends State<CajaPage> {
     fondoCtrl.dispose();
     contadoCtrl.dispose();
     notasCtrl.dispose();
-  }
-
-  // Mismo offset fijo de México (UTC-6) usado en caja_repository.dart, para
-  // que "hoy" coincida con los movimientos que el propio cobro ya registra
-  // en cash_movements con esa misma fecha.
-  String _fechaDeHoyMexico() {
-    final ahoraMexico =
-        DateTime.now().toUtc().add(const Duration(hours: -6));
-    final anio = ahoraMexico.year.toString().padLeft(4, '0');
-    final mes = ahoraMexico.month.toString().padLeft(2, '0');
-    final dia = ahoraMexico.day.toString().padLeft(2, '0');
-    return '$anio-$mes-$dia';
-  }
-
-  Future<void> _abrirDialogoMovimientos(BuildContext context) async {
-    final movimientoProvider = context.read<MovimientoCajaProvider>();
-    final hoy = _fechaDeHoyMexico();
-
-    await movimientoProvider.cargarMovimientosPorFecha(hoy);
-
-    if (!context.mounted) return;
-
-    String tipo = 'Ingreso';
-    final conceptoCtrl = TextEditingController();
-    final montoCtrl = TextEditingController();
-    bool guardando = false;
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            final width = MediaQuery.sizeOf(dialogContext).width;
-
-            return AlertDialog(
-              insetPadding: EdgeInsets.symmetric(
-                horizontal: width < 480 ? 16 : 40,
-                vertical: 24,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: Text('Movimientos de Caja de Hoy ($hoy)'),
-              content: SizedBox(
-                width: width < 480 ? double.infinity : 460,
-                height: 480,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Consumer<MovimientoCajaProvider>(
-                        builder: (context, provider, _) {
-                          if (provider.isLoading) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-
-                          if (provider.hasError) {
-                            return Center(
-                              child: Text(
-                                'No se pudieron cargar los movimientos: '
-                                '${provider.errorMessage}',
-                                style: const TextStyle(color: Colors.red),
-                              ),
-                            );
-                          }
-
-                          if (provider.movimientos.isEmpty) {
-                            return const Center(
-                              child: Text(
-                                'Sin movimientos registrados hoy.',
-                              ),
-                            );
-                          }
-
-                          return ListView.separated(
-                            itemCount: provider.movimientos.length,
-                            separatorBuilder: (_, __) => const Divider(),
-                            itemBuilder: (context, index) {
-                              final m = provider.movimientos[index];
-                              final esIngreso = m.tipo == 'Ingreso';
-
-                              return ListTile(
-                                dense: true,
-                                title: Text(
-                                  m.concepto,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Text(m.tipo),
-                                trailing: Text(
-                                  '${esIngreso ? '+' : '-'}\$${m.monto.toStringAsFixed(2)}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: esIngreso
-                                        ? Colors.green
-                                        : Colors.red,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    const Divider(height: 24),
-                    const Text(
-                      'Registrar movimiento manual',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ChoiceChip(
-                            label: const Text('Ingreso'),
-                            selected: tipo == 'Ingreso',
-                            onSelected: (_) =>
-                                setDialogState(() => tipo = 'Ingreso'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ChoiceChip(
-                            label: const Text('Egreso'),
-                            selected: tipo == 'Egreso',
-                            onSelected: (_) =>
-                                setDialogState(() => tipo = 'Egreso'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: conceptoCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Concepto',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: montoCtrl,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'Monto',
-                        prefixText: '\$ ',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cerrar'),
-                ),
-                ElevatedButton(
-                  onPressed: guardando
-                      ? null
-                      : () async {
-                          final concepto = conceptoCtrl.text.trim();
-                          final monto =
-                              double.tryParse(montoCtrl.text.trim());
-
-                          if (concepto.isEmpty) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(
-                                content: Text('Ingresa un concepto.'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          if (monto == null || monto <= 0) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Ingresa un monto numérico mayor a 0.',
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-
-                          setDialogState(() => guardando = true);
-
-                          final exito =
-                              await movimientoProvider.agregarMovimiento(
-                            MovimientoCaja(
-                              id: '',
-                              concepto: concepto,
-                              tipo: tipo,
-                              monto: monto,
-                              fecha: hoy,
-                            ),
-                          );
-
-                          if (!dialogContext.mounted) return;
-
-                          setDialogState(() => guardando = false);
-
-                          if (exito) {
-                            conceptoCtrl.clear();
-                            montoCtrl.clear();
-                            await movimientoProvider
-                                .cargarMovimientosPorFecha(hoy);
-                          } else {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  movimientoProvider.errorMessage ??
-                                      'No se pudo registrar el movimiento.',
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        },
-                  child: guardando
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2.5),
-                        )
-                      : const Text('Agregar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    conceptoCtrl.dispose();
-    montoCtrl.dispose();
   }
 }

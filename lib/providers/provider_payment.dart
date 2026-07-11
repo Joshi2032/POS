@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/provider_payment.dart';
 import '../repositories/payment_repository.dart';
+import '../utils/mexico_time.dart';
 
 class PaymentsProvider extends ChangeNotifier {
   final PaymentRepository _repository;
@@ -60,14 +61,7 @@ class PaymentsProvider extends ChangeNotifier {
 
   // --- ESTADÍSTICAS MÉTRICAS (KPI Cards de tu pantalla) ---
 
-  // Offset fijo de México zona Centro (America/Mexico_City) respecto a UTC.
-  // Mismo criterio que caja_repository.dart, para que "hoy"/"esta semana" no
-  // se desfase cerca de medianoche si el reloj del dispositivo usa otra
-  // zona horaria.
-  static const Duration _offsetMexicoCentro = Duration(hours: -6);
-
-  DateTime get _ahoraMexico =>
-      DateTime.now().toUtc().add(_offsetMexicoCentro);
+  DateTime get _ahoraMexico => ahoraComoWallClockMexico();
 
   double get todayTotal {
     final String hoy =

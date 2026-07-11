@@ -13,7 +13,7 @@ class PaymentRepository {
     try {
       final response = await _client
           .from(_table)
-          .select()
+          .select('*, suppliers(name)')
           .order('created_at', ascending: false);
           
       return (response as List)

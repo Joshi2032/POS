@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../repositories/orden_repository.dart';
 import '../models/restaurant_order.dart';
 import '../models/order_item.dart';
+import '../utils/categoria_utils.dart';
 
 class VentaReporte {
   final String id;
@@ -80,25 +81,7 @@ class ReportesProvider extends ChangeNotifier {
   // categoría asignada (categoryName == null) se recurre a un respaldo por
   // palabras clave, para no dejar el reporte sin ninguna categoría.
   String _resolverCategoria(OrderItem item) {
-    final categoriaReal = item.categoryName?.trim();
-    if (categoriaReal != null && categoriaReal.isNotEmpty) {
-      return categoriaReal;
-    }
-
-    final rawName = item.productName.toLowerCase();
-    if (rawName.contains('arrachera') ||
-        rawName.contains('t-bone') ||
-        rawName.contains('plato') ||
-        rawName.contains('corte')) {
-      return 'Alimentos';
-    } else if (rawName.contains('cerveza') ||
-        rawName.contains('refresco') ||
-        rawName.contains('agua')) {
-      return 'Bebidas';
-    } else if (rawName.contains('combo') || rawName.contains('paquete')) {
-      return 'Combos';
-    }
-    return 'Sin categoría';
+    return resolverCategoriaConFallback(item.categoryName, item.productName);
   }
 
   Future<void> cargarReporteDeVentas() async {

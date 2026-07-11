@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/empleado.dart';
@@ -8,6 +7,7 @@ import '../providers/empleados_provider.dart';
 import '../providers/nominas_provider.dart';
 import '../widgets/app_widgets.dart';
 import '../widgets/layout_widgets.dart';
+import '../utils/formatters.dart';
 
 class NominasPage extends StatelessWidget {
   const NominasPage({super.key});
@@ -26,11 +26,6 @@ class _NominasView extends StatefulWidget {
 }
 
 class _NominasViewState extends State<_NominasView> {
-  final NumberFormat _money = NumberFormat.currency(
-    locale: 'es_MX',
-    symbol: '\$',
-  );
-
   Future<void> _openEditor(
     NominasProvider provider, {
     NominaPago? nomina,
@@ -708,7 +703,7 @@ class _NominasViewState extends State<_NominasView> {
                                       alignment: Alignment
                                           .centerLeft,
                                       child: Text(
-                                        _money.format(
+                                        Formatters.money(
                                           provider
                                               .totalMensual,
                                         ),
@@ -817,7 +812,6 @@ class _NominasViewState extends State<_NominasView> {
 
                                   return _NominaTile(
                                     nomina: nomina,
-                                    money: _money,
                                     primaryTextColor:
                                         primaryTextColor,
                                     mutedTextColor:
@@ -926,7 +920,6 @@ class _NominasViewState extends State<_NominasView> {
 class _NominaTile extends StatelessWidget {
   const _NominaTile({
     required this.nomina,
-    required this.money,
     required this.primaryTextColor,
     required this.mutedTextColor,
     required this.isCompact,
@@ -935,7 +928,6 @@ class _NominaTile extends StatelessWidget {
   });
 
   final NominaPago nomina;
-  final NumberFormat money;
   final Color primaryTextColor;
   final Color mutedTextColor;
   final bool isCompact;
@@ -971,7 +963,7 @@ class _NominaTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  money.format(nomina.monto),
+                  Formatters.money(nomina.monto),
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 15,
@@ -1052,7 +1044,7 @@ class _NominaTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            money.format(nomina.monto),
+            Formatters.money(nomina.monto),
             style: const TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 16,

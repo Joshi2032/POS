@@ -63,8 +63,9 @@ class _InventarioViewState extends State<_InventarioView> {
 
     bool guardando = false;
 
-    showDialog(
+    await showDialog(
         context: context,
+        barrierDismissible: false,
         builder: (dialogContext) {
           return StatefulBuilder(builder: (dialogContext, setDialogState) {
           return AlertDialog(
@@ -182,14 +183,12 @@ class _InventarioViewState extends State<_InventarioView> {
                       success = await provider.addInventoryItem(inventoryItem);
                     } else {
                       success = await provider.updateInventoryItem(
-                          item.id, inventoryItem);
+                          item.id, item, inventoryItem);
                     }
 
-                    if (mounted) {
+                    if (mounted && dialogContext.mounted) {
                       if (success) {
-                        if (dialogContext.mounted) {
-                          Navigator.pop(dialogContext);
-                        }
+                        Navigator.pop(dialogContext);
                       } else {
                         setDialogState(() => guardando = false);
                         // MEJORA: Muestra un SnackBar si Supabase rechaza la petición
@@ -213,6 +212,13 @@ class _InventarioViewState extends State<_InventarioView> {
           );
         });
         });
+
+    idController.dispose();
+    categoryController.dispose();
+    nameController.dispose();
+    stockController.dispose();
+    costController.dispose();
+    providerController.dispose();
   }
 
   @override

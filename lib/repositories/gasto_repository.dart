@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/gasto.dart';
+import '../utils/json_payload_utils.dart';
 
 class GastoRepository {
   final SupabaseClient _client;
@@ -24,9 +25,8 @@ class GastoRepository {
   Future<void> create(Gasto gasto) async {
     try {
       final data = gasto.toJson();
-      // Limpieza de datos nulos o vacíos para evitar error de UUID
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      
+      limpiarCamposUuidVacios(data);
+
       await _client.from('expenses').insert(data);
     } catch (e) {
       throw Exception('Error al registrar el gasto: $e');

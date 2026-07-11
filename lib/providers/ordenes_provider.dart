@@ -139,11 +139,11 @@ class OrdenesProvider extends BaseProvider {
   int get totalPages =>
       (filteredOrders.length / pageSize).ceil().clamp(1, 999999);
 
-  // Condicionales basadas estrictamente en las propiedades de tus modelos
-  int get activeOrdersCount => _orders
-      .where((o) => o.status == 'pendiente' || o.status == 'preparando')
-      .length;
-  int get readyOrdersCount => _orders.where((o) => o.status == 'lista').length;
+  // Órdenes creadas que todavía no se cobran ni se cancelan: ya no pasan
+  // por un flujo de cocina (pendiente→preparando→lista→entregada), quedan
+  // disponibles para cobrar en caja desde el momento en que se crean.
+  int get activeOrdersCount =>
+      _orders.where((o) => o.status == 'pendiente').length;
 
   // --- CONTROLES DE INTERFAZ ---
   void onSearchChange(String val) {
@@ -213,8 +213,8 @@ class OrdenesProvider extends BaseProvider {
   Future<bool> cambiarEstadoOrden(String id, String nuevoEstado) async {
     bool exito = false;
     await ejecutarOperacion(() async {
-      // Mapear estados desde la UI (es: 'preparando', 'pagada')
-      // al valor que espera la base de datos (en inglés: 'preparing', 'paid').
+      // Mapear estados desde la UI (es: 'pendiente', 'pagada', 'cancelada')
+      // al valor que espera la base de datos (en inglés: 'pending', 'paid', 'cancelled').
       final estadoDb = _mapEstadoUiToDb(nuevoEstado);
       debugPrint(
           'ORDENES_PROVIDER: cambiarEstadoOrden(id=$id, nuevoEstado=$nuevoEstado) -> estadoDb=$estadoDb');
@@ -265,12 +265,6 @@ Future<void> agregarItemsAOrden(
   String _mapEstadoUiToDb(String estado) {
     final e = estado.toLowerCase();
     switch (e) {
-      case 'preparando':
-        return 'preparing';
-      case 'lista':
-        return 'ready';
-      case 'entregada':
-        return 'delivered';
       case 'pagada':
         return 'paid';
       case 'cancelada':
@@ -279,8 +273,7 @@ Future<void> agregarItemsAOrden(
         return 'pending';
       default:
         // Si ya se pasó un estado en inglés, lo devolvemos tal cual si es válido
-        if (['pending', 'preparing', 'ready', 'delivered', 'paid', 'cancelled']
-            .contains(e)) {
+        if (['pending', 'paid', 'cancelled'].contains(e)) {
           return e;
         }
         // Fallback seguro

@@ -2,30 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/movimiento_caja.dart';
 import '../models/corte_caja.dart';
+import '../utils/mexico_time.dart';
+import '../utils/json_payload_utils.dart';
 
 class CajaRepository {
   final SupabaseClient _client;
 
   CajaRepository(this._client);
 
-  // Offset fijo de México zona Centro (America/Mexico_City) respecto a UTC.
-  // México eliminó el horario de verano desde 2022 (excepto franja fronteriza
-  // norte), así que este offset es constante todo el año: UTC-6.
-  static const Duration _offsetMexicoCentro = Duration(hours: -6);
-
   /// Retorna el inicio del día de "hoy" en hora de México, expresado en UTC.
-  /// Nota: se separó en un método simple en vez de retornar un Record (tupla)
-  /// para mantener compatibilidad con Dart 2.18+. Records requieren Dart >=3.0.
-  DateTime _inicioDiaHoyEnUtc() {
-    final ahoraUtc = DateTime.now().toUtc();
-    final ahoraMexico = ahoraUtc.add(_offsetMexicoCentro);
-    final inicioDiaMexico = DateTime.utc(
-      ahoraMexico.year,
-      ahoraMexico.month,
-      ahoraMexico.day,
-    );
-    return inicioDiaMexico.subtract(_offsetMexicoCentro);
-  }
+  DateTime _inicioDiaHoyEnUtc() => inicioDeDiaMexicoEnUtc(hoyEnMexico());
 
   // Obtener el saldo total actual en la caja registradora (Sumando las órdenes en efectivo de hoy)
   Future<double> obtenerTotalEnCaja() async {
@@ -130,17 +116,6 @@ class CajaRepository {
     }
   }
 
-  /// Fecha de "hoy" en hora de México (YYYY-MM-DD), para columnas de tipo
-  /// `date` como `cash_movements.date`. Usa el mismo offset fijo que
-  /// [_rangoDeHoyEnUtc] para que ambas columnas queden consistentes entre sí.
-  String _fechaDeHoyMexico() {
-    final ahoraMexico = DateTime.now().toUtc().add(_offsetMexicoCentro);
-    final anio = ahoraMexico.year.toString().padLeft(4, '0');
-    final mes = ahoraMexico.month.toString().padLeft(2, '0');
-    final dia = ahoraMexico.day.toString().padLeft(2, '0');
-    return '$anio-$mes-$dia';
-  }
-
   // Registrar un cobro de orden directamente en la base de datos.
   // Retorna `true` si el cobro y el movimiento de caja quedaron completos,
   // o `false` si el cobro se realizó pero NO se pudo registrar el
@@ -200,14 +175,13 @@ class CajaRepository {
     final String statusActual =
         ordenData['status']?.toString().toLowerCase().trim() ?? '';
 
-    // Evita cobrar órdenes que todavía no fueron entregadas
-    if (statusActual != 'delivered' && statusActual != 'entregada') {
-      if (statusActual == 'paid' || statusActual == 'pagada') {
-        throw Exception('Esta orden ya fue cobrada anteriormente.');
-      }
-      throw Exception(
-        'La orden debe estar entregada antes de cobrar. Estado actual: $statusActual',
-      );
+    // Ya no hay flujo de cocina: cualquier orden creada es cobrable de
+    // inmediato, salvo que ya se haya cobrado o cancelado.
+    if (statusActual == 'paid' || statusActual == 'pagada') {
+      throw Exception('Esta orden ya fue cobrada anteriormente.');
+    }
+    if (statusActual == 'cancelled' || statusActual == 'cancelada') {
+      throw Exception('No se puede cobrar una orden cancelada.');
     }
 
     final double totalReal =
@@ -260,7 +234,7 @@ class CajaRepository {
         'concept': 'Cobro de Orden #$folioLegible',
         'type': 'Ingreso',
         'amount': totalReal,
-        'date': _fechaDeHoyMexico(),
+        'date': fechaHoyMexicoStr(),
       });
     } catch (e) {
       debugPrint('Advertencia: Tabla cash_movements falló: $e');
@@ -277,8 +251,7 @@ class CajaRepository {
   Future<void> realizarCorte(CorteCaja corte) async {
     try {
       final data = corte.toJson();
-      data.removeWhere(
-          (key, value) => value == null || value.toString().trim().isEmpty);
+      limpiarCamposUuidVacios(data);
 
       await _client.from('cash_register_cuts').insert(data);
     } catch (e) {
@@ -290,8 +263,7 @@ class CajaRepository {
   Future<void> registrarMovimientoManual(MovimientoCaja movimiento) async {
     try {
       final data = movimiento.toJson();
-      data.removeWhere(
-          (key, value) => value == null || value.toString().trim().isEmpty);
+      limpiarCamposUuidVacios(data);
 
       await _client.from('cash_movements').insert(data);
     } catch (e) {

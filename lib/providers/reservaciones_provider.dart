@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import '../models/reservacion.dart';
 import '../repositories/reservacion_repository.dart';
+import '../utils/mexico_time.dart';
 
 class ReservacionesProvider extends ChangeNotifier {
   final ReservacionRepository _repository;
 
   final int pageSize = 10;
 
-  // Mismo offset fijo de México (UTC-6) que ya se usa en caja_repository.dart
-  // y provider_payment.dart: se calcula fresco en cada acceso (no como un
-  // `final` fijado una sola vez al arrancar) para que "hoy" no se quede
-  // obsoleto si la app se queda abierta después de medianoche, y para que
-  // no dependa de que el dispositivo tenga la zona horaria correcta.
-  String get todayIso {
-    final ahoraMexico =
-        DateTime.now().toUtc().add(const Duration(hours: -6));
-    return ahoraMexico.toIso8601String().substring(0, 10);
-  }
+  // Se calcula fresco en cada acceso (no como un `final` fijado una sola vez
+  // al arrancar) para que "hoy" no se quede obsoleto si la app se queda
+  // abierta después de medianoche.
+  String get todayIso => fechaHoyMexicoStr();
 
   // Listas de datos desde Supabase
   List<Reservacion> _reservations = [];

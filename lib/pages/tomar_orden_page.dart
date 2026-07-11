@@ -488,10 +488,12 @@ Future<void> _mostrarOrdenesExistentes(
 
     final serviceType = order.serviceType.toLowerCase().trim();
 
-    final esActiva = status == 'pendiente' ||
-        status == 'preparando' ||
-        status == 'pending' ||
-        status == 'preparing';
+    // Ya no hay flujo de cocina: "activa" es cualquier orden que no se ha
+    // pagado ni cancelado todavía.
+    final esActiva = status != 'pagada' &&
+        status != 'paid' &&
+        status != 'cancelada' &&
+        status != 'cancelled';
 
     final esComedor = serviceType == 'comedor' || serviceType == 'dine_in';
 

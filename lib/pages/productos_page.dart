@@ -205,8 +205,8 @@ class _ProductosView extends StatelessWidget {
     );
   }
 
-  void _mostrarDialogoFormulario(
-      BuildContext context, Producto? productoExistente) {
+  Future<void> _mostrarDialogoFormulario(
+      BuildContext context, Producto? productoExistente) async {
     final provider = context.read<ProductosProvider>();
     final isEditing = productoExistente != null;
 
@@ -234,7 +234,7 @@ class _ProductosView extends StatelessWidget {
       recetaSeleccionada = match;
     }
 
-    showDialog(
+    await showDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(builder: (context, setState) {
@@ -502,6 +502,12 @@ class _ProductosView extends StatelessWidget {
         });
       },
     );
+
+    nombreCtrl.dispose();
+    descCtrl.dispose();
+    precioCtrl.dispose();
+    stockCtrl.dispose();
+    unidadCtrl.dispose();
   }
 
   void _confirmarEliminar(

@@ -226,5 +226,7 @@ class _CategoriasView extends StatelessWidget {
         );
       },
     );
+
+    nombreCtrl.dispose();
   }
 }

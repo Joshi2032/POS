@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/empleado.dart';
+import '../utils/json_payload_utils.dart';
 
 class EmpleadoRepository {
   final SupabaseClient _client;
@@ -127,6 +128,15 @@ class EmpleadoRepository {
           .toSet()
           .toList();
 
+      // Respaldamos las áreas actuales ANTES de borrarlas, por si hay que
+      // restaurarlas si el insert de las nuevas falla justo después: sin
+      // esto, un fallo transitorio (red, RLS) deja al empleado con cero
+      // áreas asignadas en vez de conservar las que ya tenía.
+      final anterioresResponse = await _client
+          .from('employee_areas')
+          .select('area')
+          .eq('employee_id', employeeId);
+
       await _client
           .from('employee_areas')
           .delete()
@@ -143,7 +153,22 @@ class EmpleadoRepository {
         };
       }).toList();
 
-      await _client.from('employee_areas').insert(data);
+      try {
+        await _client.from('employee_areas').insert(data);
+      } catch (e) {
+        final anterioresData = (anterioresResponse as List)
+            .map((row) => {
+                  'employee_id': employeeId,
+                  'area': row['area'],
+                })
+            .toList();
+        if (anterioresData.isNotEmpty) {
+          try {
+            await _client.from('employee_areas').insert(anterioresData);
+          } catch (_) {}
+        }
+        rethrow;
+      }
     } catch (e) {
       throw Exception(
         'Error al asignar áreas al empleado: $e',
@@ -155,9 +180,7 @@ class EmpleadoRepository {
     try {
       final data = empleado.toJson();
 
-      data.removeWhere(
-        (key, value) => value == null || value.toString().trim().isEmpty,
-      );
+      limpiarCamposUuidVacios(data);
 
       final response =
           await _client.from('employees').insert(data).select().single();
@@ -189,9 +212,7 @@ class EmpleadoRepository {
 
       data.remove('id');
 
-      data.removeWhere(
-        (key, value) => value == null || value.toString().trim().isEmpty,
-      );
+      limpiarCamposUuidVacios(data);
 
       await _client.from('employees').update(data).eq('id', id);
     } on PostgrestException catch (e) {

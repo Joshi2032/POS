@@ -30,11 +30,16 @@ class CajaProvider extends ChangeNotifier {
 
   // --- GETTERS (Exactamente idénticos a los que necesita tu UI original) ---
 // --- GETTERS (Exactamente idénticos a los que necesita tu UI original) ---
+// Ya no hay flujo de cocina: toda orden creada queda disponible para
+// cobrar de inmediato, hasta que se paga o se cancela.
 List<CashOrder> get pendingOrders =>
     _ordenesProvider.orders.where((o) {
       final status = o.status.toLowerCase().trim();
 
-      return status == 'delivered' || status == 'entregada';
+      return status != 'paid' &&
+          status != 'pagada' &&
+          status != 'cancelled' &&
+          status != 'cancelada';
     }).map(_mapRestaurantToCashOrder).toList();
 
 List<CashOrder> get paidToday =>
@@ -176,7 +181,13 @@ int get paidTodayCount => paidToday.length;
             'actualizar el total en caja. Refresca la pantalla.';
       }
 
-      closeSelectedOrderPanel();
+      // Solo cerramos el panel si sigue seleccionada la MISMA orden que
+      // acabamos de cobrar: si el cajero seleccionó otra orden mientras
+      // esta esperaba la respuesta del servidor, cerrar el panel aquí
+      // descartaría esa selección en curso.
+      if (_selectedOrderId == orderId) {
+        closeSelectedOrderPanel();
+      }
       _setLoading(false);
       notifyListeners();
       return true;

@@ -31,6 +31,44 @@ class _DashboardPageState extends State<DashboardPage> {
 class _DashboardView extends StatelessWidget {
   const _DashboardView();
 
+  /// Transición de fade + escala sutil, usada al alternar entre semana/mes/
+  /// año en las gráficas y al cargar el contenido del dashboard por primera
+  /// vez, en vez del reemplazo instantáneo que había antes.
+  static Widget _fadeScaleTransition(Widget child, Animation<double> animation) {
+    return FadeTransition(
+      opacity: animation,
+      child: ScaleTransition(
+        scale: Tween<double>(begin: 0.97, end: 1.0).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  /// "Dibuja" la gráfica de izquierda a derecha, dando la sensación de que
+  /// el flujo de datos aparece progresivamente en vez de aparecer de golpe.
+  /// Se reproduce cada vez que se monta una gráfica nueva (carga inicial o
+  /// al cambiar semana/mes/año, ya que el AnimatedSwitcher que la envuelve
+  /// fuerza un remount con cada cambio de filtro).
+  static Widget _flowReveal(Widget chart) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, childWidget) {
+        return ClipRect(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            widthFactor: value < 0.001 ? 0.001 : value,
+            child: childWidget,
+          ),
+        );
+      },
+      child: chart,
+    );
+  }
+
   List<FlSpot> _getSpots(List<double> data) {
     return data
         .asMap()
@@ -341,7 +379,8 @@ class _DashboardView extends StatelessWidget {
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(24.0),
-              child: Column(
+              child: FadeScaleIn(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (provider.errorMessage != null) ...[
@@ -499,9 +538,67 @@ class _DashboardView extends StatelessWidget {
                               children: [
                                 SizedBox(
                                     width: lineW,
+                                    child: AnimatedSwitcher(
+                                        duration:
+                                            const Duration(milliseconds: 300),
+                                        transitionBuilder:
+                                            _fadeScaleTransition,
+                                        child: AppCard(
+                                            key: ValueKey(
+                                                'line_${provider.filterType}'),
+                                            child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  _buildChartLegend(context),
+                                                  const SizedBox(height: 24),
+                                                  SizedBox(
+                                                      height: 300,
+                                                      child: _flowReveal(
+                                                          LineChart(
+                                                              _buildLineChartData(
+                                                                  context,
+                                                                  provider))))
+                                                ])))),
+                                const SizedBox(width: 16),
+                                SizedBox(
+                                    width: barW,
+                                    child: AnimatedSwitcher(
+                                        duration:
+                                            const Duration(milliseconds: 300),
+                                        transitionBuilder:
+                                            _fadeScaleTransition,
+                                        child: AppCard(
+                                            key: ValueKey(
+                                                'bar_${provider.filterType}'),
+                                            child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text('Utilidad neta',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .titleMedium),
+                                                  const SizedBox(height: 24),
+                                                  SizedBox(
+                                                      height: 300,
+                                                      child: _flowReveal(
+                                                          BarChart(
+                                                              _buildBarChartData(
+                                                                  context,
+                                                                  provider))))
+                                                ])))),
+                              ],
+                            )
+                          : Column(
+                              children: [
+                                AnimatedSwitcher(
+                                    duration:
+                                        const Duration(milliseconds: 300),
+                                    transitionBuilder: _fadeScaleTransition,
                                     child: AppCard(
                                         key: ValueKey(
-                                            'line_${provider.filterType}'),
+                                            'line_mobile_${provider.filterType}'),
                                         child: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
@@ -509,17 +606,19 @@ class _DashboardView extends StatelessWidget {
                                               _buildChartLegend(context),
                                               const SizedBox(height: 24),
                                               SizedBox(
-                                                  height: 300,
-                                                  child: LineChart(
+                                                  height: 260,
+                                                  child: _flowReveal(LineChart(
                                                       _buildLineChartData(
-                                                          context, provider)))
+                                                          context, provider))))
                                             ]))),
-                                const SizedBox(width: 16),
-                                SizedBox(
-                                    width: barW,
+                                const SizedBox(height: 16),
+                                AnimatedSwitcher(
+                                    duration:
+                                        const Duration(milliseconds: 300),
+                                    transitionBuilder: _fadeScaleTransition,
                                     child: AppCard(
                                         key: ValueKey(
-                                            'bar_${provider.filterType}'),
+                                            'bar_mobile_${provider.filterType}'),
                                         child: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
@@ -530,49 +629,11 @@ class _DashboardView extends StatelessWidget {
                                                       .titleMedium),
                                               const SizedBox(height: 24),
                                               SizedBox(
-                                                  height: 300,
-                                                  child: BarChart(
+                                                  height: 260,
+                                                  child: _flowReveal(BarChart(
                                                       _buildBarChartData(
-                                                          context, provider)))
+                                                          context, provider))))
                                             ]))),
-                              ],
-                            )
-                          : Column(
-                              children: [
-                                AppCard(
-                                    key: ValueKey(
-                                        'line_mobile_${provider.filterType}'),
-                                    child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _buildChartLegend(context),
-                                          const SizedBox(height: 24),
-                                          SizedBox(
-                                              height: 260,
-                                              child: LineChart(
-                                                  _buildLineChartData(
-                                                      context, provider)))
-                                        ])),
-                                const SizedBox(height: 16),
-                                AppCard(
-                                    key: ValueKey(
-                                        'bar_mobile_${provider.filterType}'),
-                                    child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text('Utilidad neta',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium),
-                                          const SizedBox(height: 24),
-                                          SizedBox(
-                                              height: 260,
-                                              child: BarChart(
-                                                  _buildBarChartData(
-                                                      context, provider)))
-                                        ])),
                               ],
                             );
                     },
@@ -582,6 +643,7 @@ class _DashboardView extends StatelessWidget {
                   // ── Tabla de productos ───────────────────────────────────
                   _buildPremiumProductTable(context, provider),
                 ],
+                ),
               ),
             ),
           );
@@ -667,32 +729,42 @@ class _DashboardView extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface)),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            transitionBuilder: _fadeScaleTransition,
+            child: Text(value,
+                key: ValueKey(value),
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface)),
+          ),
           const SizedBox(height: 6),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 3,
-            runSpacing: 1,
-            children: [
-              Icon(isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                  color: trendColor, size: 12),
-              Text(change,
-                  style: TextStyle(
-                      color: trendColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold)),
-              Text('vs anterior',
-                  style: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.4),
-                      fontSize: 10)),
-            ],
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            transitionBuilder: _fadeScaleTransition,
+            child: Wrap(
+              key: ValueKey('$change-$isPositive'),
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 3,
+              runSpacing: 1,
+              children: [
+                Icon(isPositive ? Icons.arrow_upward : Icons.arrow_downward,
+                    color: trendColor, size: 12),
+                Text(change,
+                    style: TextStyle(
+                        color: trendColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold)),
+                Text('vs anterior',
+                    style: TextStyle(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.4),
+                        fontSize: 10)),
+              ],
+            ),
           ),
         ],
       ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/mexico_time.dart';
+import '../utils/embed_utils.dart';
+import '../utils/categoria_utils.dart';
 
 // Modelo relacional para estructurar el rendimiento de productos vendidos
 class ProductoRendimiento {
@@ -166,33 +169,10 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   // Extrae 'categories.name' del embed anidado
-  // 'order_items(*, products(categories(name)))'. PostgREST puede devolver
-  // los embeds como Map (relación 1:1) o como List (por seguridad, si
-  // llegara a tratarse como 1:N), así que se manejan ambos casos.
+  // 'order_items(*, products(categories(name)))'.
   String? _extraerCategoriaReal(Map<String, dynamic> item) {
-    final productosEmbed = item['products'];
-
-    Map<String, dynamic>? productoMap;
-    if (productosEmbed is Map<String, dynamic>) {
-      productoMap = productosEmbed;
-    } else if (productosEmbed is List && productosEmbed.isNotEmpty) {
-      final primero = productosEmbed.first;
-      if (primero is Map<String, dynamic>) productoMap = primero;
-    }
-
-    if (productoMap == null) return null;
-
-    final categoriasEmbed = productoMap['categories'];
-    if (categoriasEmbed is Map<String, dynamic>) {
-      return categoriasEmbed['name']?.toString();
-    } else if (categoriasEmbed is List && categoriasEmbed.isNotEmpty) {
-      final primero = categoriasEmbed.first;
-      if (primero is Map<String, dynamic>) {
-        return primero['name']?.toString();
-      }
-    }
-
-    return null;
+    return asEmbedMap(asEmbedMap(item['products'])?['categories'])?['name']
+        ?.toString();
   }
 
   Future<List<dynamic>> _cargarOrdersConItems() async {
@@ -237,18 +217,14 @@ class DashboardProvider extends ChangeNotifier {
 
   // --- MOTOR ANALÍTICO Y CRUCE DE TABLAS ---
   void _procesarOperacionesFinancieras() {
-    final ahora = DateTime.now();
-
-    // Mismo offset fijo de México (UTC-6) que ya se usa en caja_repository.dart,
-    // provider_payment.dart y reservaciones_provider.dart: "hoy"/"ayer" se
-    // calculan con este offset para que Ventas Hoy no dependa de la zona
-    // horaria del dispositivo ni se desfase cerca de medianoche.
-    final ahoraMexico = DateTime.now().toUtc().add(const Duration(hours: -6));
-    final hoyStr = ahoraMexico.toIso8601String().substring(0, 10);
-    final ayerStr = ahoraMexico
-        .subtract(const Duration(days: 1))
-        .toIso8601String()
-        .substring(0, 10);
+    // Todo el análisis de fechas se hace sobre el día-calendario de MÉXICO
+    // (UTC-6 fijo), nunca sobre el timestamp UTC crudo que guarda Supabase
+    // ni sobre la zona horaria del dispositivo. Antes se comparaba
+    // directamente el string de created_at (UTC) contra "hoy" del
+    // dispositivo: una venta de la tarde/noche en México cae en UTC del día
+    // siguiente, así que se contaba en el día/semana/mes equivocado.
+    final hoyMexico = hoyEnMexico();
+    final ayerMexico = hoyMexico.subtract(const Duration(days: 1));
 
     _ventasHoy = 0.0;
     _ventasAyer = 0.0;
@@ -256,42 +232,48 @@ class DashboardProvider extends ChangeNotifier {
 
     final Map<String, ProductoRendimiento> mapaProductosFiltro = {};
 
-    bool cumpleFiltroFecha(
-      DateTime fechaObjeto,
-      DateTime inicioSemana,
-      String mesStr,
-      String anioStr,
-    ) {
+    final inicioSemana = hoyMexico.subtract(
+      Duration(days: hoyMexico.weekday - 1),
+    );
+
+    final mesActualStr =
+        '${hoyMexico.year.toString().padLeft(4, '0')}-${hoyMexico.month.toString().padLeft(2, '0')}';
+    final anioActualStr = hoyMexico.year.toString();
+
+    bool cumpleFiltroFecha(DateTime fechaMexico) {
       if (_filterType == 'semana') {
-        return fechaObjeto
-                .isAfter(inicioSemana.subtract(const Duration(seconds: 1))) &&
-            fechaObjeto.difference(inicioSemana).inDays < 7;
+        return !fechaMexico.isBefore(inicioSemana) &&
+            fechaMexico.difference(inicioSemana).inDays < 7;
       } else if (_filterType == 'mes') {
-        return fechaObjeto.toIso8601String().startsWith(mesStr);
+        final str =
+            '${fechaMexico.year.toString().padLeft(4, '0')}-${fechaMexico.month.toString().padLeft(2, '0')}';
+        return str == mesActualStr;
       } else {
-        return fechaObjeto.toIso8601String().startsWith(anioStr);
+        return fechaMexico.year.toString() == anioActualStr;
       }
     }
 
     // 1. CÁLCULO DE VENTAS DE HOY Y ÓRDENES ACTIVAS
     for (final rawJson in _allOrders) {
       try {
-        final String dateStr =
-            rawJson['created_at']?.toString().substring(0, 10) ?? '';
         final double totalValue = (rawJson['total'] as num?)?.toDouble() ?? 0.0;
         final String estado =
             (rawJson['status'] ?? '').toString().toLowerCase();
 
         // Solo sumamos dinero de órdenes que ya están pagadas (paid)
-        if (dateStr.startsWith(hoyStr) && estado == 'paid') {
-          _ventasHoy += totalValue;
+        if (estado == 'paid') {
+          final fechaMexico = diaMexicoDesde(rawJson['created_at']);
+          if (fechaMexico != null && fechaMexico == hoyMexico) {
+            _ventasHoy += totalValue;
+          }
+          if (fechaMexico != null && fechaMexico == ayerMexico) {
+            _ventasAyer += totalValue;
+          }
         }
 
-        if (dateStr.startsWith(ayerStr) && estado == 'paid') {
-          _ventasAyer += totalValue;
-        }
-
-        if (estado == 'pending' || estado == 'preparing' || estado == 'ready') {
+        // Ya no hay flujo de cocina: "activa" es cualquier orden que no se
+        // ha pagado ni cancelado todavía.
+        if (estado != 'paid' && estado != 'cancelled') {
           _ordenesActivas++;
         }
       } catch (e, stackTrace) {
@@ -303,19 +285,6 @@ class DashboardProvider extends ChangeNotifier {
       }
     }
 
-    final lunesDeEstaSemana = ahora.subtract(
-      Duration(days: ahora.weekday - 1),
-    );
-
-    final inicioSemana = DateTime(
-      lunesDeEstaSemana.year,
-      lunesDeEstaSemana.month,
-      lunesDeEstaSemana.day,
-    );
-
-    final mesActualStr = ahora.toIso8601String().substring(0, 7);
-    final anioActualStr = ahora.year.toString();
-
     // 2. AGRUPAMIENTO TEMPORAL DE VECTOR DE GRÁFICAS
     if (_filterType == 'semana') {
       _currentLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -324,16 +293,14 @@ class DashboardProvider extends ChangeNotifier {
 
       for (final rawJson in _allOrders) {
         try {
-          final String dateStr = rawJson['created_at'] ?? '';
           final double totalValue =
               (rawJson['total'] as num?)?.toDouble() ?? 0.0;
           final String estado =
               (rawJson['status'] ?? '').toString().toLowerCase();
 
-          if (dateStr.isNotEmpty && estado == 'paid') {
-            final fechaOrd = DateTime.parse(dateStr);
-            if (fechaOrd
-                .isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
+          if (estado == 'paid') {
+            final fechaOrd = diaMexicoDesde(rawJson['created_at']);
+            if (fechaOrd != null && !fechaOrd.isBefore(inicioSemana)) {
               final diasDiferencia = fechaOrd.difference(inicioSemana).inDays;
               if (diasDiferencia >= 0 && diasDiferencia < 7) {
                 _currentIngresos[diasDiferencia] += totalValue;
@@ -351,19 +318,15 @@ class DashboardProvider extends ChangeNotifier {
 
       for (final rawJson in _allExpenses) {
         try {
-          final String dateStr =
-              rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
           final double amountValue =
               (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          if (dateStr.isNotEmpty) {
-            final fechaGst = DateTime.parse(dateStr);
-            if (fechaGst
-                .isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-              final diasDiferencia = fechaGst.difference(inicioSemana).inDays;
-              if (diasDiferencia >= 0 && diasDiferencia < 7) {
-                _currentGastos[diasDiferencia] += amountValue;
-              }
+          final fechaGst =
+              diaMexicoDesde(rawJson['expense_date'] ?? rawJson['created_at']);
+          if (fechaGst != null && !fechaGst.isBefore(inicioSemana)) {
+            final diasDiferencia = fechaGst.difference(inicioSemana).inDays;
+            if (diasDiferencia >= 0 && diasDiferencia < 7) {
+              _currentGastos[diasDiferencia] += amountValue;
             }
           }
         } catch (e, stackTrace) {
@@ -377,18 +340,14 @@ class DashboardProvider extends ChangeNotifier {
 
       for (final rawJson in _allSupplierPayments) {
         try {
-          final String dateStr = rawJson['created_at'] ?? '';
           final double amountValue =
               (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          if (dateStr.isNotEmpty) {
-            final fechaPag = DateTime.parse(dateStr);
-            if (fechaPag
-                .isAfter(inicioSemana.subtract(const Duration(seconds: 1)))) {
-              final diasDiferencia = fechaPag.difference(inicioSemana).inDays;
-              if (diasDiferencia >= 0 && diasDiferencia < 7) {
-                _currentGastos[diasDiferencia] += amountValue;
-              }
+          final fechaPag = diaMexicoDesde(rawJson['created_at']);
+          if (fechaPag != null && !fechaPag.isBefore(inicioSemana)) {
+            final diasDiferencia = fechaPag.difference(inicioSemana).inDays;
+            if (diasDiferencia >= 0 && diasDiferencia < 7) {
+              _currentGastos[diasDiferencia] += amountValue;
             }
           }
         } catch (e, stackTrace) {
@@ -406,16 +365,20 @@ class DashboardProvider extends ChangeNotifier {
 
       for (final rawJson in _allOrders) {
         try {
-          final String dateStr = rawJson['created_at'] ?? '';
           final double totalValue =
               (rawJson['total'] as num?)?.toDouble() ?? 0.0;
           final String estado =
               (rawJson['status'] ?? '').toString().toLowerCase();
 
-          if (dateStr.startsWith(mesActualStr) && estado == 'paid') {
-            final dia = int.tryParse(dateStr.substring(8, 10)) ?? 1;
-            final indiceSemana = ((dia - 1) / 7).floor().clamp(0, 3);
-            _currentIngresos[indiceSemana] += totalValue;
+          if (estado == 'paid') {
+            final fecha = diaMexicoDesde(rawJson['created_at']);
+            final str = fecha == null
+                ? null
+                : '${fecha.year.toString().padLeft(4, '0')}-${fecha.month.toString().padLeft(2, '0')}';
+            if (fecha != null && str == mesActualStr) {
+              final indiceSemana = ((fecha.day - 1) / 7).floor().clamp(0, 3);
+              _currentIngresos[indiceSemana] += totalValue;
+            }
           }
         } catch (e, stackTrace) {
           _logDashboardError(
@@ -428,14 +391,16 @@ class DashboardProvider extends ChangeNotifier {
 
       for (final rawJson in _allExpenses) {
         try {
-          final String dateStr =
-              rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
           final double amountValue =
               (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          if (dateStr.startsWith(mesActualStr)) {
-            final dia = int.tryParse(dateStr.substring(8, 10)) ?? 1;
-            final indiceSemana = ((dia - 1) / 7).floor().clamp(0, 3);
+          final fecha =
+              diaMexicoDesde(rawJson['expense_date'] ?? rawJson['created_at']);
+          final str = fecha == null
+              ? null
+              : '${fecha.year.toString().padLeft(4, '0')}-${fecha.month.toString().padLeft(2, '0')}';
+          if (fecha != null && str == mesActualStr) {
+            final indiceSemana = ((fecha.day - 1) / 7).floor().clamp(0, 3);
             _currentGastos[indiceSemana] += amountValue;
           }
         } catch (e, stackTrace) {
@@ -449,13 +414,15 @@ class DashboardProvider extends ChangeNotifier {
 
       for (final rawJson in _allSupplierPayments) {
         try {
-          final String dateStr = rawJson['created_at'] ?? '';
           final double amountValue =
               (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          if (dateStr.startsWith(mesActualStr)) {
-            final dia = int.tryParse(dateStr.substring(8, 10)) ?? 1;
-            final indiceSemana = ((dia - 1) / 7).floor().clamp(0, 3);
+          final fecha = diaMexicoDesde(rawJson['created_at']);
+          final str = fecha == null
+              ? null
+              : '${fecha.year.toString().padLeft(4, '0')}-${fecha.month.toString().padLeft(2, '0')}';
+          if (fecha != null && str == mesActualStr) {
+            final indiceSemana = ((fecha.day - 1) / 7).floor().clamp(0, 3);
             _currentGastos[indiceSemana] += amountValue;
           }
         } catch (e, stackTrace) {
@@ -473,16 +440,17 @@ class DashboardProvider extends ChangeNotifier {
 
       for (final rawJson in _allOrders) {
         try {
-          final String dateStr = rawJson['created_at'] ?? '';
           final double totalValue =
               (rawJson['total'] as num?)?.toDouble() ?? 0.0;
           final String estado =
               (rawJson['status'] ?? '').toString().toLowerCase();
 
-          if (dateStr.startsWith(anioActualStr) && estado == 'paid') {
-            final mes = int.tryParse(dateStr.substring(5, 7)) ?? 1;
-            final indiceTrimestre = ((mes - 1) / 3).floor().clamp(0, 3);
-            _currentIngresos[indiceTrimestre] += totalValue;
+          if (estado == 'paid') {
+            final fecha = diaMexicoDesde(rawJson['created_at']);
+            if (fecha != null && fecha.year.toString() == anioActualStr) {
+              final indiceTrimestre = ((fecha.month - 1) / 3).floor().clamp(0, 3);
+              _currentIngresos[indiceTrimestre] += totalValue;
+            }
           }
         } catch (e, stackTrace) {
           _logDashboardError(
@@ -495,14 +463,13 @@ class DashboardProvider extends ChangeNotifier {
 
       for (final rawJson in _allExpenses) {
         try {
-          final String dateStr =
-              rawJson['expense_date'] ?? rawJson['created_at'] ?? '';
           final double amountValue =
               (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          if (dateStr.startsWith(anioActualStr)) {
-            final mes = int.tryParse(dateStr.substring(5, 7)) ?? 1;
-            final indiceTrimestre = ((mes - 1) / 3).floor().clamp(0, 3);
+          final fecha =
+              diaMexicoDesde(rawJson['expense_date'] ?? rawJson['created_at']);
+          if (fecha != null && fecha.year.toString() == anioActualStr) {
+            final indiceTrimestre = ((fecha.month - 1) / 3).floor().clamp(0, 3);
             _currentGastos[indiceTrimestre] += amountValue;
           }
         } catch (e, stackTrace) {
@@ -516,13 +483,12 @@ class DashboardProvider extends ChangeNotifier {
 
       for (final rawJson in _allSupplierPayments) {
         try {
-          final String dateStr = rawJson['created_at'] ?? '';
           final double amountValue =
               (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
 
-          if (dateStr.startsWith(anioActualStr)) {
-            final mes = int.tryParse(dateStr.substring(5, 7)) ?? 1;
-            final indiceTrimestre = ((mes - 1) / 3).floor().clamp(0, 3);
+          final fecha = diaMexicoDesde(rawJson['created_at']);
+          if (fecha != null && fecha.year.toString() == anioActualStr) {
+            final indiceTrimestre = ((fecha.month - 1) / 3).floor().clamp(0, 3);
             _currentGastos[indiceTrimestre] += amountValue;
           }
         } catch (e, stackTrace) {
@@ -538,20 +504,14 @@ class DashboardProvider extends ChangeNotifier {
     // 3. EXTRACCIÓN REAL DE PRODUCTOS
     for (final rawJson in _allOrders) {
       try {
-        final String dateStr = rawJson['created_at'] ?? '';
         final String estado =
             (rawJson['status'] ?? '').toString().toLowerCase();
 
         // Solo contar productos de órdenes que ya fueron pagadas
-        if (dateStr.isNotEmpty && estado == 'paid') {
-          final fechaOrd = DateTime.parse(dateStr);
+        if (estado == 'paid') {
+          final fechaOrd = diaMexicoDesde(rawJson['created_at']);
 
-          if (cumpleFiltroFecha(
-            fechaOrd,
-            inicioSemana,
-            mesActualStr,
-            anioActualStr,
-          )) {
+          if (fechaOrd != null && cumpleFiltroFecha(fechaOrd)) {
             // Leemos los order_items obtenidos gracias a la consulta '.select("*, order_items(*)")'
             final items = rawJson['order_items'] ?? [];
 
@@ -561,32 +521,15 @@ class DashboardProvider extends ChangeNotifier {
                     (item['product_name'] ?? 'Producto Desconocido').toString();
 
                 // Usamos la categoría REAL asignada al producto en el
-                // catálogo (Productos > Categoría) en vez de adivinarla por
-                // palabras clave en el nombre, que fallaba en silencio a
-                // "General" para cualquier producto sin esas palabras
-                // exactas en el nombre.
-                String? categoriaProd = _extraerCategoriaReal(item);
-
-                // Si el producto ya no existe/fue borrado (sin join
-                // disponible), caemos al heurístico anterior como respaldo
-                // en vez de dejarlo sin categoría.
-                if (categoriaProd == null || categoriaProd.trim().isEmpty) {
-                  final rawName = nombreProd.toLowerCase();
-
-                  if (rawName.contains('arrachera') ||
-                      rawName.contains('t-bone') ||
-                      rawName.contains('corte')) {
-                    categoriaProd = 'Parrilla';
-                  } else if (rawName.contains('cerveza') ||
-                      rawName.contains('agua') ||
-                      rawName.contains('refresco')) {
-                    categoriaProd = 'Bebidas';
-                  } else if (rawName.contains('combo')) {
-                    categoriaProd = 'Combos';
-                  } else {
-                    categoriaProd = 'General';
-                  }
-                }
+                // catálogo (Productos > Categoría); si el producto ya no
+                // existe/fue borrado (sin join disponible), caemos a un
+                // respaldo por palabras clave (mismo helper que usa
+                // reportes_provider.dart, para que ambas pantallas muestren
+                // la misma categoría también en ese caso límite).
+                final String categoriaProd = resolverCategoriaConFallback(
+                  _extraerCategoriaReal(item),
+                  nombreProd,
+                );
 
                 final int cantidad = ((item['quantity'] ?? 1) as num).toInt();
 
@@ -636,7 +579,7 @@ class DashboardProvider extends ChangeNotifier {
 
     _utilidadFiltroTotal = _ingresoFiltroTotal - totalGastosFiltro;
 
-    _calcularTotalesPeriodoAnterior(ahora);
+    _calcularTotalesPeriodoAnterior(hoyMexico);
 
     try {
       debugPrint(
@@ -656,25 +599,25 @@ class DashboardProvider extends ChangeNotifier {
   // Calcula el ingreso y la utilidad del período INMEDIATO ANTERIOR al
   // seleccionado (semana pasada / mes pasado / año pasado), para poder
   // mostrar un % de cambio real en las tarjetas del dashboard en vez del
-  // valor fijo que había antes.
-  void _calcularTotalesPeriodoAnterior(DateTime ahora) {
+  // valor fijo que había antes. Recibe "hoy" ya normalizado al día-calendario
+  // de México (ver hoyEnMexico()), y compara contra fechas normalizadas de la
+  // misma forma vía diaMexicoDesde().
+  void _calcularTotalesPeriodoAnterior(DateTime hoyMexico) {
     late DateTime inicioAnterior;
     late DateTime finAnteriorExclusivo;
 
     if (_filterType == 'semana') {
-      final lunesDeEstaSemana = DateTime(
-        ahora.year,
-        ahora.month,
-        ahora.day,
-      ).subtract(Duration(days: ahora.weekday - 1));
+      final lunesDeEstaSemana = hoyMexico.subtract(
+        Duration(days: hoyMexico.weekday - 1),
+      );
       inicioAnterior = lunesDeEstaSemana.subtract(const Duration(days: 7));
       finAnteriorExclusivo = lunesDeEstaSemana;
     } else if (_filterType == 'mes') {
-      inicioAnterior = DateTime(ahora.year, ahora.month - 1, 1);
-      finAnteriorExclusivo = DateTime(ahora.year, ahora.month, 1);
+      inicioAnterior = DateTime(hoyMexico.year, hoyMexico.month - 1, 1);
+      finAnteriorExclusivo = DateTime(hoyMexico.year, hoyMexico.month, 1);
     } else {
-      inicioAnterior = DateTime(ahora.year - 1, 1, 1);
-      finAnteriorExclusivo = DateTime(ahora.year, 1, 1);
+      inicioAnterior = DateTime(hoyMexico.year - 1, 1, 1);
+      finAnteriorExclusivo = DateTime(hoyMexico.year, 1, 1);
     }
 
     double ingresoAnterior = 0.0;
@@ -685,12 +628,11 @@ class DashboardProvider extends ChangeNotifier {
 
     for (final rawJson in _allOrders) {
       try {
-        final dateStr = rawJson['created_at']?.toString() ?? '';
         final estado = (rawJson['status'] ?? '').toString().toLowerCase();
-        if (dateStr.isEmpty || estado != 'paid') continue;
+        if (estado != 'paid') continue;
 
-        final fecha = DateTime.parse(dateStr);
-        if (enRango(fecha)) {
+        final fecha = diaMexicoDesde(rawJson['created_at']);
+        if (fecha != null && enRango(fecha)) {
           ingresoAnterior += (rawJson['total'] as num?)?.toDouble() ?? 0.0;
         }
       } catch (_) {
@@ -701,13 +643,9 @@ class DashboardProvider extends ChangeNotifier {
 
     for (final rawJson in _allExpenses) {
       try {
-        final dateStr =
-            (rawJson['expense_date'] ?? rawJson['created_at'] ?? '')
-                .toString();
-        if (dateStr.isEmpty) continue;
-
-        final fecha = DateTime.parse(dateStr);
-        if (enRango(fecha)) {
+        final fecha =
+            diaMexicoDesde(rawJson['expense_date'] ?? rawJson['created_at']);
+        if (fecha != null && enRango(fecha)) {
           gastosAnterior += (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
         }
       } catch (_) {}
@@ -715,11 +653,8 @@ class DashboardProvider extends ChangeNotifier {
 
     for (final rawJson in _allSupplierPayments) {
       try {
-        final dateStr = (rawJson['created_at'] ?? '').toString();
-        if (dateStr.isEmpty) continue;
-
-        final fecha = DateTime.parse(dateStr);
-        if (enRango(fecha)) {
+        final fecha = diaMexicoDesde(rawJson['created_at']);
+        if (fecha != null && enRango(fecha)) {
           gastosAnterior += (rawJson['amount'] as num?)?.toDouble() ?? 0.0;
         }
       } catch (_) {}

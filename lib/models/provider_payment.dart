@@ -1,3 +1,5 @@
+import '../utils/embed_utils.dart';
+
 class ProviderPayment {
   final String id;
   
@@ -46,14 +48,17 @@ class ProviderPayment {
       timeUi = parts[1].substring(0, 5); // Formato HH:mm
     }
 
+    final nombreProveedorEmbed = asEmbedMap(json['suppliers'])?['name']?.toString();
+
     return ProviderPayment(
       id: json['id']?.toString() ?? '',
       supplierId: json['supplier_id']?.toString(),
       notes: json['notes']?.toString(),
       cashierId: json['cashier_id']?.toString(),
-      
-      // Si haces un JOIN a suppliers, extraemos el nombre, si no, texto genérico
-      provider: json['suppliers'] != null ? json['suppliers']['name'] : (json['provider'] ?? 'Proveedor'),
+
+      provider: (nombreProveedorEmbed != null && nombreProveedorEmbed.isNotEmpty)
+          ? nombreProveedorEmbed
+          : (json['provider']?.toString() ?? 'Proveedor'),
       category: json['concept']?.toString() ?? json['category']?.toString() ?? 'General',
       method: methodUi,
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,

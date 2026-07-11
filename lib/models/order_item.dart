@@ -1,3 +1,5 @@
+import '../utils/embed_utils.dart';
+
 class OrderItem {
   final String? productId;
   final String? comboId;
@@ -32,35 +34,10 @@ class OrderItem {
       unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
       total: (json['total_price'] as num?)?.toDouble() ?? (json['total'] as num?)?.toDouble() ?? 0.0,
       notes: json['notes']?.toString(),
-      categoryName: _extraerCategoriaDelEmbed(json['products']),
+      categoryName:
+          asEmbedMap(asEmbedMap(json['products'])?['categories'])?['name']
+              ?.toString(),
     );
-  }
-
-  // PostgREST puede devolver el embed anidado 'products(categories(name))'
-  // como Map (relación 1:1, lo normal) o como List (por seguridad si algún
-  // día se tratara como 1:N), así que se manejan ambos casos.
-  static String? _extraerCategoriaDelEmbed(dynamic productosEmbed) {
-    Map<String, dynamic>? productoMap;
-    if (productosEmbed is Map<String, dynamic>) {
-      productoMap = productosEmbed;
-    } else if (productosEmbed is List && productosEmbed.isNotEmpty) {
-      final primero = productosEmbed.first;
-      if (primero is Map<String, dynamic>) productoMap = primero;
-    }
-
-    if (productoMap == null) return null;
-
-    final categoriasEmbed = productoMap['categories'];
-    if (categoriasEmbed is Map<String, dynamic>) {
-      return categoriasEmbed['name']?.toString();
-    } else if (categoriasEmbed is List && categoriasEmbed.isNotEmpty) {
-      final primero = categoriasEmbed.first;
-      if (primero is Map<String, dynamic>) {
-        return primero['name']?.toString();
-      }
-    }
-
-    return null;
   }
 
   Map<String, dynamic> toJson() {

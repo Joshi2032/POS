@@ -17,6 +17,7 @@ import 'repositories/reservacion_repository.dart';
 import 'repositories/mesa_repository.dart';
 import 'repositories/inventario_repository.dart';
 import 'repositories/payment_repository.dart';
+import 'repositories/supplier_repository.dart';
 import 'repositories/combo_repository.dart';
 import 'repositories/movimiento_caja_repository.dart';
 import 'repositories/corte_caja_repository.dart';
@@ -122,6 +123,7 @@ Future<void> main() async {
         Provider(create: (_) => MesaRepository(SupabaseService.client)),
         Provider(create: (_) => InventarioRepository(SupabaseService.client)),
         Provider(create: (_) => PaymentRepository(SupabaseService.client)),
+        Provider(create: (_) => SupplierRepository(SupabaseService.client)),
         Provider(create: (_) => ComboRepository(SupabaseService.client)),
         Provider(
             create: (_) => MovimientoCajaRepository(SupabaseService.client)),

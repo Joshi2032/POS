@@ -1,4 +1,5 @@
 import 'order_item.dart';
+import '../utils/embed_utils.dart';
 
 typedef OrderStatus = String;
 typedef ServiceType = String;
@@ -67,16 +68,7 @@ class RestaurantOrder {
     typeDb == 'takeout' ? 'llevar' : 'comedor';
 
     // Resolver el nombre legible de la mesa desde el embed restaurant_tables(name).
-    String? nombreMesa;
-    final tablaEmbed = json['restaurant_tables'];
-    if (tablaEmbed is Map<String, dynamic>) {
-      nombreMesa = tablaEmbed['name']?.toString();
-    } else if (tablaEmbed is List && tablaEmbed.isNotEmpty) {
-      final primero = tablaEmbed.first;
-      if (primero is Map<String, dynamic>) {
-        nombreMesa = primero['name']?.toString();
-      }
-    }
+    final nombreMesa = asEmbedMap(json['restaurant_tables'])?['name']?.toString();
 
     final tableOrCustomerResuelto = (nombreMesa != null && nombreMesa.isNotEmpty)
         ? nombreMesa
@@ -84,17 +76,8 @@ class RestaurantOrder {
 
     // Resolver el nombre del mesero desde el embed profiles(full_name).
     // OrdenRepository pide: profiles!orders_waiter_id_fkey(full_name)
-    // PostgREST devuelve el resultado bajo la clave 'profiles' como Map o List.
-    String? waiterNameResuelto;
-    final profilesEmbed = json['profiles'];
-    if (profilesEmbed is Map<String, dynamic>) {
-      waiterNameResuelto = profilesEmbed['full_name']?.toString().trim();
-    } else if (profilesEmbed is List && profilesEmbed.isNotEmpty) {
-      final primero = profilesEmbed.first;
-      if (primero is Map<String, dynamic>) {
-        waiterNameResuelto = primero['full_name']?.toString().trim();
-      }
-    }
+    String? waiterNameResuelto =
+        asEmbedMap(json['profiles'])?['full_name']?.toString().trim();
     // Si el embed no llegó (orden sin mesero asignado), intentar el campo
     // waiterName que a veces se pasa directamente desde la UI al crear la orden.
     if (waiterNameResuelto == null || waiterNameResuelto.isEmpty) {

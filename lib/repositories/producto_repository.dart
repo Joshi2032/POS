@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/product.dart';
+import '../utils/json_payload_utils.dart';
 
 class ProductoRepository {
   final SupabaseClient _client;
@@ -72,8 +73,7 @@ class ProductoRepository {
   Future<void> create(Producto product) async {
     try {
       final data = product.toJson();
-      data.removeWhere(
-          (key, value) => value == null || value.toString().trim().isEmpty);
+      limpiarCamposUuidVacios(data);
       await _client.from('products').insert(data);
     } catch (e) {
       throw Exception('Error al crear producto: $e');
@@ -84,8 +84,7 @@ class ProductoRepository {
     try {
       final data = product.toJson();
       data.remove('id');
-      data.removeWhere(
-          (key, value) => value == null || value.toString().trim().isEmpty);
+      limpiarCamposUuidVacios(data);
       await _client.from('products').update(data).eq('id', id);
     } catch (e) {
       throw Exception('Error al actualizar producto: $e');

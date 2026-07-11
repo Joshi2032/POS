@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/inventory_item.dart';
+import '../utils/json_payload_utils.dart';
 
 class InventarioRepository {
   final SupabaseClient _client;
@@ -19,18 +20,25 @@ class InventarioRepository {
   Future<void> create(InventoryItem item) async {
     try {
       final data = item.toJson();
-      // LIMPIEZA UUID
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+      limpiarCamposUuidVacios(data);
       await _client.from('inventory_items').insert(data);
     } catch (e) {
       throw Exception('Error al agregar artículo: $e');
     }
   }
 
+  // No incluye 'quantity': editar nombre/categoría/costo/proveedor no debe
+  // tocar el stock. Un ajuste de stock concurrente (venta, compra, otro
+  // admin) entre que se abrió este formulario y se guardó se perdería si
+  // se sobreescribiera con el valor que traía el formulario al abrirse.
+  // Los cambios de stock van por [ajustarStockAtomico], que opera sobre el
+  // valor actual en el servidor, no sobre una copia potencialmente
+  // desactualizada en el cliente.
   Future<void> update(String id, InventoryItem item) async {
     try {
       final data = item.toJson();
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+      data.remove('quantity');
+      limpiarCamposUuidVacios(data);
       await _client.from('inventory_items').update(data).eq('id', id);
     } catch (e) {
       throw Exception('Error al actualizar artículo: $e');

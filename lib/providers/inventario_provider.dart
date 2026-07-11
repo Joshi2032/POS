@@ -70,13 +70,32 @@ class InventarioProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateInventoryItem(String id, InventoryItem item) async {
+  // Recibe también el item ORIGINAL (tal como estaba antes de abrir el
+  // formulario de edición) para poder calcular el delta real de stock si el
+  // admin lo cambió, y ajustarlo de forma atómica en vez de sobreescribirlo
+  // con el valor que traía el formulario (ver comentario en
+  // InventarioRepository.update).
+  Future<bool> updateInventoryItem(
+    String id,
+    InventoryItem itemOriginal,
+    InventoryItem itemNuevo,
+  ) async {
     _setLoading(true);
     _clearError();
     try {
       // Usamos copyWith para asegurar que el ID coincida con el que viene de la UI
-      final itemActualizado = item.copyWith(id: id);
+      final itemActualizado = itemNuevo.copyWith(id: id);
       await _repository.update(id, itemActualizado);
+
+      final deltaStock = itemNuevo.stock - itemOriginal.stock;
+      if (deltaStock != 0) {
+        await _repository.ajustarStockAtomico(
+          id,
+          deltaStock,
+          'Ajuste manual desde edición de insumo',
+        );
+      }
+
       await cargarInventario();
       return true;
     } catch (e) {

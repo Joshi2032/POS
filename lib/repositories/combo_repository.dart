@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/combo_item.dart';
+import '../utils/json_payload_utils.dart';
 
 class ComboRepository {
   final SupabaseClient _client;
@@ -22,9 +23,7 @@ class ComboRepository {
     // Quitamos el ID para que Supabase/PostgreSQL genere el UUID automáticamente
     data.remove('id');
 
-    data.removeWhere(
-      (key, value) => value == null || value.toString().trim().isEmpty,
-    );
+    limpiarCamposUuidVacios(data);
 
     // 1. Insertamos el combo y obtenemos el UUID generado
     final response = await _client
@@ -63,7 +62,7 @@ class ComboRepository {
     try {
       final data = combo.toJson();
       data.remove('id');
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
+      limpiarCamposUuidVacios(data);
 
       // 1. Actualizar el combo principal
       await _client.from('combos').update(data).eq('id', id);

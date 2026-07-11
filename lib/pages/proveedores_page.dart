@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/provider_payment.dart';
+import '../models/supplier.dart';
 import '../providers/provider_payment.dart';
 import '../providers/inventario_provider.dart';
+import '../repositories/supplier_repository.dart';
 import '../widgets/app_widgets.dart';
+import '../utils/formatters.dart';
 
 class ProveedoresPage extends StatelessWidget {
   const ProveedoresPage({super.key});
@@ -23,9 +25,20 @@ class _ProveedoresView extends StatefulWidget {
 }
 
 class _ProveedoresViewState extends State<_ProveedoresView> {
-  final _money = NumberFormat.currency(locale: 'es_MX', symbol: '\$');
+  Future<void> _openEditor(PaymentsProvider provider,
+      {ProviderPayment? payment}) async {
+    final supplierRepo = context.read<SupplierRepository>();
+    List<Supplier> proveedoresDisponibles = [];
+    try {
+      proveedoresDisponibles = await supplierRepo.getAll();
+    } catch (_) {
+      // Si falla la carga de proveedores existentes, seguimos: el buscador
+      // simplemente no tendrá sugerencias, pero el cajero puede escribir un
+      // proveedor nuevo y se creará al guardar.
+    }
 
-  void _openEditor(PaymentsProvider provider, {ProviderPayment? payment}) {
+    if (!mounted) return;
+
     final todayIso = DateTime.now().toIso8601String().split('T').first;
     final idCtrl = TextEditingController(
         text: payment?.id ?? 'PAG-${DateTime.now().millisecondsSinceEpoch}');
@@ -41,12 +54,21 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
         TextEditingController(text: payment?.time ?? '09:00 a.m.');
     final cashierCtrl =
         TextEditingController(text: payment?.cashier ?? 'Laura S.');
+    final providerFocusNode = FocusNode();
     String method = payment?.method ?? 'Transferencia';
     bool saving = false;
 
+    // Si estamos editando un pago que ya tiene un proveedor real asociado
+    // (supplierId), lo dejamos preseleccionado para no forzar una búsqueda o
+    // creación duplicada si el nombre no cambia.
+    Supplier? selectedSupplier = (payment?.supplierId != null &&
+            payment!.supplierId!.isNotEmpty)
+        ? Supplier(id: payment.supplierId!, name: payment.provider)
+        : null;
+
     final w = MediaQuery.of(context).size.width;
 
-    showDialog(
+    await showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setDialogState) {
@@ -70,7 +92,47 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                   children: [
                     _DialogField(ctrl: idCtrl, label: 'ID', readOnly: true),
                     const SizedBox(height: 12),
-                    _DialogField(ctrl: providerCtrl, label: 'Proveedor'),
+                    Autocomplete<Supplier>(
+                      textEditingController: providerCtrl,
+                      focusNode: providerFocusNode,
+                      displayStringForOption: (s) => s.name,
+                      optionsBuilder: (textEditingValue) {
+                        final query = textEditingValue.text.trim().toLowerCase();
+                        if (query.isEmpty) {
+                          return const Iterable<Supplier>.empty();
+                        }
+                        return proveedoresDisponibles.where(
+                          (s) => s.name.toLowerCase().contains(query),
+                        );
+                      },
+                      onSelected: (s) {
+                        selectedSupplier = s;
+                        providerCtrl.text = s.name;
+                      },
+                      fieldViewBuilder:
+                          (context, textController, focusNode, onSubmit) {
+                        return TextField(
+                          controller: textController,
+                          focusNode: focusNode,
+                          decoration: const InputDecoration(
+                            labelText: 'Proveedor',
+                            border: OutlineInputBorder(),
+                            helperText:
+                                'Escribe para buscar uno existente o crear uno nuevo',
+                          ),
+                          onChanged: (_) {
+                            // Si el texto ya no coincide con el proveedor
+                            // preseleccionado, se trata como un proveedor
+                            // distinto (se resolverá/creará al guardar).
+                            if (selectedSupplier != null &&
+                                selectedSupplier!.name.toLowerCase().trim() !=
+                                    textController.text.toLowerCase().trim()) {
+                              selectedSupplier = null;
+                            }
+                          },
+                        );
+                      },
+                    ),
                     const SizedBox(height: 12),
                     _DialogField(ctrl: categoryCtrl, label: 'Concepto'),
                     const SizedBox(height: 12),
@@ -131,26 +193,60 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                 onPressed: saving
                     ? null
                     : () async {
-                        final data = ProviderPayment(
-                          id: idCtrl.text,
-                          provider: providerCtrl.text.trim(),
-                          category: categoryCtrl.text.trim(),
-                          method: method,
-                          amount: double.tryParse(amountCtrl.text) ?? 0.0,
-                          date: dateCtrl.text,
-                          time: timeCtrl.text,
-                          cashier: cashierCtrl.text,
-                        );
+                        final proveedorTexto = providerCtrl.text.trim();
+                        final conceptoTexto = categoryCtrl.text.trim();
+                        final montoValido =
+                            double.tryParse(amountCtrl.text) ?? 0.0;
 
-                        if (data.provider.isEmpty ||
-                            data.category.isEmpty ||
-                            data.amount <= 0) {
+                        if (proveedorTexto.isEmpty ||
+                            conceptoTexto.isEmpty ||
+                            montoValido <= 0) {
                           return;
                         }
 
                         final messenger = ScaffoldMessenger.of(context);
 
                         setDialogState(() => saving = true);
+
+                        // Resolver el proveedor real (supplier_id): si ya
+                        // estaba preseleccionado y el nombre no cambió, lo
+                        // reusamos; si no, buscamos/creamos uno con el
+                        // nombre escrito para no perder la asociación real.
+                        String? supplierId = selectedSupplier?.id;
+                        if (selectedSupplier == null ||
+                            selectedSupplier!.name.toLowerCase() !=
+                                proveedorTexto.toLowerCase()) {
+                          try {
+                            final resuelto = await supplierRepo
+                                .obtenerOCrearPorNombre(proveedorTexto);
+                            supplierId = resuelto.id;
+                            selectedSupplier = resuelto;
+                          } catch (e) {
+                            setDialogState(() => saving = false);
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                    'No se pudo registrar el proveedor: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+                        }
+
+                        if (!ctx.mounted) return;
+
+                        final data = ProviderPayment(
+                          id: idCtrl.text,
+                          supplierId: supplierId,
+                          provider: proveedorTexto,
+                          category: conceptoTexto,
+                          method: method,
+                          amount: montoValido,
+                          date: dateCtrl.text,
+                          time: timeCtrl.text,
+                          cashier: cashierCtrl.text,
+                        );
 
                         bool exito;
                         if (payment == null) {
@@ -199,6 +295,15 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
         },
       ),
     );
+
+    idCtrl.dispose();
+    providerCtrl.dispose();
+    categoryCtrl.dispose();
+    amountCtrl.dispose();
+    dateCtrl.dispose();
+    timeCtrl.dispose();
+    cashierCtrl.dispose();
+    providerFocusNode.dispose();
   }
 
   @override
@@ -322,20 +427,20 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                         children: [
                           _StatCard(
                             label: 'Pagos hoy',
-                            value: _money.format(provider.todayTotal),
+                            value: Formatters.money(provider.todayTotal),
                             note:
                                 '${provider.todayPaymentsCount} operaciones',
                             tone: Colors.deepOrange,
                           ),
                           _StatCard(
                             label: 'Total semana',
-                            value: _money.format(provider.weekTotal),
+                            value: Formatters.money(provider.weekTotal),
                             note: 'Últimos 7 días',
                             tone: Colors.red,
                           ),
                           _StatCard(
                             label: 'Total mes',
-                            value: _money.format(provider.monthTotal),
+                            value: Formatters.money(provider.monthTotal),
                             note: 'Mes en curso',
                             tone: Colors.green,
                           ),
@@ -386,7 +491,6 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
                             final payment = paginated[index];
                             return _PaymentTile(
                               payment: payment,
-                              money: _money,
                               primaryTextColor: primaryTextColor,
                               mutedTextColor: mutedTextColor,
                               isCompact: isCompact,
@@ -467,7 +571,7 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
           title: const Text('Eliminar pago'),
           content: Text(
             '¿Seguro que deseas eliminar el pago a "${payment.provider}" '
-            'por ${_money.format(payment.amount)}? '
+            'por ${Formatters.money(payment.amount)}? '
             'Esta acción no se puede deshacer.',
           ),
           actions: [
@@ -594,7 +698,6 @@ class _StatCard extends StatelessWidget {
 class _PaymentTile extends StatelessWidget {
   const _PaymentTile({
     required this.payment,
-    required this.money,
     required this.primaryTextColor,
     required this.mutedTextColor,
     required this.isCompact,
@@ -603,7 +706,6 @@ class _PaymentTile extends StatelessWidget {
   });
 
   final ProviderPayment payment;
-  final NumberFormat money;
   final Color primaryTextColor;
   final Color mutedTextColor;
   final bool isCompact;
@@ -647,7 +749,7 @@ class _PaymentTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                 ),
                 Text(
-                  money.format(payment.amount),
+                  Formatters.money(payment.amount),
                   style: TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 15,
@@ -719,7 +821,7 @@ class _PaymentTile extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(money.format(payment.amount),
+            Text(Formatters.money(payment.amount),
                 style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 16,

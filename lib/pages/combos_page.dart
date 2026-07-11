@@ -166,10 +166,7 @@ class _CombosViewState extends State<_CombosView> {
                                 'CMB-${DateTime.now().millisecondsSinceEpoch}',
                             title: _nombreCtrl.text,
                             subtitle: _descripcionCtrl.text,
-                            tags: [],
                             price: double.tryParse(_precioCtrl.text) ?? 0,
-                            oldPrice: double.tryParse(_precioCtrl.text) ?? 0,
-                            ahorro: '',
                           );
 
                           final messenger = ScaffoldMessenger.of(context);

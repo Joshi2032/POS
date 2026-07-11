@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/recipe.dart';
+import '../utils/json_payload_utils.dart';
 
 class RecipeRepository {
   final SupabaseClient _client;
@@ -18,8 +19,8 @@ class RecipeRepository {
   Future<void> create(Recipe recipe) async {
     try {
       final data = recipe.toJson();
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      
+      limpiarCamposUuidVacios(data);
+
       // 1. Insertar receta y recuperar ID
       final response = await _client.from('recipes').insert(data).select('id').single();
       final recipeId = response['id'];
@@ -52,8 +53,8 @@ class RecipeRepository {
     try {
       final data = recipe.toJson();
       data.remove('id');
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      
+      limpiarCamposUuidVacios(data);
+
       // 1. Actualizar datos base de la receta
       await _client.from('recipes').update(data).eq('id', id);
 

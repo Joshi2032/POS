@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/reservacion.dart';
+import '../utils/json_payload_utils.dart';
 
 class ReservacionRepository {
   final SupabaseClient _client;
@@ -25,9 +26,8 @@ class ReservacionRepository {
   Future<void> crearReservacion(Reservacion reservacion) async {
     try {
       final data = reservacion.toJson();
-      // Limpieza de datos nulos o vacíos para evitar error de UUID (como table_id si no hay mesa asignada)
-      data.removeWhere((key, value) => value == null || value.toString().trim().isEmpty);
-      
+      limpiarCamposUuidVacios(data);
+
       await _client.from('reservations').insert(data);
     } catch (e) {
       throw Exception('Error al insertar la reservación en Supabase: $e');
@@ -39,6 +39,7 @@ class ReservacionRepository {
     try {
       final data = reservacion.toJson();
       data.remove('id'); // Protegemos la llave primaria
+      limpiarCamposUuidVacios(data);
       await _client.from('reservations').update(data).eq('id', id);
     } catch (e) {
       throw Exception('Error al actualizar la reservación $id: $e');

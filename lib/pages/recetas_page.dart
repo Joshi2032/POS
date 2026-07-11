@@ -20,9 +20,9 @@ class _RecetasView extends StatefulWidget {
 }
 
 class _RecetasViewState extends State<_RecetasView> {
-  void _mostrarDialogoFormulario(RecipeProvider provider, {Recipe? receta}) {
+  Future<void> _mostrarDialogoFormulario(RecipeProvider provider, {Recipe? receta}) async {
     // FIX: Quitamos el guion bajo para evitar el lint
-    final formKey = GlobalKey<FormState>(); 
+    final formKey = GlobalKey<FormState>();
     final nombreCtrl = TextEditingController(text: receta?.name ?? '');
     final rindeCtrl = TextEditingController(text: receta?.yieldPortions.toString() ?? '1');
     final tiempoCtrl = TextEditingController(text: receta?.prepMinutes.toString() ?? '0');
@@ -32,7 +32,7 @@ class _RecetasViewState extends State<_RecetasView> {
     List<RecipeSupply> insumosTemporales = receta != null ? List.from(receta.supplies) : [];
     bool guardando = false;
 
-    showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
@@ -178,9 +178,14 @@ class _RecetasViewState extends State<_RecetasView> {
         );
       },
     );
+
+    nombreCtrl.dispose();
+    rindeCtrl.dispose();
+    tiempoCtrl.dispose();
+    descCtrl.dispose();
   }
 
-  void _mostrarSelectorDeInsumo(BuildContext parentContext, RecipeProvider provider, Function(RecipeSupply) onAdd) {
+  Future<void> _mostrarSelectorDeInsumo(BuildContext parentContext, RecipeProvider provider, Function(RecipeSupply) onAdd) async {
     if (provider.inventarioDisponible.isEmpty) {
       ScaffoldMessenger.of(parentContext).showSnackBar(
         const SnackBar(content: Text('No hay materia prima registrada.'), backgroundColor: Colors.orange)
@@ -195,7 +200,7 @@ class _RecetasViewState extends State<_RecetasView> {
     final List<String> opcionesUnidades = ['kg', 'g', 'l', 'ml', 'pza'];
     String? unidadElegida; // Inicia en null para tomar la del inventario primero
 
-    showDialog(
+    await showDialog(
       context: parentContext,
       builder: (context) {
         return StatefulBuilder(
@@ -313,6 +318,8 @@ class _RecetasViewState extends State<_RecetasView> {
         );
       }
     );
+
+    qtyCtrl.dispose();
   }
 
   @override

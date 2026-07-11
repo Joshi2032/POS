@@ -40,6 +40,12 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
 
   List<String> _selectedAreas = [];
 
+  // Evita que dos toques rápidos en "Editar" (de dos empleados distintos)
+  // disparen dos cargas async en paralelo que compartan y mezclen los
+  // mismos campos de instancia (_selectedAreas, _firstNameCtrl, etc.) antes
+  // de que cualquiera de las dos haya mostrado su diálogo.
+  bool _cargandoFormulario = false;
+
   @override
   void dispose() {
     _firstNameCtrl.dispose();
@@ -52,6 +58,20 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
   }
 
   Future<void> _abrirFormularioModal(
+    EmpleadosProvider provider, {
+    Empleado? empleado,
+  }) async {
+    if (_cargandoFormulario) return;
+    _cargandoFormulario = true;
+
+    try {
+      await _cargarYAbrirFormulario(provider, empleado: empleado);
+    } finally {
+      _cargandoFormulario = false;
+    }
+  }
+
+  Future<void> _cargarYAbrirFormulario(
     EmpleadosProvider provider, {
     Empleado? empleado,
   }) async {

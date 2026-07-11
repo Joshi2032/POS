@@ -17,6 +17,7 @@ import 'pages/historial_cortes_page.dart';
 import 'pages/inventario_page.dart';
 import 'pages/login_page.dart';
 import 'pages/mesas_page.dart';
+import 'pages/movimientos_caja_page.dart';
 import 'pages/nominas_page.dart';
 import 'pages/ordenes_page.dart';
 import 'pages/productos_page.dart';
@@ -109,6 +110,12 @@ final GoRouter appRouter = GoRouter(
           path: '/caja',
           builder: (context, state) {
             return const CajaPage();
+          },
+        ),
+        GoRoute(
+          path: '/movimientos-caja',
+          builder: (context, state) {
+            return const MovimientosCajaPage();
           },
         ),
         GoRoute(

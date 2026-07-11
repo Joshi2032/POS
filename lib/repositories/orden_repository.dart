@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/restaurant_order.dart';
+import '../utils/json_payload_utils.dart';
 
 class OrdenRepository {
   final SupabaseClient _client;
@@ -119,11 +120,9 @@ class OrdenRepository {
       // ==========================================
       // LA SOLUCIÓN DEFINITIVA AL ERROR 22P02
       // ==========================================
-      // Borramos dinámicamente CUALQUIER campo que sea nulo o un string vacío.
-      // Esto limpia 'id', 'table_id', 'waiter_id', 'discount_id', etc., si vienen vacíos.
-      // Así Supabase no intentará convertirlos a UUID y usará nulos o sus valores DEFAULT.
-      ordenData.removeWhere(
-          (key, value) => value == null || value.toString().trim().isEmpty);
+      // Limpia 'id', 'table_id', 'waiter_id', 'discount_id', etc. si vienen
+      // vacíos, para que Supabase no intente convertirlos a UUID.
+      limpiarCamposUuidVacios(ordenData);
 
       // Insertamos la orden y pedimos el ID generado
       final responseOrden =
@@ -148,9 +147,8 @@ class OrdenRepository {
               itemLimpio.remove('total');
             }
 
-            // Limpieza nuclear también para los artículos (limpia product_id, combo_id, etc. si van vacíos)
-            itemLimpio.removeWhere((key, value) =>
-                value == null || value.toString().trim().isEmpty);
+            // También limpia los artículos (product_id, combo_id, etc. si van vacíos)
+            limpiarCamposUuidVacios(itemLimpio);
 
             return itemLimpio;
           }).toList();
@@ -274,9 +272,7 @@ Future<void> agregarItemsAOrden(
       itemLimpio.remove('total');
     }
 
-    itemLimpio.removeWhere(
-      (key, value) => value == null || value.toString().trim().isEmpty,
-    );
+    limpiarCamposUuidVacios(itemLimpio);
 
     return itemLimpio;
   }).toList();
