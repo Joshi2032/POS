@@ -593,6 +593,22 @@ class PrinterService {
           : '$prefijoMiles ${convertirGrupo(resto)}';
     }
 
+    if (n < 1000000000) {
+      final int millones = n ~/ 1000000;
+      final int resto = n % 1000000;
+
+      final String prefijoMillones = millones == 1
+          ? 'un millón'
+          : '${convertirGrupo(millones)} millones';
+
+      return resto == 0
+          ? prefijoMillones
+          : '$prefijoMillones ${_numeroALetras(resto)}';
+    }
+
+    // Montos de mil millones en adelante son un escenario extraordinario
+    // para un ticket de restaurante; se deja el número tal cual en vez de
+    // seguir extendiendo la conversión a palabras.
     return n.toString();
   }
 

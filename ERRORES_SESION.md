@@ -1,6 +1,6 @@
 # Errores encontrados y corregidos — ZAPATA POS
 
-Registro completo de todos los bugs encontrados durante esta sesión de revisión, en orden cronológico. Incluye los ya corregidos y los que se están corrigiendo en este momento (marcados como **[EN PROGRESO]**).
+Registro completo de todos los bugs encontrados durante esta sesión de revisión, en orden cronológico. **Todos los hallazgos de este documento están corregidos**, incluidos los 48 de la Ronda 9 (antes marcados como en progreso).
 
 ---
 
@@ -140,7 +140,7 @@ Búsqueda con 5 agentes en paralelo cubriendo páginas restantes, servicios/auth
 4. ✅ **`obtenerPagosProveedoresHoy()` sumaba pagos a proveedores de CUALQUIER método** (efectivo, tarjeta, transferencia) y los restaba completos del efectivo esperado en el corte de caja. *Corregido: ahora filtra solo `method = 'cash'`.*
 5. ✅ **El cierre de turno nunca incluía los movimientos manuales de caja** (Movimientos de Caja). *Corregido: nuevo `obtenerNetoMovimientosManualesHoy()`, con cuidado de no contar dos veces las filas auto-generadas por cada cobro de orden.*
 
-### Altos (16) — **[EN PROGRESO]**
+### Altos (16) — ✅ Todos corregidos
 
 6. Reportes: `paymentMethod` se fijaba como `'Efectivo'` para TODAS las ventas, sin leer el método real de la orden
 7. Reportes: filtros Hoy/Esta Semana/Este Mes comparaban el string UTC crudo contra la fecha local del dispositivo, sin usar `mexico_time.dart`
@@ -154,27 +154,27 @@ Búsqueda con 5 agentes en paralelo cubriendo páginas restantes, servicios/auth
 15. `inventory_functions.sql`: el registro de movimientos de inventario guardaba el delta SOLICITADO, no el aplicado tras el recorte a 0 — la bitácora de auditoría queda descuadrada
 16-21. 6 diálogos de guardar sin `barrierDismissible: false` (empleados, combos, categorías, mesas, productos, proveedores) — tocar fuera durante un guardado en curso descarta el resultado en silencio
 
-### Medios (23) — **[EN PROGRESO]**
+### Medios (23) — ✅ Todos corregidos
 
-- `printer_service.dart`: redondeo de centavos puede dar exactamente 100 por imprecisión de punto flotante
-- `historial_cortes_page.dart`: `cutAt` no pasa por `mexico_time.dart`
-- `gastos_provider.dart`: `totalGastosLength` está definido igual al total YA filtrado
-- `theme_provider.dart`: modo oscuro fijo en `true`, sin persistencia (no existe `shared_preferences` en el proyecto)
-- `routes.dart`: no hay redirect para la ruta raíz `"/"` estando logueado; no hay `errorBuilder`
-- `login_page.dart`: la contraseña se recorta con `.trim()` antes de enviarla
-- `printer_service.dart`: la fecha/hora del ticket usa `DateTime.now()` del dispositivo, no la hora de México centralizada
-- `tomar_orden_provider` (singleton de app): el carrito no se limpia al cerrar sesión — riesgo en terminal compartida
-- `rls_lockdown.sql`: el bloque de `employee_areas` no tiene `drop policy if exists` por cada política nueva
-- `create-employee-user`: los 4 pasos de rollback no tienen try/catch individual; verificación de correo duplicado sin bloqueo (condición de carrera)
-- 5 confirmaciones de eliminar sin revisar `mounted` tras un `await` (productos, recetas, inventario, proveedores, reservaciones)
-- 2 casos en `tomar_orden_page.dart` con el mismo patrón (mensajes de error tras enviar orden / cambiar estado de mesa)
-- 4 modelos con casts sin protección o sin usar `asEmbedMap()`: `product.dart`, `nomina_pago.dart`, `corte_caja.dart`, `provider_payment.dart`
+- `printer_service.dart`: redondeo de centavos ahora vía enteros de centavos totales (evita "19 pesos 100/100" por imprecisión de punto flotante)
+- `historial_cortes_page.dart` / `historial_cortes_provider.dart`: filtro y vista de fecha/hora ahora en hora de México (nuevo `wallClockMexicoDesde` en `mexico_time.dart`)
+- `gastos_provider.dart`: `totalGastosLength` ahora usa `_gastos.length` (total real), no el ya filtrado
+- `theme_provider.dart`: modo oscuro/claro ahora persiste con `shared_preferences` (dependencia agregada)
+- `routes.dart`: redirect agregado para la ruta raíz `"/"` estando logueado; `errorBuilder` agregado para enlaces rotos
+- `login_page.dart`: la contraseña ya NO se recorta con `.trim()` antes de enviarla
+- `printer_service.dart`: la fecha/hora del ticket ahora usa `ahoraComoWallClockMexico()`, no `DateTime.now()` del dispositivo
+- `tomar_orden_provider`: nuevo `limpiarSesion()`, llamado desde `main.dart` cuando `AuthProvider` detecta logout
+- `rls_lockdown.sql`: `drop policy if exists` agregado para cada política de `employee_areas`
+- `create-employee-user`: cada paso de rollback ahora en su propio try/catch; nueva restricción única `employees.email` (ver `supabase/employees_email_unique.sql`, falta correrlo) traducida a un mensaje claro en vez de dejar pasar la condición de carrera
+- 5 confirmaciones de eliminar (productos, recetas, inventario, proveedores, reservaciones) ahora revisan `mounted`/`context.mounted` tras el `await` antes de tocar el messenger
+- 2 casos en `tomar_orden_page.dart` con el mismo patrón (mensajes de error tras enviar orden / cambiar estado de mesa) corregidos igual
+- 4 modelos corregidos: `product.dart` y `nomina_pago.dart` ahora usan `asEmbedMap()`, `corte_caja.dart` usa cast seguro de `num`, `provider_payment.dart` protegido contra timestamps cortos
 
-### Bajos / informativos (4) — **[EN PROGRESO]**
+### Bajos / informativos (4) — ✅ Todos corregidos
 
-- `printer_service.dart`: `_numeroALetras` no convierte montos ≥ $1,000,000 a palabras
-- `mesa.dart`: `capacidad` cae silenciosamente a 4 si el valor llega como decimal (ej. "4.0")
-- `product_item.dart` y `cart_item.dart`: casts sin protección, pero código muerto — no se usan en ningún lugar actual
+- `printer_service.dart`: `_numeroALetras` ahora convierte montos hasta 999,999,999 a palabras (antes se quedaba en `n.toString()` desde $1,000,000)
+- `mesa.dart`: `capacidad` ahora parsea correctamente valores decimales (ej. "4.0") en vez de caer silenciosamente a 4
+- `product_item.dart`: era código 100% muerto (cero referencias) — eliminado. `cart_item.dart`: se quitaron sus métodos `fromJson`/`toJson` (nunca se llamaban), se conservó la clase que sí se usa
 
 ---
 
@@ -182,8 +182,9 @@ Búsqueda con 5 agentes en paralelo cubriendo páginas restantes, servicios/auth
 
 Estos archivos deben ejecutarse en el SQL Editor de Supabase para que las funciones correspondientes existan en producción:
 
-- `supabase/inventory_functions.sql` — ajuste atómico de stock y descuento de inventario por receta
-- `supabase/rls_lockdown.sql` — políticas de seguridad RLS
-- `supabase/restaurant_settings.sql` — **nuevo**, tabla para que Ajustes persista de verdad
+- `supabase/inventory_functions.sql` — ajuste atómico de stock y descuento de inventario por receta (actualizado: ahora registra el delta real aplicado, vuelve a correrlo aunque ya lo hayas corrido antes)
+- `supabase/rls_lockdown.sql` — políticas de seguridad RLS (actualizado: agrega los `drop policy if exists` faltantes de `employee_areas`)
+- `supabase/restaurant_settings.sql` — tabla para que Ajustes persista de verdad
+- `supabase/employees_email_unique.sql` — restricción única en `employees.email`; revisa primero si ya hay correos duplicados (el script trae la consulta para checarlo)
 
-Sin correr `restaurant_settings.sql`, el fix de Ajustes de esta ronda cargará valores en blanco y el guardado no tendrá ninguna fila que actualizar.
+Sin correr `restaurant_settings.sql`, el fix de Ajustes cargará valores en blanco y el guardado no tendrá ninguna fila que actualizar.
