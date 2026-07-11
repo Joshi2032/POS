@@ -45,8 +45,12 @@ class _MesasViewState extends State<_MesasView> {
     return 4;
   }
 
-  bool _esMesaOcupada(Mesa mesa) {
-    return mesa.estado.trim().toLowerCase() == 'ocupada';
+  // Antes solo bloqueaba eliminar una mesa 'ocupada'; una mesa 'por cobrar'
+  // (cuenta activa esperando pago) se podía borrar igual, perdiendo la
+  // referencia de la mesa de una orden que todavía tiene dinero pendiente.
+  bool _mesaBloqueadaParaEliminar(Mesa mesa) {
+    final estado = mesa.estado.trim().toLowerCase();
+    return estado == 'ocupada' || estado == 'por cobrar' || estado == 'cuenta';
   }
 
   void _limpiarFormulario() {
@@ -76,6 +80,7 @@ class _MesasViewState extends State<_MesasView> {
 
     await showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setDialogState) {
         final width = MediaQuery.sizeOf(dialogContext).width;
@@ -311,7 +316,7 @@ class _MesasViewState extends State<_MesasView> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'No puedes eliminar una mesa ocupada.',
+          'No puedes eliminar una mesa ocupada o con cuenta por cobrar.',
         ),
         backgroundColor: Colors.redAccent,
       ),
@@ -513,11 +518,11 @@ class _MesasViewState extends State<_MesasView> {
             itemCount: mesasEnArea.length,
             itemBuilder: (context, index) {
               final mesa = mesasEnArea[index];
-              final ocupada = _esMesaOcupada(mesa);
+              final bloqueada = _mesaBloqueadaParaEliminar(mesa);
 
               return _MesaCard(
                 mesa: mesa,
-                ocupada: ocupada,
+                ocupada: bloqueada,
                 isCompact: isCompact,
                 primaryColor: primaryColor,
                 onEditar: () {
@@ -526,7 +531,7 @@ class _MesasViewState extends State<_MesasView> {
                     mesa: mesa,
                   );
                 },
-                onEliminar: ocupada
+                onEliminar: bloqueada
                     ? _mostrarErrorMesaOcupada
                     : () {
                         _confirmarEliminar(
@@ -810,14 +815,17 @@ class _MesaCard extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: isCompact ? 15 : 18,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             '${mesa.capacidad} personas',
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
               fontSize: 12,
             ),
           ),

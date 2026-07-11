@@ -27,6 +27,7 @@ import 'repositories/recipe_repository.dart';
 
 // --- Providers ---
 import 'providers/ajustes_provider.dart';
+import 'repositories/settings_repository.dart';
 import 'providers/caja_provider.dart';
 import 'providers/combos_provider.dart';
 import 'providers/dashboard_provider.dart';
@@ -131,6 +132,7 @@ Future<void> main() async {
         Provider(create: (_) => EmpleadoRepository(SupabaseService.client)),
         Provider(create: (_) => NominaPagoRepository(SupabaseService.client)),
         Provider(create: (_) => RecipeRepository(SupabaseService.client)),
+        Provider(create: (_) => SettingsRepository(SupabaseService.client)),
         Provider(create: (_) => AuthRepository()),
 
         // ==========================================
@@ -190,7 +192,10 @@ Future<void> main() async {
           create: (context) => RecipeProvider(context.read<RecipeRepository>()),
         ),
         ChangeNotifierProvider(
-          create: (context) => AuthProvider(context.read<AuthRepository>()),
+          create: (context) => AuthProvider(
+            context.read<AuthRepository>(),
+            context.read<EmpleadoRepository>(),
+          ),
         ),
 
         ChangeNotifierProvider(
@@ -230,7 +235,10 @@ Future<void> main() async {
         // 4. PROVIDERS SIMPLES (Estado Local)
         // ==========================================
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        ChangeNotifierProvider(create: (_) => AjustesProvider()),
+        ChangeNotifierProvider(
+          create: (context) =>
+              AjustesProvider(context.read<SettingsRepository>()),
+        ),
       ],
       child: const App(),
     ),

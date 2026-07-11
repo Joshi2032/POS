@@ -47,19 +47,36 @@ security definer
 set search_path = public
 as $$
 declare
+  v_cantidad_anterior numeric;
   v_nueva_cantidad numeric;
+  v_delta_aplicado numeric;
 begin
-  update public.inventory_items
-     set quantity = greatest(quantity + p_delta, 0)
+  -- FOR UPDATE bloquea la fila hasta que termine esta función, preservando
+  -- la misma atomicidad que el UPDATE de una sola sentencia que había
+  -- antes, pero permitiendo conocer el valor ANTERIOR para calcular el
+  -- delta realmente aplicado tras el recorte a 0.
+  select quantity into v_cantidad_anterior
+    from public.inventory_items
    where id = p_item_id
-   returning quantity into v_nueva_cantidad;
+     for update;
 
-  if v_nueva_cantidad is null then
+  if v_cantidad_anterior is null then
     raise exception 'No existe el insumo con id %', p_item_id;
   end if;
 
+  v_nueva_cantidad := greatest(v_cantidad_anterior + p_delta, 0);
+  v_delta_aplicado := v_nueva_cantidad - v_cantidad_anterior;
+
+  update public.inventory_items
+     set quantity = v_nueva_cantidad
+   where id = p_item_id;
+
+  -- Se registra el delta REALMENTE aplicado (tras el recorte a 0), no el
+  -- solicitado: si se pide restar más de lo que hay, el movimiento
+  -- registrado debe coincidir con el cambio real de quantity, para que la
+  -- bitácora de auditoría siempre cuadre con el stock.
   insert into public.inventory_movements (inventory_item_id, change_qty, reason)
-  values (p_item_id, p_delta, coalesce(p_reason, 'Ajuste'));
+  values (p_item_id, v_delta_aplicado, coalesce(p_reason, 'Ajuste'));
 
   return v_nueva_cantidad;
 end;
@@ -93,7 +110,9 @@ declare
   v_item record;
   v_supply record;
   v_cantidad_a_descontar numeric;
+  v_cantidad_anterior numeric;
   v_nueva_cantidad numeric;
+  v_delta_aplicado numeric;
   v_insumos_agotados jsonb := '[]'::jsonb;
 begin
   for v_item in
@@ -115,13 +134,24 @@ begin
       v_cantidad_a_descontar :=
         (v_supply.receta_cantidad / v_supply.yield_portions) * v_item.quantity;
 
-      update public.inventory_items
-         set quantity = greatest(quantity - v_cantidad_a_descontar, 0)
+      -- FOR UPDATE bloquea la fila para conocer el valor ANTERIOR y poder
+      -- calcular el delta realmente aplicado tras el recorte a 0 (ver
+      -- adjust_inventory_stock más arriba para la misma corrección).
+      select quantity into v_cantidad_anterior
+        from public.inventory_items
        where id = v_supply.supply_id
-       returning quantity into v_nueva_cantidad;
+         for update;
+
+      v_nueva_cantidad :=
+        greatest(coalesce(v_cantidad_anterior, 0) - v_cantidad_a_descontar, 0);
+      v_delta_aplicado := v_nueva_cantidad - coalesce(v_cantidad_anterior, 0);
+
+      update public.inventory_items
+         set quantity = v_nueva_cantidad
+       where id = v_supply.supply_id;
 
       insert into public.inventory_movements (inventory_item_id, change_qty, reason)
-      values (v_supply.supply_id, -v_cantidad_a_descontar, 'Venta de producto');
+      values (v_supply.supply_id, v_delta_aplicado, 'Venta de producto');
 
       if v_nueva_cantidad = 0 then
         v_insumos_agotados := v_insumos_agotados || jsonb_build_object(

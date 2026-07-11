@@ -21,6 +21,12 @@ class _AjustesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<AjustesProvider>();
 
+    if (provider.isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Ajustes'),
@@ -30,6 +36,24 @@ class _AjustesView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (provider.errorMessage != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  provider.saveStatus == 'error'
+                      ? 'No se pudieron guardar los ajustes: ${provider.errorMessage}'
+                      : 'No se pudieron cargar los ajustes: ${provider.errorMessage}',
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             Text(
               'Información del Negocio',
               style: Theme.of(context).textTheme.titleLarge,

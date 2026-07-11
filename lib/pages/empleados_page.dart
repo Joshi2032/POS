@@ -123,6 +123,7 @@ class _EmpleadosViewState extends State<_EmpleadosView> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {

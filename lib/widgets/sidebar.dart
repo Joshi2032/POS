@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/auth_provider.dart';
 
 class CustomSidebar extends StatelessWidget {
   final String currentPath;
@@ -15,6 +16,11 @@ class CustomSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    // Antes se mostraban TODOS los ítems del menú a cualquier usuario
+    // autenticado, sin importar su puesto: un Mesero o Cajero podía abrir
+    // /nominas o /empleados desde el sidebar aunque RLS bloqueara los datos
+    // del lado del servidor, mostrando una pantalla confusa "vacía".
+    final esAdminOGerente = context.watch<AuthProvider>().esAdminOGerente;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final sidebarBg = isDark ? const Color(0xFF1E1E2D) : Colors.white;
@@ -116,6 +122,7 @@ class CustomSidebar extends StatelessWidget {
                     title: 'Reservaciones',
                     path: '/reservaciones',
                     icon: Icons.calendar_today_outlined),
+                if (esAdminOGerente) ...[
                 const Padding(
                     padding:
                         EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
@@ -195,6 +202,7 @@ class CustomSidebar extends StatelessWidget {
                     ],
                   ),
                 ),
+                ],
               ],
             ),
           ),

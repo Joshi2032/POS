@@ -603,6 +603,7 @@ class DashboardProvider extends ChangeNotifier {
   // de México (ver hoyEnMexico()), y compara contra fechas normalizadas de la
   // misma forma vía diaMexicoDesde().
   void _calcularTotalesPeriodoAnterior(DateTime hoyMexico) {
+    late DateTime inicioActual;
     late DateTime inicioAnterior;
     late DateTime finAnteriorExclusivo;
 
@@ -610,14 +611,30 @@ class DashboardProvider extends ChangeNotifier {
       final lunesDeEstaSemana = hoyMexico.subtract(
         Duration(days: hoyMexico.weekday - 1),
       );
+      inicioActual = lunesDeEstaSemana;
       inicioAnterior = lunesDeEstaSemana.subtract(const Duration(days: 7));
       finAnteriorExclusivo = lunesDeEstaSemana;
     } else if (_filterType == 'mes') {
+      inicioActual = DateTime(hoyMexico.year, hoyMexico.month, 1);
       inicioAnterior = DateTime(hoyMexico.year, hoyMexico.month - 1, 1);
       finAnteriorExclusivo = DateTime(hoyMexico.year, hoyMexico.month, 1);
     } else {
+      inicioActual = DateTime(hoyMexico.year, 1, 1);
       inicioAnterior = DateTime(hoyMexico.year - 1, 1, 1);
       finAnteriorExclusivo = DateTime(hoyMexico.year, 1, 1);
+    }
+
+    // El período ACTUAL normalmente sigue en curso (ej. "esta semana" un
+    // miércoles solo tiene 3 días de ventas todavía). Comparar eso contra
+    // el período anterior COMPLETO (7 días) hace ver una caída de ventas
+    // ficticia aunque el ritmo diario sea idéntico. Se acota el período
+    // anterior a la MISMA cantidad de días ya transcurridos en el actual,
+    // para comparar tramo contra tramo equivalente.
+    final diasTranscurridos = hoyMexico.difference(inicioActual).inDays + 1;
+    final finComparableAnterior =
+        inicioAnterior.add(Duration(days: diasTranscurridos));
+    if (finComparableAnterior.isBefore(finAnteriorExclusivo)) {
+      finAnteriorExclusivo = finComparableAnterior;
     }
 
     double ingresoAnterior = 0.0;

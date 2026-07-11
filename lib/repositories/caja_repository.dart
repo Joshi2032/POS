@@ -91,8 +91,11 @@ class CajaRepository {
     }
   }
 
-  // Total pagado a proveedores HOY. Es un dato complementario para el corte
-  // de caja: si falla, no debe impedir cerrar el corte, solo se reporta 0.
+  // Total pagado a proveedores HOY *en efectivo*. Es un dato complementario
+  // para el corte de caja (se resta del efectivo esperado en el cajón): si
+  // falla, no debe impedir cerrar el corte, solo se reporta 0. Antes sumaba
+  // pagos con CUALQUIER método (tarjeta/transferencia incluidos), restando
+  // del efectivo esperado dinero que en realidad nunca salió del cajón.
   Future<double> obtenerPagosProveedoresHoy() async {
     try {
       final inicioUtc = _inicioDiaHoyEnUtc();
@@ -101,6 +104,7 @@ class CajaRepository {
       final response = await _client
           .from('supplier_payments')
           .select('amount')
+          .eq('method', 'cash')
           .gte('created_at', inicioUtc.toIso8601String())
           .lt('created_at', finUtc.toIso8601String());
 
@@ -112,6 +116,42 @@ class CajaRepository {
     } catch (e) {
       debugPrint(
           'Advertencia: no se pudo calcular pagos a proveedores de hoy: $e');
+      return 0.0;
+    }
+  }
+
+  // Movimientos manuales de caja (Ingreso/Egreso) registrados HOY, para que
+  // el cierre de turno pueda incluirlos en el efectivo esperado. Antes el
+  // cierre solo consideraba ventas en efectivo y pagos a proveedores,
+  // ignorando por completo cualquier entrada/salida manual registrada desde
+  // la pantalla "Movimientos de Caja".
+  //
+  // IMPORTANTE: registrarCobro() también inserta una fila en cash_movements
+  // por CADA orden cobrada (con concept 'Cobro de Orden #...'), sin importar
+  // el método de pago. Si se sumaran todas las filas de hoy sin filtrar, las
+  // ventas ya contadas en obtenerResumenVentasHoy() se contarían DOS VECES
+  // (y las de tarjeta/transferencia se sumarían al efectivo por error). Por
+  // eso se excluyen esas filas auto-generadas por su concepto fijo.
+  Future<double> obtenerNetoMovimientosManualesHoy() async {
+    try {
+      final response = await _client
+          .from('cash_movements')
+          .select('type, amount, concept')
+          .eq('date', fechaHoyMexicoStr());
+
+      double neto = 0.0;
+      for (final row in (response as List)) {
+        final concepto = row['concept']?.toString() ?? '';
+        if (concepto.startsWith('Cobro de Orden #')) continue;
+
+        final monto = (row['amount'] as num?)?.toDouble() ?? 0.0;
+        final tipo = row['type']?.toString() ?? 'Ingreso';
+        neto += tipo == 'Egreso' ? -monto : monto;
+      }
+      return neto;
+    } catch (e) {
+      debugPrint(
+          'Advertencia: no se pudieron calcular los movimientos manuales de caja de hoy: $e');
       return 0.0;
     }
   }

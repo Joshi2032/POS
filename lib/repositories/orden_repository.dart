@@ -179,19 +179,68 @@ class OrdenRepository {
   /// si falla (ej. la función RPC no existe todavía porque no se ha corrido
   /// ese script), NO debe bloquear ni revertir la venta, solo se registra
   /// en el log de depuración.
+  ///
+  /// Los combos se modelan en el carrito como Producto falsos usando
+  /// combos.id como si fuera product_id (ver TomarOrdenProvider.cargarProductos),
+  /// así que itemsMap trae ids que a veces son en realidad combos.id, no
+  /// products.id. Aquí se detectan esos casos y se expande cada combo a sus
+  /// productos reales (vía combo_items) antes de llamar al RPC, que solo
+  /// entiende product_id — sin esto, vender un combo nunca descontaba
+  /// ningún insumo de sus productos.
   Future<void> _descontarInventarioPorVenta(
     List<Map<String, dynamic>> itemsMap,
   ) async {
     try {
-      final itemsValidos = itemsMap
+      final idsCandidatos = itemsMap
           .where((item) =>
               item['product_id'] != null &&
               item['product_id'].toString().trim().isNotEmpty)
-          .map((item) => {
-                'product_id': item['product_id'].toString(),
-                'quantity': item['quantity'] ?? 1,
-              })
+          .map((item) => item['product_id'].toString())
+          .toSet()
           .toList();
+
+      if (idsCandidatos.isEmpty) return;
+
+      final combosEncontrados = await _client
+          .from('combos')
+          .select('id, combo_items(product_id, quantity)')
+          .filter('id', 'in', '(${idsCandidatos.join(',')})');
+
+      final Map<String, List<Map<String, dynamic>>> combosPorId = {
+        for (final combo in (combosEncontrados as List))
+          combo['id'].toString(): List<Map<String, dynamic>>.from(
+              (combo['combo_items'] as List?) ?? const []),
+      };
+
+      final List<Map<String, dynamic>> itemsValidos = [];
+
+      for (final item in itemsMap) {
+        final id = item['product_id']?.toString();
+        if (id == null || id.isEmpty) continue;
+
+        final cantidadVendida = ((item['quantity'] ?? 1) as num).toDouble();
+
+        final comboItems = combosPorId[id];
+        if (comboItems != null) {
+          // Es un combo: se descuenta cada producto que lo compone,
+          // multiplicado por cuántas unidades del combo se vendieron.
+          for (final comboItem in comboItems) {
+            final productoId = comboItem['product_id']?.toString();
+            if (productoId == null || productoId.isEmpty) continue;
+            final cantidadEnCombo =
+                ((comboItem['quantity'] ?? 1) as num).toDouble();
+            itemsValidos.add({
+              'product_id': productoId,
+              'quantity': cantidadEnCombo * cantidadVendida,
+            });
+          }
+        } else {
+          itemsValidos.add({
+            'product_id': id,
+            'quantity': item['quantity'] ?? 1,
+          });
+        }
+      }
 
       if (itemsValidos.isEmpty) return;
 

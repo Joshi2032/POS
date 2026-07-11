@@ -297,7 +297,17 @@ class TomarOrdenProvider extends ChangeNotifier {
   }
 
   String _lastAuthUserIdLoaded = '';
+  DateTime? _ultimaCargaAreas;
   bool _isLoadingAssignedAreas = false;
+
+  // Antes de este cambio, una vez cargadas las áreas de un usuario no se
+  // volvían a pedir en TODA la sesión (el provider vive a nivel de app). Si
+  // un admin cambiaba el área asignada de un mesero ya conectado, la
+  // pantalla de Tomar Orden de ese mesero seguía mostrando las áreas viejas
+  // hasta que cerrara sesión por completo. Ahora se permite refrescar cada
+  // par de minutos, sin volver a pedirlo en CADA notifyListeners() de
+  // AuthProvider (que dispara este método vía ChangeNotifierProxyProvider).
+  static const Duration _intervaloRecargaAreas = Duration(minutes: 2);
 
   Future<void> cargarAreasDelUsuario({
     required String authUserId,
@@ -311,7 +321,11 @@ class TomarOrdenProvider extends ChangeNotifier {
       return;
     }
 
-    if (_lastAuthUserIdLoaded == authUserId) {
+    final cargadoRecientemente = _lastAuthUserIdLoaded == authUserId &&
+        _ultimaCargaAreas != null &&
+        DateTime.now().difference(_ultimaCargaAreas!) < _intervaloRecargaAreas;
+
+    if (cargadoRecientemente) {
       return;
     }
 
@@ -327,6 +341,7 @@ class TomarOrdenProvider extends ChangeNotifier {
         _selectedArea = '';
         _selectedTableId = '';
         _lastAuthUserIdLoaded = authUserId;
+        _ultimaCargaAreas = DateTime.now();
 
         notifyListeners();
         return;
@@ -358,6 +373,7 @@ class TomarOrdenProvider extends ChangeNotifier {
       }
 
       _lastAuthUserIdLoaded = authUserId;
+      _ultimaCargaAreas = DateTime.now();
 
       await cargarMesas();
 
@@ -371,6 +387,7 @@ class TomarOrdenProvider extends ChangeNotifier {
       _selectedArea = '';
       _selectedTableId = '';
       _lastAuthUserIdLoaded = authUserId;
+      _ultimaCargaAreas = DateTime.now();
 
       notifyListeners();
     } finally {

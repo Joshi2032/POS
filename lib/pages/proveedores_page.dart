@@ -70,6 +70,7 @@ class _ProveedoresViewState extends State<_ProveedoresView> {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(

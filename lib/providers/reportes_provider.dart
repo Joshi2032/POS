@@ -3,6 +3,7 @@ import '../repositories/orden_repository.dart';
 import '../models/restaurant_order.dart';
 import '../models/order_item.dart';
 import '../utils/categoria_utils.dart';
+import '../utils/mexico_time.dart';
 
 class VentaReporte {
   final String id;
@@ -11,6 +12,12 @@ class VentaReporte {
   final String category;
   final double amount;
   final String paymentMethod;
+  /// Monto real vendido por categoría DENTRO de esta orden (ej. una orden
+  /// con un corte de $200 y una cerveza de $30 trae {'Alimentos': 200,
+  /// 'Bebidas': 30}). Se usa para que filtrar por categoría sume solo lo
+  /// que realmente corresponde a esa categoría, en vez de atribuir el total
+  /// completo de la orden a una sola "categoría dominante".
+  final Map<String, double> montosPorCategoria;
 
   VentaReporte({
     required this.id,
@@ -19,6 +26,7 @@ class VentaReporte {
     required this.category,
     required this.amount,
     required this.paymentMethod,
+    required this.montosPorCategoria,
   });
 }
 
@@ -44,10 +52,13 @@ class ReportesProvider extends ChangeNotifier {
   // Antes era una lista fija ('Alimentos'/'Bebidas'/'Combos'/'Otros') que no
   // tenía por qué coincidir con las categorías reales que el negocio define
   // en Productos > Categoría. Ahora se arma dinámicamente con las
-  // categorías realmente presentes en las ventas cargadas.
+  // categorías realmente presentes en las ventas cargadas. Se enumeran
+  // desde montosPorCategoria (no solo la categoría dominante de cada
+  // orden), para no ocultar del filtro una categoría que nunca es la
+  // dominante pero sí tiene ventas reales dentro de alguna orden mixta.
   List<String> get categoriasFiltro {
     final categoriasReales = _historialVentas
-        .map((v) => v.category)
+        .expand((v) => v.montosPorCategoria.keys)
         .where((c) => c.trim().isNotEmpty)
         .toSet()
         .toList()
@@ -84,6 +95,20 @@ class ReportesProvider extends ChangeNotifier {
     return resolverCategoriaConFallback(item.categoryName, item.productName);
   }
 
+  // Traduce el método de pago real de la orden (BD: cash/card/transfer) al
+  // mismo texto que usa la UI en Caja. Antes se ignoraba por completo y
+  // toda venta se reportaba como 'Efectivo' sin importar cómo se pagó.
+  String _resolverMetodoPago(String? metodoDb) {
+    switch (metodoDb?.toLowerCase().trim()) {
+      case 'card':
+        return 'Tarjeta';
+      case 'transfer':
+        return 'Transferencia';
+      default:
+        return 'Efectivo';
+    }
+  }
+
   Future<void> cargarReporteDeVentas() async {
     _isLoading = true;
     _errorMessage = null;
@@ -105,13 +130,17 @@ class ReportesProvider extends ChangeNotifier {
         _historialVentas = [];
         _productosRendimiento = [];
       } else {
-        final ahora = DateTime.now();
-        final hoyStr = ahora.toIso8601String().substring(0, 10);
+        // Todo el análisis de fechas se hace sobre el día-calendario de
+        // MÉXICO (UTC-6 fijo), igual que dashboard_provider.dart: antes se
+        // comparaba el string crudo de created_at (UTC) contra "hoy" del
+        // dispositivo, así que una venta de la tarde/noche caía en UTC del
+        // día siguiente y se contaba en el período equivocado.
+        final hoyMexico = hoyEnMexico();
         final lunesDeEstaSemana =
-            ahora.subtract(Duration(days: ahora.weekday - 1));
-        final inicioSemana = DateTime(lunesDeEstaSemana.year,
-            lunesDeEstaSemana.month, lunesDeEstaSemana.day);
-        final mesActualStr = ahora.toIso8601String().substring(0, 7);
+            hoyMexico.subtract(Duration(days: hoyMexico.weekday - 1));
+        final inicioSemana = lunesDeEstaSemana;
+        final mesActualStr =
+            '${hoyMexico.year.toString().padLeft(4, '0')}-${hoyMexico.month.toString().padLeft(2, '0')}';
 
         List<VentaReporte> ventasProcesadas = [];
         final Map<String, ProductoRendimiento> mapaProductosFiltro = {};
@@ -131,6 +160,7 @@ class ReportesProvider extends ChangeNotifier {
             // Construir concepto desde los nombres de productos
             String conceptoConstruido = '';
             String categoriaPrincipal = 'Sin categoría';
+            final Map<String, double> montosPorCategoria = {};
 
             if (orden.items.isNotEmpty) {
               final listaNombres =
@@ -138,16 +168,20 @@ class ReportesProvider extends ChangeNotifier {
               conceptoConstruido = listaNombres.join(', ');
 
               // Categoría "dominante" de la orden: la del producto con
-              // mayor importe dentro de la orden, usando la categoría REAL
-              // del catálogo (con respaldo por palabras clave solo si el
-              // producto no tiene categoría asignada), en vez de adivinar
-              // por palabras clave sobre el nombre concatenado de todos los
-              // productos de la orden.
+              // mayor importe dentro de la orden. Solo se usa como ETIQUETA
+              // para el historial ("Todos"); los totales por categoría
+              // (abajo) se calculan sumando lo que realmente corresponde a
+              // cada categoría dentro de la orden, para no atribuirle el
+              // total completo a una sola categoría cuando la orden mezcla
+              // productos de varias.
               OrderItem? itemDominante;
               for (final item in orden.items) {
                 if (itemDominante == null || item.total > itemDominante.total) {
                   itemDominante = item;
                 }
+                final cat = _resolverCategoria(item);
+                montosPorCategoria[cat] =
+                    (montosPorCategoria[cat] ?? 0) + item.total;
               }
               categoriaPrincipal = _resolverCategoria(itemDominante!);
             } else {
@@ -155,28 +189,26 @@ class ReportesProvider extends ChangeNotifier {
             }
 
             if (dateStr.isNotEmpty) {
-              DateTime fechaOrd;
-              try {
-                fechaOrd = DateTime.parse(dateStr);
-              } catch (_) {
-                fechaOrd = DateTime.now();
-              }
+              final fechaOrdMexico = diaMexicoDesde(dateStr);
 
               bool pasaFiltroTiempo = false;
-              String datePrefix = dateStr.substring(0, 10);
 
-              if (_selectedPeriodo == 'Hoy') {
-                pasaFiltroTiempo = datePrefix == hoyStr;
-              } else if (_selectedPeriodo == 'Esta Semana') {
-                pasaFiltroTiempo = fechaOrd
-                    .isAfter(inicioSemana.subtract(const Duration(seconds: 1)));
-              } else if (_selectedPeriodo == 'Este Mes') {
-                pasaFiltroTiempo = datePrefix.startsWith(mesActualStr);
-              } else {
-                pasaFiltroTiempo = true;
+              if (fechaOrdMexico != null) {
+                if (_selectedPeriodo == 'Hoy') {
+                  pasaFiltroTiempo = fechaOrdMexico == hoyMexico;
+                } else if (_selectedPeriodo == 'Esta Semana') {
+                  pasaFiltroTiempo = !fechaOrdMexico.isBefore(inicioSemana);
+                } else if (_selectedPeriodo == 'Este Mes') {
+                  final strOrd =
+                      '${fechaOrdMexico.year.toString().padLeft(4, '0')}-${fechaOrdMexico.month.toString().padLeft(2, '0')}';
+                  pasaFiltroTiempo = strOrd == mesActualStr;
+                } else {
+                  pasaFiltroTiempo = true;
+                }
               }
 
               if (pasaFiltroTiempo) {
+                final datePrefix = fechaOrdMexico!.toIso8601String().substring(0, 10);
                 ventasProcesadas.add(VentaReporte(
                   id: idOrd.length > 6
                       ? idOrd.substring(idOrd.length - 6)
@@ -185,7 +217,8 @@ class ReportesProvider extends ChangeNotifier {
                   concept: conceptoConstruido,
                   category: categoriaPrincipal,
                   amount: totalValue,
-                  paymentMethod: 'Efectivo',
+                  paymentMethod: _resolverMetodoPago(orden.paymentMethod),
+                  montosPorCategoria: montosPorCategoria,
                 ));
 
                 // ✅ PROCESAR RENDIMIENTO DE PRODUCTOS
@@ -248,12 +281,32 @@ class ReportesProvider extends ChangeNotifier {
   List<VentaReporte> get filteredVentas {
     final query = _searchTerm.trim().toLowerCase();
     final cat = _selectedCategory;
-    return _historialVentas.where((v) {
+
+    // Al filtrar por una categoría específica, se incluye cualquier orden
+    // que tenga ALGO de esa categoría (no solo cuya categoría dominante
+    // coincida), y el monto mostrado/sumado es solo la porción real de esa
+    // categoría dentro de la orden — así totalIngresos no atribuye de más
+    // ni de menos cuando una orden mezcla categorías.
+    final base = cat == 'Todos'
+        ? _historialVentas
+        : _historialVentas
+            .where((v) => (v.montosPorCategoria[cat] ?? 0) > 0)
+            .map((v) => VentaReporte(
+                  id: v.id,
+                  date: v.date,
+                  concept: v.concept,
+                  category: cat,
+                  amount: v.montosPorCategoria[cat]!,
+                  paymentMethod: v.paymentMethod,
+                  montosPorCategoria: v.montosPorCategoria,
+                ))
+            .toList();
+
+    return base.where((v) {
       final matchesSearch = query.isEmpty ||
           v.concept.toLowerCase().contains(query) ||
           v.id.toLowerCase().contains(query);
-      final matchesCategory = cat == 'Todos' || v.category == cat;
-      return matchesSearch && matchesCategory;
+      return matchesSearch;
     }).toList();
   }
 

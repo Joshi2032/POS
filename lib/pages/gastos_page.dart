@@ -24,7 +24,7 @@ class _GastosView extends StatefulWidget {
 
 class _GastosViewState extends State<_GastosView> {
   final List<String> categorias = [
-    'Todos', 'Renta', 'Servicios', 'Insumos',
+    'Todas', 'Renta', 'Servicios', 'Insumos',
     'Mantenimiento', 'Publicidad', 'Impuestos', 'General',
   ];
   final List<String> formCategories = [

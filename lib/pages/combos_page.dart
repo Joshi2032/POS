@@ -36,7 +36,12 @@ class _CombosViewState extends State<_CombosView> {
   }
 
   void _abrirFormularioModal(CombosProvider provider, {ComboItem? combo}) {
-    List<String> productosSeleccionados = [];
+    // Al editar, se precargan los productos YA vinculados al combo; si no
+    // se hace esto, guardar sin tocar la selección de productos borraría
+    // todos los combo_items existentes (el repository borra y solo
+    // reinserta lo que venga en esta lista).
+    List<String> productosSeleccionados =
+        combo != null ? List<String>.from(combo.productIds) : [];
     bool guardando = false;
 
     if (combo != null) {
@@ -51,6 +56,7 @@ class _CombosViewState extends State<_CombosView> {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {

@@ -85,21 +85,25 @@ int get paidTodayCount => paidToday.length;
   // Método público para forzar la recarga desde la pantalla si fuera necesario
   Future<void> recargarCaja() => _inicializarDatos();
 
-  // Resumen de ventas de hoy (por método de pago) + pagos a proveedores,
-  // usado para armar el corte de caja de fin de turno. Son dos consultas
-  // independientes, así que corren en paralelo en vez de una tras otra.
+  // Resumen de ventas de hoy (por método de pago) + pagos a proveedores en
+  // efectivo + movimientos manuales de caja, usado para armar el corte de
+  // caja de fin de turno. Son tres consultas independientes, así que corren
+  // en paralelo en vez de una tras otra.
   Future<Map<String, dynamic>> obtenerResumenParaCorte() async {
     final resultados = await Future.wait([
       _repository.obtenerResumenVentasHoy(),
       _repository.obtenerPagosProveedoresHoy(),
+      _repository.obtenerNetoMovimientosManualesHoy(),
     ]);
 
     final resumenVentas = resultados[0] as Map<String, dynamic>;
     final pagosProveedores = resultados[1] as double;
+    final netoMovimientosManuales = resultados[2] as double;
 
     return {
       ...resumenVentas,
       'supplierPayments': pagosProveedores,
+      'manualMovementsNet': netoMovimientosManuales,
     };
   }
 

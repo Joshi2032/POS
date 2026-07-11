@@ -22,6 +22,10 @@ class RestaurantOrder {
   /// desde AuthProvider.nombreUsuario. Al recargar desde Supabase se
   /// resuelve vía el join profiles(full_name) en OrdenRepository.
   final String? waiterName;
+  /// Método de pago real ('cash'/'card'/'transfer'), solo tiene valor una
+  /// vez que la orden se cobró (orders.payment_method se llena en
+  /// CajaRepository.registrarCobro). Null en órdenes aún no pagadas.
+  final String? paymentMethod;
 
   RestaurantOrder({
     required this.id,
@@ -36,6 +40,7 @@ class RestaurantOrder {
     this.notes,
     this.waiterId,
     this.waiterName,
+    this.paymentMethod,
   });
 
   factory RestaurantOrder.fromJson(Map<String, dynamic> json) {
@@ -97,6 +102,7 @@ class RestaurantOrder {
       notes: json['notes']?.toString(),
       waiterId: json['waiter_id']?.toString(),
       waiterName: waiterNameResuelto,
+      paymentMethod: json['payment_method']?.toString(),
     );
   }
 
@@ -159,6 +165,7 @@ class RestaurantOrder {
     String? notes,
     String? waiterId,
     String? waiterName,
+    String? paymentMethod,
   }) {
     return RestaurantOrder(
       id: id ?? this.id,
@@ -173,6 +180,7 @@ class RestaurantOrder {
       notes: notes ?? this.notes,
       waiterId: waiterId ?? this.waiterId,
       waiterName: waiterName ?? this.waiterName,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 }

@@ -176,6 +176,7 @@ class _CategoriasView extends StatelessWidget {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return AlertDialog(
           title: Text(isEditing ? 'Editar categoría' : 'Nueva categoría'),

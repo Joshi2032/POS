@@ -1048,6 +1048,8 @@ class _CajaPageState extends State<CajaPage> {
     final int totalOrdenes = resumen['totalOrdenes'] as int;
     final double pagosProveedores =
         (resumen['supplierPayments'] as num).toDouble();
+    final double netoMovimientosManuales =
+        (resumen['manualMovementsNet'] as num).toDouble();
 
     final fondoCtrl = TextEditingController(text: '0');
     final contadoCtrl = TextEditingController();
@@ -1062,7 +1064,10 @@ class _CajaPageState extends State<CajaPage> {
           builder: (dialogContext, setDialogState) {
             final fondo = double.tryParse(fondoCtrl.text.trim()) ?? 0.0;
             final contado = double.tryParse(contadoCtrl.text.trim()) ?? 0.0;
-            final esperado = fondo + ventasEfectivo - pagosProveedores;
+            final esperado = fondo +
+                ventasEfectivo -
+                pagosProveedores +
+                netoMovimientosManuales;
             final diferencia = contado - esperado;
             final width = MediaQuery.sizeOf(dialogContext).width;
 
@@ -1094,9 +1099,16 @@ class _CajaPageState extends State<CajaPage> {
                       _filaResumenCorte('Tarjeta', ventasTarjeta),
                       _filaResumenCorte('Transferencia', ventasTransferencia),
                       _filaResumenCorte(
-                        'Pagos a proveedores',
+                        'Pagos a proveedores (efectivo)',
                         -pagosProveedores,
                         color: Colors.red,
+                      ),
+                      _filaResumenCorte(
+                        'Movimientos manuales de caja',
+                        netoMovimientosManuales,
+                        color: netoMovimientosManuales < 0
+                            ? Colors.red
+                            : Colors.green,
                       ),
                       const Divider(height: 24),
                       TextField(

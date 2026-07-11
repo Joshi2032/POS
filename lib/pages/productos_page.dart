@@ -236,6 +236,7 @@ class _ProductosView extends StatelessWidget {
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
         return StatefulBuilder(builder: (context, setState) {
           final categoriasDisponibles =
